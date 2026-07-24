@@ -77,6 +77,15 @@ export default function PreceptorPage() {
     }
   }
 
+  const handleOpenInscribirModal = () => {
+    if (selectedCurso) {
+      setCursoAsignadoId(selectedCurso.id);
+    } else if (cursos.length > 0) {
+      setCursoAsignadoId(cursos[0].id);
+    }
+    setShowInscribirModal(true);
+  };
+
   async function loadEstudiantesYAsistencias(cursoId, fechaSel) {
     try {
       let ids = [];
@@ -91,7 +100,6 @@ export default function PreceptorPage() {
         eData = d1 || [];
       }
 
-      // Consulta de respaldo directa por curso_id
       const { data: d2 } = await supabase.from('estudiantes').select('*').eq('curso_id', cursoId).order('apellido');
       if (d2 && d2.length > 0) {
         const existingIds = new Set(eData.map((e) => e.id));
@@ -116,7 +124,9 @@ export default function PreceptorPage() {
   }
   const handleInscribirLegajoCompleto = async (e) => {
     e.preventDefault();
-    if (!dni.trim() || !nombre.trim() || !apellido.trim() || !cursoAsignadoId) {
+    const finalCursoId = cursoAsignadoId || (selectedCurso?.id) || (cursos.length > 0 ? cursos[0].id : '');
+    
+    if (!dni.trim() || !nombre.trim() || !apellido.trim() || !finalCursoId) {
       Swal.fire('Campos Obligatorios', 'Ingrese DNI, Nombre, Apellido y seleccione un Curso.', 'warning');
       return;
     }
@@ -141,7 +151,7 @@ export default function PreceptorPage() {
         tipo_certificado: tipoCertificado.trim(),
         materias_adeudadas: materiasAdeudadas.trim(),
         estado: 'activo',
-        curso_id: cursoAsignadoId,
+        curso_id: finalCursoId,
       };
 
       let estData = null;
@@ -156,7 +166,7 @@ export default function PreceptorPage() {
           email: email.trim(),
           telefono: telefono.trim(),
           estado: 'activo',
-          curso_id: cursoAsignadoId,
+          curso_id: finalCursoId,
         };
         const { data: bData, error: bErr } = await supabase.from('estudiantes').insert(basePayload).select().single();
         if (bErr) throw bErr;
@@ -166,7 +176,7 @@ export default function PreceptorPage() {
       }
 
       if (estData && estData.id) {
-        await supabase.from('alumnos_cursos').insert({ estudiante_id: estData.id, curso_id: cursoAsignadoId });
+        await supabase.from('alumnos_cursos').insert({ estudiante_id: estData.id, curso_id: finalCursoId });
       }
 
       Swal.fire({
@@ -183,7 +193,11 @@ export default function PreceptorPage() {
       setCiudadNacimiento('');
       setDireccion('');
 
-      if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
+      const targetCurso = cursos.find((c) => c.id === finalCursoId) || selectedCurso;
+      if (targetCurso) {
+        setSelectedCurso(targetCurso);
+        loadEstudiantesYAsistencias(targetCurso.id, fecha);
+      }
     } catch (err) {
       Swal.fire('Error al Inscribir', err.message, 'error');
     }
@@ -241,7 +255,7 @@ export default function PreceptorPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowInscribirModal(true)}
+            onClick={handleOpenInscribirModal}
             className="btn-gold font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs"
           >
             <UserPlus className="w-4 h-4" /> + Inscribir Estudiante (Legajo Completo)
@@ -408,12 +422,12 @@ export default function PreceptorPage() {
                     <select
                       value={cursoAsignadoId}
                       onChange={(e) => setCursoAsignadoId(e.target.value)}
-                      className="field-soft text-xs font-bold border-2 border-blue-500"
+                      className="field-soft text-xs font-bold border-2 border-blue-500 bg-blue-50/30"
                       required
                     >
                       {cursos.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.anio}° "{c.division}"
+                          {c.anio}° "{c.division}" - {c.orientacion} ({c.turno})
                         </option>
                       ))}
                     </select>
