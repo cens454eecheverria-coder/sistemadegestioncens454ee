@@ -27,6 +27,7 @@ export default function Sidebar() {
   const { user, role, logout, cicloLectivo, changeCicloLectivo } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  // Matriz Estricta de Menú por Rol
   const menuItems = [
     { name: 'Dashboard General', href: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
     { name: 'Toma de Asistencia', href: '/preceptores', icon: ClipboardCheck, roles: ['admin', 'preceptor'] },
@@ -41,9 +42,10 @@ export default function Sidebar() {
     { name: 'Form Preinscripción', href: '/preinscripcion', icon: FileText, roles: ['admin', 'preceptor', 'profesor', 'estudiante', null] },
   ];
 
+  // Filtrar estrictamente según el rol activo
   const filteredItems = menuItems.filter((item) => {
     if (!role) return item.roles.includes(null);
-    if (role === 'admin') return true;
+    if (role === 'admin') return true; // Admin ve todo
     return item.roles.includes(role);
   });
 
@@ -106,7 +108,7 @@ export default function Sidebar() {
             </select>
           </div>
 
-          {/* Menú de Navegación Filtradísimo por Rol */}
+          {/* Menú de Navegación Exclusivo por Rol */}
           <nav className="px-3 space-y-1 mt-2 max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredItems.map((item) => {
               const Icon = item.icon;

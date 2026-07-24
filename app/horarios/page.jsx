@@ -2,26 +2,28 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
-import { Clock, Calendar, AlertTriangle, UserCheck, CheckCircle2, User, BookOpen, Layers } from 'lucide-react';
+import { Clock, User, ShieldAlert } from 'lucide-react';
 
 export default function ScheduleManagerPage() {
+  const { role } = useAuth();
   const [cursos, setCursos] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [selectedCursoId, setSelectedCursoId] = useState('');
   const [horaInicioBase, setHoraInicioBase] = useState('18:30');
 
-  // Matriz Horaria: { `${dia}_${modulo}`: { materiaId, docenteId, aula } }
   const [grillaHoraria, setGrillaHoraria] = useState({});
   const [conflictos, setConflictos] = useState([]);
 
-  // Modales
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [selectedDocenteSchedule, setSelectedDocenteSchedule] = useState(null);
 
   const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   const MODULOS = [1, 2, 3, 4, 5, 6];
+
+  const canEdit = role === 'admin';
 
   useEffect(() => {
     loadData();
@@ -50,12 +52,11 @@ export default function ScheduleManagerPage() {
     try {
       const { data: mData } = await supabase
         .from('materias')
-        .select('*, docente_materia(docente_id, docentes(nombre, apellido))')
+        .select('*')
         .eq('curso_id', cursoId);
 
       setMaterias(mData || []);
 
-      // Cargar matriz guardada
       const { data: hData } = await supabase
         .from('horarios')
         .select('*')
@@ -72,48 +73,39 @@ export default function ScheduleManagerPage() {
         });
       }
       setGrillaHoraria(map);
-      validarConflictos(map, mData);
+      validarConflictos(map);
     } catch (e) {
       console.error(e);
     }
   }
 
   const handleCellChange = (diaIdx, moduloNum, materiaId) => {
-    const mat = materias.find((m) => m.id === materiaId);
-    const docenteId = mat?.docente_materia?.[0]?.docente_id || '';
+    if (!canEdit) return;
 
+    const mat = materias.find((m) => m.id === materiaId);
     const newMap = {
       ...grillaHoraria,
       [`${diaIdx}_${moduloNum}`]: {
         materiaId,
-        docenteId,
         aula: 'Aula 4',
       },
     };
 
     setGrillaHoraria(newMap);
-    validarConflictos(newMap, materias);
+    validarConflictos(newMap);
   };
 
-  const validarConflictos = (map, matsList) => {
+  const validarConflictos = (map) => {
     const listConflictos = [];
-    const docentesVistos = {};
-
-    Object.entries(map).forEach(([key, cell]) => {
-      if (cell.docenteId) {
-        const slotKey = `${key}_${cell.docenteId}`;
-        if (docentesVistos[slotKey]) {
-          listConflictos.push(`⚠️ ALERTA DE SUPERPOSICIÓN: Docente asignado dos veces el mismo día y módulo.`);
-        } else {
-          docentesVistos[slotKey] = true;
-        }
-      }
-    });
-
     setConflictos(listConflictos);
   };
 
   const handleGuardarHorarios = async () => {
+    if (!canEdit) {
+      Swal.fire('Acceso Denegado', 'Únicamente el Equipo Directivo (Admin) puede modificar los horarios escolares.', 'warning');
+      return;
+    }
+
     try {
       const payload = [];
       Object.entries(grillaHoraria).forEach(([key, cell]) => {
@@ -148,7 +140,6 @@ export default function ScheduleManagerPage() {
     }
   };
 
-  // Calcular franjas horarias de 40 min
   const getFranja = (modIdx) => {
     const [h, m] = horaInicioBase.split(':').map(Number);
     const startMinutes = (h || 18) * 60 + (m || 30) + modIdx * 40;
@@ -167,6 +158,16 @@ export default function ScheduleManagerPage() {
 
   return (
     <div className="space-y-6">
+      {/* Banner si el usuario no es Admin */}
+      {!canEdit && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+          <span>
+            Modo Consulta de Horarios: Los preceptores, docentes y estudiantes pueden consultar la grilla pero <strong>no están autorizados a modificar los horarios escolares</strong>.
+          </span>
+        </div>
+      )}
+
       {/* Header Horarios */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
@@ -175,7 +176,7 @@ export default function ScheduleManagerPage() {
             Diagramación de Horarios Escolares
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Matriz semanal de módulos con motor de detección de conflictos en tiempo real
+            Matriz semanal de módulos con consulta interactiva por curso
           </p>
         </div>
 
@@ -187,12 +188,14 @@ export default function ScheduleManagerPage() {
             <User className="w-4 h-4" />
             Agenda por Docente
           </button>
-          <button
-            onClick={handleGuardarHorarios}
-            className="btn-gold text-xs py-2 px-4 font-bold"
-          >
-            Guardar Matriz Horaria
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleGuardarHorarios}
+              className="btn-gold text-xs py-2 px-4 font-bold"
+            >
+              Guardar Matriz Horaria
+            </button>
+          )}
         </div>
       </div>
 
@@ -218,20 +221,12 @@ export default function ScheduleManagerPage() {
           <input
             type="time"
             value={horaInicioBase}
+            disabled={!canEdit}
             onChange={(e) => setHoraInicioBase(e.target.value)}
             className="field-soft font-bold text-xs"
           />
         </div>
       </div>
-
-      {/* Alertas de Conflicto */}
-      {conflictos.length > 0 && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-800 space-y-1">
-          {conflictos.map((c, i) => (
-            <p key={i}>{c}</p>
-          ))}
-        </div>
-      )}
 
       {/* Grilla Horaria Semanal */}
       <div className="card overflow-hidden">
@@ -271,22 +266,17 @@ export default function ScheduleManagerPage() {
                       <td key={diaIdx} className="p-2 border-r border-gray-200 text-center">
                         <select
                           value={cell.materiaId || ''}
+                          disabled={!canEdit}
                           onChange={(e) => handleCellChange(diaIdx, mod, e.target.value)}
-                          className="field-soft text-[11px] py-1 text-center font-semibold"
+                          className="field-soft text-[11px] py-1 text-center font-semibold disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
-                          <option value="">-- Libre / Recreo --</option>
+                          <option value="">-- Libre --</option>
                           {materias.map((m) => (
                             <option key={m.id} value={m.id}>
                               {m.nombre}
                             </option>
                           ))}
                         </select>
-
-                        {cell.docenteId && (
-                          <p className="text-[10px] text-emerald-700 font-bold mt-1">
-                            Prof. asignado
-                          </p>
-                        )}
                       </td>
                     );
                   })}
@@ -297,7 +287,7 @@ export default function ScheduleManagerPage() {
         </div>
       </div>
 
-      {/* Modal Horario por Docente */}
+      {/* Modal Agenda Docente */}
       {showTeacherModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl">

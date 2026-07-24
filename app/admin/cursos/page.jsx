@@ -24,20 +24,16 @@ export default function CourseManagerPage() {
   const [docentes, setDocentes] = useState([]);
   const [selectedCurso, setSelectedCurso] = useState(null);
   const [materiasCurso, setMateriasCurso] = useState([]);
-  const [vinculacionesMap, setVinculacionesMap] = useState({}); // { [materiaId]: docenteId }
+  const [vinculacionesMap, setVinculacionesMap] = useState({});
 
-  // Modal Crear Curso Form
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newAnio, setNewAnio] = useState('1');
-  const [newDivision, setNewDivision] = useState(''); // LIBRE: letras o números
+  const [newDivision, setNewDivision] = useState('');
   const [newOrientacion, setNewOrientacion] = useState('Ciencias Sociales');
   const [newTurno, setNewTurno] = useState('Noche');
   const [creating, setCreating] = useState(false);
 
-  // Sub-tab o vista activa
   const [activeSubTab, setActiveSubTab] = useState('cursos');
-
-  // System Settings / Bloqueo Global de Notas
   const [gradesLocked, setGradesLocked] = useState(false);
 
   useEffect(() => {
@@ -75,7 +71,6 @@ export default function CourseManagerPage() {
   const selectCurso = async (curso) => {
     setSelectedCurso(curso);
     try {
-      // 1. Cargar materias del curso
       const { data: mData } = await supabase
         .from('materias')
         .select('*')
@@ -83,7 +78,6 @@ export default function CourseManagerPage() {
 
       setMateriasCurso(mData || []);
 
-      // 2. Cargar vinculaciones docente_materia
       const { data: dmData } = await supabase.from('docente_materia').select('*');
       const vMap = {};
       if (dmData) {
@@ -106,7 +100,6 @@ export default function CourseManagerPage() {
 
     setCreating(true);
     try {
-      // 1. Insertar el Curso
       const { data: cursoData, error: cursoErr } = await supabase
         .from('cursos')
         .insert({
@@ -121,7 +114,6 @@ export default function CourseManagerPage() {
 
       if (cursoErr) throw cursoErr;
 
-      // 2. AUTO-CREAR MATERIAS basadas en la malla oficial Res. 2993/22
       const curriculum = getMateriasForCurso(newAnio, newOrientacion);
       const materiasToInsert = curriculum.todas.map((m) => ({
         nombre: m.nombre,
@@ -130,13 +122,21 @@ export default function CourseManagerPage() {
       }));
 
       const { error: matErr } = await supabase.from('materias').insert(materiasToInsert);
-      if (matErr) console.warn('Aviso al auto-crear materias:', matErr.message);
-
-      Swal.fire({
-        icon: 'success',
-        title: '¡Curso y Materias Creados!',
-        text: `Se creó ${newAnio}° "${newDivision.trim()}" con ${materiasToInsert.length} materias oficiales autogeneradas de ${newOrientacion}.`,
-      });
+      if (matErr && matErr.message?.includes('row-level security')) {
+        // RLS fallback para previsualización local
+        setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: `local_${idx}` })));
+        Swal.fire({
+          icon: 'warning',
+          title: 'Curso Creado con Aviso de RLS',
+          text: 'El curso se creó en Supabase. Para insertar materias sin restricción RLS, ejecute el script sql/schema.sql en Supabase.',
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Curso y Materias Creados!',
+          text: `Se creó ${newAnio}° "${newDivision.trim()}" con ${materiasToInsert.length} materias oficiales autogeneradas.`,
+        });
+      }
 
       setShowCreateModal(false);
       setNewDivision('');
@@ -164,7 +164,18 @@ export default function CourseManagerPage() {
       }));
 
       const { error } = await supabase.from('materias').insert(materiasToInsert);
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('row-level security')) {
+          setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: `temp_${idx}` })));
+          Swal.fire({
+            icon: 'info',
+            title: 'Materias Cargadas en Vista',
+            text: 'Se previsualizan las asignaturas. En Supabase ejecute las políticas RLS habilitadas en sql/schema.sql para guardar permanentemente.',
+          });
+          return;
+        }
+        throw error;
+      }
 
       Swal.fire({
         icon: 'success',
@@ -228,7 +239,6 @@ export default function CourseManagerPage() {
 
   return (
     <div className="space-y-6">
-      {/* Restricción si el usuario no es Admin */}
       {role !== 'admin' && (
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 font-semibold flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
@@ -238,7 +248,6 @@ export default function CourseManagerPage() {
         </div>
       )}
 
-      {/* Header Módulo */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
@@ -274,7 +283,6 @@ export default function CourseManagerPage() {
         </div>
       </div>
 
-      {/* Selector de Sub-Pestañas */}
       <div className="flex border-b border-gray-200 bg-white rounded-t-xl px-4 pt-2 gap-2 overflow-x-auto text-xs font-bold">
         <button
           onClick={() => setActiveSubTab('cursos')}
@@ -305,10 +313,8 @@ export default function CourseManagerPage() {
         </button>
       </div>
 
-      {/* VISTA 1: Gestión de Cursos y Vinculación de Materias */}
       {activeSubTab === 'cursos' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Lista de Cursos Existentes */}
           <div className="card p-5 bg-white space-y-4">
             <h3 className="text-sm font-bold font-heading text-[#0D2A3E]">
               Cursos Registrados ({cursos.length})
@@ -343,7 +349,6 @@ export default function CourseManagerPage() {
             </div>
           </div>
 
-          {/* Panel de Materias del Curso Seleccionado */}
           <div className="lg:col-span-2 card p-6 bg-white space-y-4">
             {selectedCurso ? (
               <>
@@ -387,7 +392,6 @@ export default function CourseManagerPage() {
                             </span>
                           </div>
 
-                          {/* Asignar Docente */}
                           <div className="w-full sm:w-64">
                             <select
                               value={docenteActualId}
@@ -416,7 +420,6 @@ export default function CourseManagerPage() {
         </div>
       )}
 
-      {/* VISTA 2: Migración Masiva de Matrícula */}
       {activeSubTab === 'migrar' && (
         <div className="card p-8 bg-white max-w-2xl mx-auto space-y-4 text-center">
           <Users className="w-12 h-12 text-[#006384] mx-auto" />
@@ -438,7 +441,6 @@ export default function CourseManagerPage() {
         </div>
       )}
 
-      {/* VISTA 3: Horas No Frente a Alumno */}
       {activeSubTab === 'horas_n_frente' && (
         <div className="card p-6 bg-white space-y-6">
           <h3 className="text-base font-bold font-heading text-[#0D2A3E]">
@@ -476,7 +478,6 @@ export default function CourseManagerPage() {
         </div>
       )}
 
-      {/* MODAL CREAR CURSO CON AUTO-MATERIAS */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <form
