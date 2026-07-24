@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -15,19 +15,18 @@ import {
   FileCheck,
   LogOut,
   User,
-  Menu,
   X,
   FileText,
   Clock,
-  Layers
+  Layers,
+  ChevronLeft
 } from 'lucide-react';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, setIsOpen }) {
   const pathname = usePathname();
   const { user, role, logout, cicloLectivo, changeCicloLectivo } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
 
-  // Matriz Estricta de Menú por Rol
+  // Matriz de Accesos por Rol
   const menuItems = [
     { name: 'Dashboard General', href: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
     { name: 'Toma de Asistencia', href: '/preceptores', icon: ClipboardCheck, roles: ['admin', 'preceptor'] },
@@ -35,7 +34,7 @@ export default function Sidebar() {
     { name: 'Portal Docente', href: '/docentes', icon: GraduationCap, roles: ['admin', 'profesor'] },
     { name: 'Boletín Estudiante', href: '/estudiantes', icon: BookOpen, roles: ['admin', 'estudiante'] },
     { name: 'Libro DICYT', href: '/dicyt', icon: BookMarked, roles: ['admin', 'preceptor', 'profesor'] },
-    { name: 'Secretaría y Legajos', href: '/secretaria', icon: Users, roles: ['admin', 'preceptor'] },
+    { name: 'Secretaría y Legajos', href: '/secretaria', icon: Users, roles: ['admin'] }, // RESTRINGIDO A SOLO ADMIN
     { name: 'Cursos & Orientaciones', href: '/admin/cursos', icon: Layers, roles: ['admin'] },
     { name: 'Horarios Escolares', href: '/horarios', icon: Clock, roles: ['admin', 'preceptor', 'profesor', 'estudiante'] },
     { name: 'Gestión Preinscripción', href: '/admin/preinscripciones', icon: FileCheck, roles: ['admin', 'preceptor'] },
@@ -45,51 +44,52 @@ export default function Sidebar() {
   // Filtrar estrictamente según el rol activo
   const filteredItems = menuItems.filter((item) => {
     if (!role) return item.roles.includes(null);
-    if (role === 'admin') return true; // Admin ve todo
+    if (role === 'admin') return true;
     return item.roles.includes(role);
   });
 
   return (
     <>
-      {/* Botón flotante móvil */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-[#0D2A3E] text-white p-2.5 rounded-lg shadow-lg hover:bg-[#006384] transition-colors"
-        aria-label="Toggle menu"
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
       {/* Backdrop móvil */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm transition-opacity"
         />
       )}
 
-      {/* Sidebar Principal */}
+      {/* Sidebar Principal (Oculta por defecto, desplegable) */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-72 bg-[#0D2A3E] text-white z-40 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed top-0 left-0 bottom-0 w-72 bg-[#0D2A3E] text-white z-50 flex flex-col justify-between transition-transform duration-300 ease-in-out shadow-2xl ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div>
-          {/* Header Institucional Sidebar */}
-          <div className="p-5 border-b border-white/10 flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Logo CENS 454"
-              className="w-11 h-11 object-contain rounded-lg bg-white/10 p-1 border border-[#F5C442]/40"
-            />
-            <div>
-              <h2 className="font-heading text-lg font-bold text-white tracking-tight leading-tight">
-                CENS N° 454
-              </h2>
-              <p className="text-xs text-[#F5C442] font-semibold tracking-wide uppercase">
-                Esteban Echeverría
-              </p>
+          {/* Header Sidebar con Botón para Ocultar */}
+          <div className="p-5 border-b border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="Logo CENS 454"
+                className="w-10 h-10 object-contain rounded-lg bg-white/10 p-1 border border-[#F5C442]/40"
+              />
+              <div>
+                <h2 className="font-heading text-base font-bold text-white tracking-tight leading-tight">
+                  CENS N° 454
+                </h2>
+                <p className="text-[10px] text-[#F5C442] font-semibold tracking-wide uppercase">
+                  Esteban Echeverría
+                </p>
+              </div>
             </div>
+
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+              title="Ocultar Barra Lateral"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Selector de Ciclo Lectivo */}

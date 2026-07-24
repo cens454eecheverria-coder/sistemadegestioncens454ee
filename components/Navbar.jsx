@@ -3,15 +3,26 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { School, User, Calendar, LogOut, RefreshCw } from 'lucide-react';
+import { Calendar, LogOut, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function Navbar({ showSidebar }) {
-  const { user, role, cicloLectivo, logout } = useAuth();
+export default function Navbar({ showSidebar, sidebarOpen, toggleSidebar }) {
+  const { user, logout, cicloLectivo } = useAuth();
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className={`flex items-center gap-3 ${showSidebar ? 'lg:ml-72' : ''}`}>
+        <div className={`flex items-center gap-3 transition-all duration-300 ${showSidebar && sidebarOpen ? 'lg:ml-72' : ''}`}>
+          {showSidebar && (
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-xl bg-[#EEF5FA] hover:bg-[#006384] hover:text-white text-[#0D2A3E] transition-colors border border-gray-200 flex items-center gap-1.5 text-xs font-bold"
+              title={sidebarOpen ? 'Ocultar Barra Lateral' : 'Mostrar Barra Lateral'}
+            >
+              {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              <span className="hidden sm:inline">{sidebarOpen ? 'Ocultar Menú' : 'Menú Principal'}</span>
+            </button>
+          )}
+
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="CENS 454" className="w-8 h-8 object-contain" />
             <span className="font-heading font-bold text-gray-800 text-sm md:text-base">
@@ -37,7 +48,7 @@ export default function Navbar({ showSidebar }) {
               <button
                 onClick={logout}
                 className="btn-gold text-xs py-1.5 px-3 font-bold flex items-center gap-1.5"
-                title="Cerrar sesión actual para ingresar con otra cuenta"
+                title="Cerrar sesión actual e ir al Login"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Cambiar Sesión</span>
