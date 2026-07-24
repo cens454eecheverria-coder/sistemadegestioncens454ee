@@ -69,7 +69,7 @@ export default function CourseManagerPage() {
         setGradesLocked(data.grades_locked);
       }
     } catch (e) {
-      console.warn('System settings usara valor por defecto');
+      console.warn('System settings usará valor por defecto');
     }
   }
 
@@ -95,12 +95,13 @@ export default function CourseManagerPage() {
   const handleCrearCurso = async (e) => {
     e.preventDefault();
     if (!newDivision.trim()) {
-      Swal.fire('Error', 'Ingrese una denominacion para la division.', 'error');
+      Swal.fire('Error', 'Ingrese una denominación para la división.', 'error');
       return;
     }
 
     setCreating(true);
     try {
+      const nombreMatStr = newAnio + '° "' + newDivision.trim() + '" - ' + newOrientacion + ' (' + newTurno + ')';
       const { data: cursoData, error: cursoErr } = await supabase
         .from('cursos')
         .insert({
@@ -108,7 +109,7 @@ export default function CourseManagerPage() {
           division: newDivision.trim(),
           orientacion: newOrientacion,
           turno: newTurno,
-          nombre_materia: ${newAnio}° "" -  (),
+          nombre_materia: nombreMatStr,
         })
         .select()
         .single();
@@ -138,13 +139,13 @@ export default function CourseManagerPage() {
 
       const { error: matErr } = await supabase.from('materias').insert(materiasToInsert);
       if (matErr && matErr.message?.includes('row-level security')) {
-        setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: local_ })));
+        setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: 'local_' + idx })));
       }
 
       Swal.fire({
         icon: 'success',
         title: 'Curso Agregado',
-        text: Se creo el curso ° "" con  materias.,
+        text: 'Se creó el curso ' + newAnio + '° "' + newDivision.trim() + '" con ' + materiasToInsert.length + ' materias.',
       });
 
       setNewDivision('');
@@ -152,7 +153,7 @@ export default function CourseManagerPage() {
       await loadCursosYDocentes();
       if (cursoData) selectCurso(cursoData);
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Error de Creacion', text: err.message });
+      Swal.fire({ icon: 'error', title: 'Error de Creación', text: err.message });
     } finally {
       setCreating(false);
     }
@@ -165,8 +166,8 @@ export default function CourseManagerPage() {
     }
 
     Swal.fire({
-      title: ¿Eliminar ?,
-      text: 'Esta accion eliminara el curso y todas sus asignaturas.',
+      title: '¿Eliminar ' + nombreCurso + '?',
+      text: 'Esta acción eliminará el curso y todas sus asignaturas.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -199,11 +200,11 @@ export default function CourseManagerPage() {
 
       const { error } = await supabase.from('materias').insert(materiasToInsert);
       if (error && error.message?.includes('row-level security')) {
-        setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: 	emp_ })));
+        setMateriasCurso(materiasToInsert.map((m, idx) => ({ ...m, id: 'temp_' + idx })));
         return;
       }
 
-      Swal.fire({ icon: 'success', title: 'Materias Generadas', text: Se crearon  asignaturas. });
+      Swal.fire({ icon: 'success', title: 'Materias Generadas', text: 'Se crearon ' + materiasToInsert.length + ' asignaturas.' });
       await selectCurso(selectedCurso);
     } catch (e) {
       Swal.fire('Error', e.message, 'error');
@@ -217,7 +218,7 @@ export default function CourseManagerPage() {
         await supabase.from('docente_materia').insert({ materia_id: materiaId, docente_id: docenteId, cargo: 'titular' });
       }
       setVinculacionesMap((prev) => ({ ...prev, [materiaId]: docenteId }));
-      Swal.fire({ icon: 'success', title: 'Docente Vinculado', text: 'Se asigno el profesor.', timer: 1200, showConfirmButton: false });
+      Swal.fire({ icon: 'success', title: 'Docente Vinculado', text: 'Se asignó el profesor.', timer: 1200, showConfirmButton: false });
     } catch (e) {
       Swal.fire('Error', e.message, 'error');
     }
@@ -225,7 +226,7 @@ export default function CourseManagerPage() {
 
   const handleEjecutarMigracionInteractivas = async () => {
     if (!migrarOrigenId || !migrarDestinoId) {
-      Swal.fire('Error', 'Seleccione el Curso Origen y el Destino de Migracion.', 'error');
+      Swal.fire('Error', 'Seleccione el Curso Origen y el Destino de Migración.', 'error');
       return;
     }
 
@@ -240,7 +241,7 @@ export default function CourseManagerPage() {
           await supabase.from('estudiantes').update({ estado: 'egresado' }).in('id', ids);
           await supabase.from('alumnos_cursos').delete().eq('curso_id', migrarOrigenId);
         }
-        Swal.fire({ icon: 'success', title: '🎓 Alumnos Egresados', text: Se graduo la plantilla de ° "". });
+        Swal.fire({ icon: 'success', title: '🎓 Alumnos Egresados', text: 'Se graduó la plantilla de ' + (cursoOrigen ? cursoOrigen.anio + '° "' + cursoOrigen.division + '"' : 'estudiantes') + '.' });
       } else {
         const cursoDestino = cursos.find((c) => c.id === migrarDestinoId);
         const { data: alumnosOrigen } = await supabase.from('alumnos_cursos').select('estudiante_id').eq('curso_id', migrarOrigenId);
@@ -249,7 +250,7 @@ export default function CourseManagerPage() {
           const newRecords = alumnosOrigen.map((a) => ({ estudiante_id: a.estudiante_id, curso_id: migrarDestinoId }));
           await supabase.from('alumnos_cursos').insert(newRecords);
         }
-        Swal.fire({ icon: 'success', title: 'Migracion Exitosa', text: Se promovieron los estudiantes de ° "" a ° "". });
+        Swal.fire({ icon: 'success', title: 'Migración Exitosa', text: 'Se promovieron los estudiantes de ' + (cursoOrigen ? cursoOrigen.anio + '° "' + cursoOrigen.division + '"' : '') + ' a ' + (cursoDestino ? cursoDestino.anio + '° "' + cursoDestino.division + '"' : '') + '.' });
       }
 
       setMigrarOrigenId('');
@@ -270,7 +271,7 @@ export default function CourseManagerPage() {
     setGradesLocked(nuevoEstado);
     try {
       await supabase.from('system_settings').upsert({ id: 1, grades_locked: nuevoEstado });
-      Swal.fire({ icon: 'info', title: nuevoEstado ? 'Bloqueo Global Activado' : 'Edicion Habilitada' });
+      Swal.fire({ icon: 'info', title: nuevoEstado ? 'Bloqueo Global Activado' : 'Edición Habilitada' });
     } catch (e) {
       console.error(e);
     }
@@ -295,9 +296,9 @@ export default function CourseManagerPage() {
     }).then((res) => {
       if (res.isConfirmed && res.value) {
         const nAnio = parseInt(res.value);
-        setCiclosList((prev) => [{ id: Date.now(), anio: nAnio, estado: 'ACTIVO', inicio:  1 de marzo de , fin: 'En curso' }, ...prev]);
+        setCiclosList((prev) => [{ id: Date.now(), anio: nAnio, estado: 'ACTIVO', inicio: '01 de marzo de ' + nAnio, fin: 'En curso' }, ...prev]);
         changeCicloLectivo(nAnio.toString());
-        Swal.fire('Ciclo Lectivo Creado', Se dio de alta el Ciclo Lectivo ., 'success');
+        Swal.fire('Ciclo Lectivo Creado', 'Se dio de alta el Ciclo Lectivo ' + nAnio + '.', 'success');
       }
     });
   };
@@ -328,7 +329,7 @@ export default function CourseManagerPage() {
       <div className="flex border-b border-gray-200 bg-white rounded-t-xl px-4 pt-2 gap-2 overflow-x-auto text-xs font-bold">
         <button onClick={() => setActiveTab('cursos')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Layers className="w-4 h-4" /> Estructura de Cursos</button>
         <button onClick={() => setActiveTab('ciclos')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Calendar className="w-4 h-4" /> Ciclos Lectivos</button>
-        <button onClick={() => setActiveTab('migrar')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Users className="w-4 h-4" /> Migracion y Promocion Masiva</button>
+        <button onClick={() => setActiveTab('migrar')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Users className="w-4 h-4" /> Migración y Promoción Masiva</button>
       </div>
 
       {activeTab === 'cursos' && (
@@ -388,7 +389,7 @@ export default function CourseManagerPage() {
                       <td className="py-3.5 px-4 text-center">
                         <div className="inline-flex items-center gap-2">
                           <button onClick={() => selectCurso(c)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-4 h-4" /></button>
-                          {role === 'admin' && (<button onClick={() => handleEliminarCurso(c.id, ${c.anio}° "")} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>)}
+                          {role === 'admin' && (<button onClick={() => handleEliminarCurso(c.id, c.anio + '° "' + c.division + '"')} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>)}
                         </div>
                       </td>
                     </tr>
