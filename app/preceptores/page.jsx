@@ -22,9 +22,10 @@ export default function PreceptorPage() {
   const [apellido, setApellido] = useState("");
   const [genero, setGenero] = useState("Masculino");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
+  const [ciudadNacimiento, setCiudadNacimiento] = useState("");
+  const [direccion, setDireccion] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [ciudadNacimiento, setCiudadNacimiento] = useState("");
   const [orientacion, setOrientacion] = useState("Ciencias Sociales");
   const [cursoAsignadoId, setCursoAsignadoId] = useState("");
   const [numeroLibro, setNumeroLibro] = useState("");
@@ -70,9 +71,10 @@ export default function PreceptorPage() {
     try {
       let payload = {
         dni: dni.trim(), nombre: nombre.trim(), apellido: apellido.trim(), genero,
-        fecha_nacimiento: fechaNacimiento || null, email: email.trim(), telefono: telefono.trim(),
-        ciudad_nacimiento: ciudadNacimiento.trim(), orientacion, numero_libro: numeroLibro.trim(),
-        numero_folio: numeroFolio.trim(), fotocopia_dni: fotocopiaDni, partida_nacimiento: partidaNacimiento,
+        fecha_nacimiento: fechaNacimiento || null, ciudad_nacimiento: ciudadNacimiento.trim(),
+        direccion: direccion.trim(), email: email.trim(), telefono: telefono.trim(),
+        orientacion, numero_libro: numeroLibro.trim(), numero_folio: numeroFolio.trim(),
+        fotocopia_dni: fotocopiaDni, partida_nacimiento: partidaNacimiento,
         certificado_estudios: certificadoEstudios, tipo_certificado: tipoCertificado.trim(),
         materias_adeudadas: materiasAdeudadas.trim(), estado: "activo",
       };
@@ -89,7 +91,7 @@ export default function PreceptorPage() {
         await supabase.from("alumnos_cursos").insert({ estudiante_id: estData.id, curso_id: cursoAsignadoId });
       }
       Swal.fire({ icon: "success", title: "Estudiante Inscripto", text: "Se registró el legajo de " + apellido + ", " + nombre + "." });
-      setShowInscribirModal(false); setDni(""); setNombre(""); setApellido("");
+      setShowInscribirModal(false); setDni(""); setNombre(""); setApellido(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion("");
       if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     } catch (err) { Swal.fire("Error al Inscribir", err.message, "error"); }
   };
@@ -168,11 +170,11 @@ export default function PreceptorPage() {
 
       {showInscribirModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-5 border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 border border-gray-200">
             <div className="flex justify-between items-center border-b pb-3"><h3 className="text-lg font-bold text-[#0D2A3E]">Inscribir Estudiante (Legajo Institucional)</h3><button onClick={() => setShowInscribirModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button></div>
             <form onSubmit={handleInscribirLegajoCompleto} className="space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-[#006384] uppercase tracking-wider">👤 DATOS PERSONALES (OBLIGATORIOS *)</h4>
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-[#006384] uppercase tracking-wider">👤 DATOS PERSONALES</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={dni} onChange={(e) => setDni(e.target.value)} className="field-soft text-xs font-bold" required /></div>
                   <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="field-soft text-xs" required /></div>
@@ -180,6 +182,11 @@ export default function PreceptorPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div><label className="block text-xs font-semibold mb-1">Curso Asignado *</label><select value={cursoAsignadoId} onChange={(e) => setCursoAsignadoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-500" required>{cursos.map((c) => (<option key={c.id} value={c.id}>{c.anio}° "{c.division}"</option>))}</select></div>
+                  <div><label className="block text-xs font-semibold mb-1">Fecha de Nacimiento</label><input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} className="field-soft text-xs" /></div>
+                  <div><label className="block text-xs font-semibold mb-1">Lugar de Nacimiento</label><input type="text" value={ciudadNacimiento} onChange={(e) => setCiudadNacimiento(e.target.value)} placeholder="Ej. Esteban Echeverría" className="field-soft text-xs" /></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div><label className="block text-xs font-semibold mb-1">Dirección / Domicilio</label><input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Ej. Av. Fair 1230" className="field-soft text-xs" /></div>
                   <div><label className="block text-xs font-semibold mb-1">Email (Opcional)</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="field-soft text-xs" /></div>
                   <div><label className="block text-xs font-semibold mb-1">Teléfono (Opcional)</label><input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="field-soft text-xs" /></div>
                 </div>
