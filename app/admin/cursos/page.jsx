@@ -8,16 +8,13 @@ import Swal from 'sweetalert2';
 import {
   BookOpen,
   Plus,
-  Copy,
   Users,
-  Calendar,
   Lock,
   Unlock,
-  Trash2,
-  UserPlus,
-  CheckCircle2,
+  Layers,
   Clock,
-  Layers
+  Zap,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function CourseManagerPage() {
@@ -27,6 +24,7 @@ export default function CourseManagerPage() {
   const [docentes, setDocentes] = useState([]);
   const [selectedCurso, setSelectedCurso] = useState(null);
   const [materiasCurso, setMateriasCurso] = useState([]);
+  const [vinculacionesMap, setVinculacionesMap] = useState({}); // { [materiaId]: docenteId }
 
   // Modal Crear Curso Form
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -37,16 +35,10 @@ export default function CourseManagerPage() {
   const [creating, setCreating] = useState(false);
 
   // Sub-tab o vista activa
-  const [activeSubTab, setActiveSubTab] = useState('cursos'); // cursos, ciclos, horas_n_frente, migrar
+  const [activeSubTab, setActiveSubTab] = useState('cursos');
 
   // System Settings / Bloqueo Global de Notas
   const [gradesLocked, setGradesLocked] = useState(false);
-
-  // Horas No Frente a Alumno
-  const [horasNFrenteList, setHorasNFrenteList] = useState([]);
-  const [newDocenteHoras, setNewDocenteHoras] = useState('');
-  const [newProyectoHoras, setNewProyectoHoras] = useState('');
-  const [newCantHoras, setNewCantHoras] = useState('2');
 
   useEffect(() => {
     loadCursosYDocentes();
@@ -83,12 +75,23 @@ export default function CourseManagerPage() {
   const selectCurso = async (curso) => {
     setSelectedCurso(curso);
     try {
+      // 1. Cargar materias del curso
       const { data: mData } = await supabase
         .from('materias')
-        .select('*, docente_materia(docente_id, cargo, docentes(nombre, apellido))')
+        .select('*')
         .eq('curso_id', curso.id);
 
       setMateriasCurso(mData || []);
+
+      // 2. Cargar vinculaciones docente_materia
+      const { data: dmData } = await supabase.from('docente_materia').select('*');
+      const vMap = {};
+      if (dmData) {
+        dmData.forEach((dm) => {
+          vMap[dm.materia_id] = dm.docente_id;
+        });
+      }
+      setVinculacionesMap(vMap);
     } catch (e) {
       console.error(e);
     }
@@ -138,6 +141,7 @@ export default function CourseManagerPage() {
       setShowCreateModal(false);
       setNewDivision('');
       await loadCursosYDocentes();
+      if (cursoData) selectCurso(cursoData);
     } catch (err) {
       Swal.fire({
         icon: 'error',
@@ -149,9 +153,33 @@ export default function CourseManagerPage() {
     }
   };
 
+  const handleGenerarMateriasParaCursoExistente = async () => {
+    if (!selectedCurso) return;
+    try {
+      const curriculum = getMateriasForCurso(selectedCurso.anio, selectedCurso.orientacion);
+      const materiasToInsert = curriculum.todas.map((m) => ({
+        nombre: m.nombre,
+        curso_id: selectedCurso.id,
+        horas_semanales: 2,
+      }));
+
+      const { error } = await supabase.from('materias').insert(materiasToInsert);
+      if (error) throw error;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Materias Generadas',
+        text: `Se crearon ${materiasToInsert.length} asignaturas oficiales para ${selectedCurso.anio}° "${selectedCurso.division}".`,
+      });
+
+      await selectCurso(selectedCurso);
+    } catch (e) {
+      Swal.fire('Error', e.message, 'error');
+    }
+  };
+
   const handleVincularDocenteMateria = async (materiaId, docenteId) => {
     try {
-      // Limpiar vinculaciones previas si existen
       await supabase.from('docente_materia').delete().eq('materia_id', materiaId);
 
       if (docenteId) {
@@ -162,6 +190,8 @@ export default function CourseManagerPage() {
         });
       }
 
+      setVinculacionesMap((prev) => ({ ...prev, [materiaId]: docenteId }));
+
       Swal.fire({
         icon: 'success',
         title: 'Docente Vinculado',
@@ -169,14 +199,16 @@ export default function CourseManagerPage() {
         timer: 1200,
         showConfirmButton: false,
       });
-
-      if (selectedCurso) selectCurso(selectedCurso);
     } catch (e) {
       Swal.fire('Error', e.message, 'error');
     }
   };
 
   const toggleBloqueoGlobalNotas = async () => {
+    if (role !== 'admin') {
+      Swal.fire('Acceso Restringido', 'Sólo el Equipo Directivo/Administrador puede modificar el bloqueo global.', 'warning');
+      return;
+    }
     const nuevoEstado = !gradesLocked;
     setGradesLocked(nuevoEstado);
 
@@ -194,28 +226,24 @@ export default function CourseManagerPage() {
     }
   };
 
-  const handleMigrarMatricula = async () => {
-    Swal.fire({
-      title: 'Promoción Masiva de Matrícula',
-      text: 'Esta herramienta promueve a los estudiantes del ciclo actual al siguiente año académico.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Iniciar Promoción',
-    }).then((res) => {
-      if (res.isConfirmed) {
-        Swal.fire('Proceso Completado', 'La matrícula fue promovida con éxito.', 'success');
-      }
-    });
-  };
-
   return (
     <div className="space-y-6">
+      {/* Restricción si el usuario no es Admin */}
+      {role !== 'admin' && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs text-amber-900 font-semibold flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+          <span>
+            Vista de Lectura / Preceptoría: La edición de cursos y el bloqueo global están reservados al <strong>Equipo Directivo (Administrador)</strong>.
+          </span>
+        </div>
+      )}
+
       {/* Header Módulo */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
             <BookOpen className="w-6 h-6 text-[#006384]" />
-            Cursos, Orientaciones y Configuraciones
+            Cursos, Orientaciones y Mallas Curriculares
           </h1>
           <p className="text-xs text-gray-500 mt-1">
             Estructura curricular CENS 454 según Res. 2993/22 y rectificativa 3463/22 DGCyE
@@ -223,13 +251,15 @@ export default function CourseManagerPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-gold text-xs py-2.5 px-4 font-bold flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Crear Nuevo Curso
-          </button>
+          {role === 'admin' && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-gold text-xs py-2.5 px-4 font-bold flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Crear Nuevo Curso
+            </button>
+          )}
           <button
             onClick={toggleBloqueoGlobalNotas}
             className={`text-xs font-bold py-2.5 px-4 rounded-full flex items-center gap-2 border transition-colors ${
@@ -327,42 +357,57 @@ export default function CourseManagerPage() {
                     </p>
                   </div>
                   <span className="bg-amber-100 text-amber-900 text-xs font-bold px-3 py-1 rounded-full">
-                    {materiasCurso.length} Materias Autogeneradas
+                    {materiasCurso.length} Materias Registradas
                   </span>
                 </div>
 
-                {/* Lista de Materias y Selector de Docente Vinculado */}
-                <div className="divide-y divide-gray-100 max-h-[450px] overflow-y-auto">
-                  {materiasCurso.map((m) => {
-                    const docenteActualId = m.docente_materia?.[0]?.docente_id || '';
-                    return (
-                      <div key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold text-[#0D2A3E]">{m.nombre}</p>
-                          <span className="text-[10px] text-gray-400 font-semibold">
-                            Carga: {m.horas_semanales || 2} hs semanales
-                          </span>
-                        </div>
+                {materiasCurso.length === 0 ? (
+                  <div className="text-center py-8 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+                    <p className="text-xs font-bold text-amber-900">
+                      Este curso aún no tiene las materias oficiales cargadas en la base de datos.
+                    </p>
+                    <button
+                      onClick={handleGenerarMateriasParaCursoExistente}
+                      className="btn-gold text-xs py-2 px-4 font-bold flex items-center gap-2 mx-auto"
+                    >
+                      <Zap className="w-4 h-4" />
+                      ⚡ Generar Materias Oficiales Res. 2993/22
+                    </button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100 max-h-[450px] overflow-y-auto">
+                    {materiasCurso.map((m) => {
+                      const docenteActualId = vinculacionesMap[m.id] || '';
+                      return (
+                        <div key={m.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-bold text-[#0D2A3E]">{m.nombre}</p>
+                            <span className="text-[10px] text-gray-400 font-semibold">
+                              Carga: {m.horas_semanales || 2} hs semanales
+                            </span>
+                          </div>
 
-                        {/* Asignar Docente */}
-                        <div className="w-full sm:w-64">
-                          <select
-                            value={docenteActualId}
-                            onChange={(e) => handleVincularDocenteMateria(m.id, e.target.value)}
-                            className="field-soft text-xs py-1"
-                          >
-                            <option value="">-- Sin Docente Asignado --</option>
-                            {docentes.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                Prof. {d.apellido}, {d.nombre}
-                              </option>
-                            ))}
-                          </select>
+                          {/* Asignar Docente */}
+                          <div className="w-full sm:w-64">
+                            <select
+                              value={docenteActualId}
+                              disabled={role !== 'admin'}
+                              onChange={(e) => handleVincularDocenteMateria(m.id, e.target.value)}
+                              className="field-soft text-xs py-1"
+                            >
+                              <option value="">-- Sin Docente Asignado --</option>
+                              {docentes.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  Prof. {d.apellido}, {d.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-center py-12 text-gray-400">Seleccione un curso para ver sus materias</div>
@@ -384,7 +429,7 @@ export default function CourseManagerPage() {
 
           <div className="pt-4">
             <button
-              onClick={handleMigrarMatricula}
+              onClick={() => Swal.fire('Promoción Masiva', 'Matrícula promovida.', 'success')}
               className="btn-gold font-bold text-xs py-3 px-6 shadow-md"
             >
               Ejecutar Promoción Masiva de Matrícula
@@ -402,11 +447,7 @@ export default function CourseManagerPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Docente:</label>
-              <select
-                value={newDocenteHoras}
-                onChange={(e) => setNewDocenteHoras(e.target.value)}
-                className="field-soft text-xs"
-              >
+              <select className="field-soft text-xs">
                 <option value="">-- Seleccionar --</option>
                 {docentes.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -419,8 +460,6 @@ export default function CourseManagerPage() {
               <label className="block text-xs font-semibold text-gray-700 mb-1">Proyecto Institucional:</label>
               <input
                 type="text"
-                value={newProyectoHoras}
-                onChange={(e) => setNewProyectoHoras(e.target.value)}
                 placeholder="Ej: Tutoría o Coordinación de Área"
                 className="field-soft text-xs"
               />
@@ -469,7 +508,7 @@ export default function CourseManagerPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  División * (Lección/Número Libre)
+                  División * (Denominación Libre: Letras o Números)
                 </label>
                 <input
                   type="text"

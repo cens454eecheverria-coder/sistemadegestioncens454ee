@@ -35,15 +35,16 @@ export default function Sidebar() {
     { name: 'Boletín Estudiante', href: '/estudiantes', icon: BookOpen, roles: ['admin', 'estudiante'] },
     { name: 'Libro DICYT', href: '/dicyt', icon: BookMarked, roles: ['admin', 'preceptor', 'profesor'] },
     { name: 'Secretaría y Legajos', href: '/secretaria', icon: Users, roles: ['admin', 'preceptor'] },
-    { name: 'Cursos & Orientaciones', href: '/admin/cursos', icon: Layers, roles: ['admin', 'preceptor'] },
-    { name: 'Horarios Escolares', href: '/horarios', icon: Clock, roles: ['admin', 'preceptor', 'profesor'] },
+    { name: 'Cursos & Orientaciones', href: '/admin/cursos', icon: Layers, roles: ['admin'] },
+    { name: 'Horarios Escolares', href: '/horarios', icon: Clock, roles: ['admin', 'preceptor', 'profesor', 'estudiante'] },
     { name: 'Gestión Preinscripción', href: '/admin/preinscripciones', icon: FileCheck, roles: ['admin', 'preceptor'] },
     { name: 'Form Preinscripción', href: '/preinscripcion', icon: FileText, roles: ['admin', 'preceptor', 'profesor', 'estudiante', null] },
   ];
 
   const filteredItems = menuItems.filter((item) => {
     if (!role) return item.roles.includes(null);
-    return item.roles.includes('admin') || item.roles.includes(role);
+    if (role === 'admin') return true;
+    return item.roles.includes(role);
   });
 
   return (
@@ -105,7 +106,7 @@ export default function Sidebar() {
             </select>
           </div>
 
-          {/* Menú de Navegación */}
+          {/* Menú de Navegación Filtradísimo por Rol */}
           <nav className="px-3 space-y-1 mt-2 max-h-[calc(100vh-280px)] overflow-y-auto">
             {filteredItems.map((item) => {
               const Icon = item.icon;
