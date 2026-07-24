@@ -100,12 +100,16 @@ export default function PreceptorPage() {
         eData = d1 || [];
       }
 
-      const { data: d2 } = await supabase.from('estudiantes').select('*').eq('curso_id', cursoId).order('apellido');
-      if (d2 && d2.length > 0) {
-        const existingIds = new Set(eData.map((e) => e.id));
-        d2.forEach((st) => {
-          if (!existingIds.has(st.id)) eData.push(st);
-        });
+      try {
+        const { data: d2 } = await supabase.from('estudiantes').select('*').eq('curso_id', cursoId).order('apellido');
+        if (d2 && d2.length > 0) {
+          const existingIds = new Set(eData.map((e) => e.id));
+          d2.forEach((st) => {
+            if (!existingIds.has(st.id)) eData.push(st);
+          });
+        }
+      } catch (e) {
+        // Ignorar si la columna curso_id no existe en la vista actual
       }
 
       setEstudiantes(eData);
@@ -151,7 +155,6 @@ export default function PreceptorPage() {
         tipo_certificado: tipoCertificado.trim(),
         materias_adeudadas: materiasAdeudadas.trim(),
         estado: 'activo',
-        curso_id: finalCursoId,
       };
 
       let estData = null;
@@ -166,7 +169,6 @@ export default function PreceptorPage() {
           email: email.trim(),
           telefono: telefono.trim(),
           estado: 'activo',
-          curso_id: finalCursoId,
         };
         const { data: bData, error: bErr } = await supabase.from('estudiantes').insert(basePayload).select().single();
         if (bErr) throw bErr;
@@ -177,6 +179,11 @@ export default function PreceptorPage() {
 
       if (estData && estData.id) {
         await supabase.from('alumnos_cursos').insert({ estudiante_id: estData.id, curso_id: finalCursoId });
+        try {
+          await supabase.from('estudiantes').update({ curso_id: finalCursoId }).eq('id', estData.id);
+        } catch (e) {
+          // Ignorar si la columna curso_id no existe en la tabla estudiantes
+        }
       }
 
       Swal.fire({
@@ -312,7 +319,7 @@ export default function PreceptorPage() {
         </div>
       </div>
 
-      <div className="card p-6 bg-white space-y-4 shadow-xs">
+      <div className="card p-6 bg-[#FFFFFF] space-y-4 shadow-xs">
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="text-base font-bold font-heading text-[#0D2A3E]">
             Nómina de Alumnos: {selectedCurso ? selectedCurso.anio + '° "' + selectedCurso.division + '"' : ''} ({estudiantes.length} inscriptos)
