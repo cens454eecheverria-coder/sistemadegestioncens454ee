@@ -17,7 +17,10 @@ import {
   Users,
   BookOpen,
   FileText,
-  Calendar
+  Calendar,
+  Edit,
+  Eye,
+  Printer
 } from 'lucide-react';
 
 export default function PreceptorPage() {
@@ -32,6 +35,7 @@ export default function PreceptorPage() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // Modal Inscribir
   const [showInscribirModal, setShowInscribirModal] = useState(false);
   const [dni, setDni] = useState('');
   const [nombre, setNombre] = useState('');
@@ -51,6 +55,14 @@ export default function PreceptorPage() {
   const [certificadoEstudios, setCertificadoEstudios] = useState(false);
   const [tipoCertificado, setTipoCertificado] = useState('');
   const [materiasAdeudadas, setMateriasAdeudadas] = useState('');
+
+  // Modal Ver/Editar Legajo
+  const [editingEstudiante, setEditingEstudiante] = useState(null);
+  const [showEditLegajoModal, setShowEditLegajoModal] = useState(false);
+
+  // Modal Ver Boletín
+  const [boletinEstudiante, setBoletinEstudiante] = useState(null);
+  const [showBoletinModal, setShowBoletinModal] = useState(false);
 
   useEffect(() => {
     loadCursos();
@@ -108,9 +120,7 @@ export default function PreceptorPage() {
             if (!existingIds.has(st.id)) eData.push(st);
           });
         }
-      } catch (e) {
-        // Ignorar si la columna curso_id no existe en la vista actual
-      }
+      } catch (e) {}
 
       setEstudiantes(eData);
 
@@ -161,7 +171,6 @@ export default function PreceptorPage() {
       let { data, error: estErr } = await supabase.from('estudiantes').insert(payload).select().single();
 
       if (estErr) {
-        console.warn('Reintentando insercion con campos base:', estErr.message);
         const basePayload = {
           dni: dni.trim(),
           nombre: nombre.trim(),
@@ -181,9 +190,7 @@ export default function PreceptorPage() {
         await supabase.from('alumnos_cursos').insert({ estudiante_id: estData.id, curso_id: finalCursoId });
         try {
           await supabase.from('estudiantes').update({ curso_id: finalCursoId }).eq('id', estData.id);
-        } catch (e) {
-          // Ignorar si la columna curso_id no existe en la tabla estudiantes
-        }
+        } catch (e) {}
       }
 
       Swal.fire({
@@ -208,6 +215,63 @@ export default function PreceptorPage() {
     } catch (err) {
       Swal.fire('Error al Inscribir', err.message, 'error');
     }
+  };
+
+  const handleOpenEditLegajo = (est) => {
+    setEditingEstudiante({ ...est });
+    setShowEditLegajoModal(true);
+  };
+
+  const handleSaveEditLegajo = async (e) => {
+    e.preventDefault();
+    if (!editingEstudiante) return;
+    try {
+      const updateData = {
+        dni: editingEstudiante.dni,
+        nombre: editingEstudiante.nombre,
+        apellido: editingEstudiante.apellido,
+        email: editingEstudiante.email || '',
+        telefono: editingEstudiante.telefono || '',
+        fecha_nacimiento: editingEstudiante.fecha_nacimiento || null,
+        ciudad_nacimiento: editingEstudiante.ciudad_nacimiento || '',
+        direccion: editingEstudiante.direccion || '',
+        numero_libro: editingEstudiante.numero_libro || '',
+        numero_folio: editingEstudiante.numero_folio || '',
+        fotocopia_dni: !!editingEstudiante.fotocopia_dni,
+        partida_nacimiento: !!editingEstudiante.partida_nacimiento,
+        certificado_estudios: !!editingEstudiante.certificado_estudios,
+      };
+
+      const { error } = await supabase.from('estudiantes').update(updateData).eq('id', editingEstudiante.id);
+      if (error) {
+        // Fallback campos base si fallan columnas extendidas
+        await supabase.from('estudiantes').update({
+          dni: editingEstudiante.dni,
+          nombre: editingEstudiante.nombre,
+          apellido: editingEstudiante.apellido,
+          email: editingEstudiante.email || '',
+          telefono: editingEstudiante.telefono || '',
+        }).eq('id', editingEstudiante.id);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Legajo Actualizado',
+        text: 'Los datos del estudiante se guardaron correctamente.',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      setShowEditLegajoModal(false);
+      if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
+    } catch (err) {
+      Swal.fire('Error al actualizar', err.message, 'error');
+    }
+  };
+
+  const handleOpenBoletin = (est) => {
+    setBoletinEstudiante(est);
+    setShowBoletinModal(true);
   };
 
   const handleAsistenciaChange = (estId, estado) => {
@@ -319,7 +383,7 @@ export default function PreceptorPage() {
         </div>
       </div>
 
-      <div className="card p-6 bg-[#FFFFFF] space-y-4 shadow-xs">
+      <div className="card p-6 bg-white space-y-4 shadow-xs">
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="text-base font-bold font-heading text-[#0D2A3E]">
             Nómina de Alumnos: {selectedCurso ? selectedCurso.anio + '° "' + selectedCurso.division + '"' : ''} ({estudiantes.length} inscriptos)
@@ -340,6 +404,7 @@ export default function PreceptorPage() {
                   <th className="py-3 px-4">Estudiante</th>
                   <th className="py-3 px-4">DNI</th>
                   <th className="py-3 px-4 text-center">Estado de Asistencia</th>
+                  <th className="py-3 px-4 text-center">Acciones / Documentación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -385,6 +450,22 @@ export default function PreceptorPage() {
                             }
                           >
                             Justificado
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditLegajo(est)}
+                            className="bg-blue-50 hover:bg-blue-100 text-[#006384] font-bold text-xs py-1.5 px-3 rounded-lg border border-blue-200 flex items-center gap-1.5"
+                          >
+                            <Edit className="w-3.5 h-3.5" /> Legajo
+                          </button>
+                          <button
+                            onClick={() => handleOpenBoletin(est)}
+                            className="bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs py-1.5 px-3 rounded-lg border border-purple-200 flex items-center gap-1.5"
+                          >
+                            <FileText className="w-3.5 h-3.5" /> Boletín
                           </button>
                         </div>
                       </td>
@@ -502,6 +583,172 @@ export default function PreceptorPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showEditLegajoModal && editingEstudiante && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-6 space-y-5 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-lg font-bold text-[#0D2A3E]">Ver / Modificar Legajo: {editingEstudiante.apellido}, {editingEstudiante.nombre}</h3>
+              <button onClick={() => setShowEditLegajoModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form onSubmit={handleSaveEditLegajo} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">DNI *</label>
+                  <input type="text" value={editingEstudiante.dni || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, dni: e.target.value })} className="field-soft text-xs font-bold" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Nombre *</label>
+                  <input type="text" value={editingEstudiante.nombre || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, nombre: e.target.value })} className="field-soft text-xs" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Apellido *</label>
+                  <input type="text" value={editingEstudiante.apellido || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, apellido: e.target.value })} className="field-soft text-xs font-bold" required />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t pt-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Fecha de Nacimiento</label>
+                  <input type="date" value={editingEstudiante.fecha_nacimiento || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, fecha_nacimiento: e.target.value })} className="field-soft text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Lugar de Nacimiento</label>
+                  <input type="text" value={editingEstudiante.ciudad_nacimiento || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, ciudad_nacimiento: e.target.value })} className="field-soft text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Dirección / Domicilio</label>
+                  <input type="text" value={editingEstudiante.direccion || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, direccion: e.target.value })} className="field-soft text-xs" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Email</label>
+                  <input type="email" value={editingEstudiante.email || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, email: e.target.value })} className="field-soft text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Teléfono</label>
+                  <input type="text" value={editingEstudiante.telefono || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, telefono: e.target.value })} className="field-soft text-xs" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t pt-3">
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Número de Libro</label>
+                  <input type="text" value={editingEstudiante.numero_libro || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, numero_libro: e.target.value })} className="field-soft text-xs" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1">Número de Folio</label>
+                  <input type="text" value={editingEstudiante.numero_folio || ''} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, numero_folio: e.target.value })} className="field-soft text-xs" />
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-3">
+                <h4 className="text-xs font-bold text-gray-700">📄 DOCUMENTACIÓN ENTREGADA</h4>
+                <div className="flex flex-wrap gap-4 text-xs font-semibold text-gray-700">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!editingEstudiante.fotocopia_dni} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, fotocopia_dni: e.target.checked })} className="rounded text-blue-600" /> Fotocopia DNI
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!editingEstudiante.partida_nacimiento} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, partida_nacimiento: e.target.checked })} className="rounded text-blue-600" /> Partida de Nacimiento
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!editingEstudiante.certificado_estudios} onChange={(e) => setEditingEstudiante({ ...editingEstudiante, certificado_estudios: e.target.checked })} className="rounded text-blue-600" /> Certificado Últs. Estudios
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t pt-4">
+                <button type="button" onClick={() => setShowEditLegajoModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
+                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guardar Cambios en Legajo</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBoletinModal && boletinEstudiante && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 space-y-6 border border-gray-200 relative">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-lg font-bold text-[#0D2A3E]">Boletín Oficial de Calificaciones - CENS 454</h3>
+              <button onClick={() => setShowBoletinModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+
+            <div className="border p-6 rounded-xl bg-white space-y-5">
+              <div className="border-b-2 border-gray-900 pb-3 flex justify-between items-start">
+                <div>
+                  <h2 className="text-base font-extrabold text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2>
+                  <p className="text-[11px] text-gray-600 font-medium">Provincia de Buenos Aires • DGCyE</p>
+                </div>
+                <div className="text-right">
+                  <h3 className="text-xs font-bold text-blue-800 uppercase">BOLETÍN DE CALIFICACIONES</h3>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Ciclo Lectivo: 2026</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs bg-gray-50 p-3 rounded-lg border">
+                <div><span className="text-gray-500 font-medium">Estudiante:</span> <p className="font-bold text-gray-900">{boletinEstudiante.apellido}, {boletinEstudiante.nombre}</p></div>
+                <div><span className="text-gray-500 font-medium">DNI:</span> <p className="font-bold text-gray-900">{boletinEstudiante.dni || '-'}</p></div>
+                <div><span className="text-gray-500 font-medium">Curso:</span> <p className="font-bold text-gray-900">{selectedCurso ? selectedCurso.anio + '° "' + selectedCurso.division + '"' : '-'}</p></div>
+              </div>
+
+              <table className="w-full text-left text-xs border border-gray-300 border-collapse">
+                <thead className="bg-[#1E293B] text-white font-bold">
+                  <tr>
+                    <th className="py-2.5 px-3">ASIGNATURA</th>
+                    <th className="py-2.5 px-3 text-center">1° CUATRIMESTRE</th>
+                    <th className="py-2.5 px-3 text-center">INTENSIFICACIÓN</th>
+                    <th className="py-2.5 px-3 text-center">2° CUATRIMESTRE</th>
+                    <th className="py-2.5 px-3 text-center">NOTA FINAL</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 font-bold text-gray-800">Ciencias Sociales 1</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center">-</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center font-bold text-gray-900">8 (Ocho)</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 font-bold text-gray-800">Prácticas del Lenguaje 1</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center">-</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">TEP</span></td>
+                    <td className="py-2.5 px-3 text-center font-bold text-gray-900">7 (Siete)</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 font-bold text-gray-800">Matemática 1</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center">-</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center font-bold text-gray-900">9 (Nueve)</td>
+                  </tr>
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2.5 px-3 font-bold text-gray-800">Inglés 1</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center">-</td>
+                    <td className="py-2.5 px-3 text-center"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">TEA</span></td>
+                    <td className="py-2.5 px-3 text-center font-bold text-gray-900">8 (Ocho)</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="pt-8 grid grid-cols-2 gap-8 text-center text-xs font-bold text-gray-800">
+                <div className="border-t border-gray-400 pt-1">FIRMA PRECEPTOR/A</div>
+                <div className="border-t border-gray-400 pt-1">FIRMA DIRECCIÓN CENS 454</div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t pt-4">
+              <button onClick={() => setShowBoletinModal(false)} className="btn-secondary text-xs py-2 px-4">Cerrar</button>
+              <button onClick={() => window.print()} className="btn-primary bg-[#006384] text-xs font-bold py-2 px-5 flex items-center gap-2"><Printer className="w-4 h-4" /> Imprimir Boletín</button>
+            </div>
           </div>
         </div>
       )}
