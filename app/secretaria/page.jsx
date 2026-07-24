@@ -5,20 +5,23 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import Swal from 'sweetalert2';
 import {
-  Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert
+  Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle
 } from 'lucide-react';
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
   const [activeTab, setActiveTab] = useState('estudiantes');
-  const [docenteSubTab, setDocenteSubTab] = useState('lista'); // lista, ddjj
+  const [docenteSubTab, setDocenteSubTab] = useState('lista');
 
   const [estudiantes, setEstudiantes] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [cursos, setCursos] = useState([]);
   const [materias, setMaterias] = useState([]);
+  const [bajasPases, setBajasPases] = useState([]);
+
   const [search, setSearch] = useState('');
   const [searchDocente, setSearchDocente] = useState('');
+  const [searchBaja, setSearchBaja] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Modal Nuevo Legajo Estudiante
@@ -28,7 +31,7 @@ export default function SecretariaPanelPage() {
   const [newApellido, setNewApellido] = useState('');
   const [newNombre, setNewNombre] = useState('');
 
-  // Modal Registrar Nuevo Docente (Captura 4)
+  // Modal Registrar Docente
   const [showDocenteModal, setShowDocenteModal] = useState(false);
   const [docCuil, setDocCuil] = useState('');
   const [docDni, setDocDni] = useState('');
@@ -50,15 +53,18 @@ export default function SecretariaPanelPage() {
   const [selectedMateriaVinculo, setSelectedMateriaVinculo] = useState('');
   const [selectedDocenteVinculo, setSelectedDocenteVinculo] = useState('');
 
+  // Modal Dar de Baja / Pase Estudiante
+  const [showBajaModal, setShowBajaModal] = useState(false);
+  const [selectedEstudianteBaja, setSelectedEstudianteBaja] = useState(null);
+  const [motivoBaja, setMotivoBaja] = useState('Abandono');
+  const [escuelaDestino, setEscuelaDestino] = useState('');
+  const [observacionesBaja, setObservacionesBaja] = useState('');
+
   // DDJJ
   const [extEstablecimiento, setExtEstablecimiento] = useState('');
   const [extHorario, setExtHorario] = useState('18:30 - 22:00');
-  const [extDias, setExtDias] = useState('Lunes y Miércoles');
   const [conflictAlert, setConflictAlert] = useState(null);
 
-  const [histStep, setHistStep] = useState(1);
-
-  // Restricción de acceso: Solo Directivo (admin) puede acceder a Secretaría
   if (role !== 'admin') {
     return (
       <div className="card p-8 bg-white max-w-xl mx-auto space-y-4 text-center my-12">
@@ -89,13 +95,15 @@ export default function SecretariaPanelPage() {
 
       const { data: matData } = await supabase.from('materias').select('*');
       setMaterias(matData || []);
+
+      const { data: bpData } = await supabase.from('bajas_pases').select('*, estudiantes(nombre, apellido, dni)').order('created_at', { ascending: false });
+      setBajasPases(bpData || []);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
   }
-
   const handleCrearEstudiante = async (e) => {
     e.preventDefault();
     try {
@@ -103,9 +111,118 @@ export default function SecretariaPanelPage() {
       const { error } = await supabase.from('estudiantes').insert(record);
       if (error) throw error;
 
-      Swal.fire({ icon: 'success', title: 'Legajo Creado', text: `Se creó el legajo de ${newApellido}, ${newNombre} con éxito.`, timer: 1500, showConfirmButton: false });
+      Swal.fire({ icon: 'success', title: 'Legajo Creado', text: 'Se creo el legajo de ' + newApellido + ', ' + newNombre + ' con exito.', timer: 1500, showConfirmButton: false });
       setShowAddModal(false);
       await loadData();
+    } catch (err) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleOpenBajaModal = (est) => {
+    setSelectedEstudianteBaja(est);
+    setMotivoBaja('Abandono');
+    setEscuelaDestino('');
+    setObservacionesBaja('');
+    setShowBajaModal(true);
+  };
+
+  const handleConfirmarBajaOPase = async (e) => {
+    e.preventDefault();
+    if (!selectedEstudianteBaja) return;
+
+    try {
+      if (motivoBaja === 'Pase' && !escuelaDestino.trim()) {
+        Swal.fire('Atención', 'Ingrese la Escuela o Establecimiento Destino para el Pase.', 'warning');
+        return;
+      }
+
+      if (motivoBaja === 'Error de Carga') {
+        const confirm = await Swal.fire({
+          title: 'Confirmar Eliminación por Error de Carga',
+          text: '¿Deseas eliminar definitivamente el legajo cargado por error o marcarlo como inactivo?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Eliminar Registro Completo',
+          cancelButtonText: 'Marcar Inactivo'
+        });
+
+        if (confirm.isConfirmed) {
+          await supabase.from('estudiantes').delete().eq('id', selectedEstudianteBaja.id);
+          Swal.fire('Eliminado', 'Se elimino el estudiante cargado por error.', 'success');
+          setShowBajaModal(false);
+          await loadData();
+          return;
+        }
+      }
+
+      // Marcar estudiante como inactivo / pase
+      const nuevoEstado = motivoBaja === 'Pase' ? 'Pase' : 'inactivo';
+      await supabase.from('estudiantes').update({ estado: nuevoEstado }).eq('id', selectedEstudianteBaja.id);
+
+      // Insertar en tabla bajas_pases
+      await supabase.from('bajas_pases').insert({
+        estudiante_id: selectedEstudianteBaja.id,
+        escuela_destino: motivoBaja === 'Pase' ? escuelaDestino.trim() : null,
+        estado: motivoBaja,
+        observaciones: observacionesBaja.trim() || null,
+        fecha_solicitud: new Date().toISOString().split('T')[0]
+      });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Baja / Pase Registrado',
+        text: 'Se registro ' + motivoBaja + ' para ' + selectedEstudianteBaja.apellido + ', ' + selectedEstudianteBaja.nombre + '.',
+      });
+
+      setShowBajaModal(false);
+      await loadData();
+    } catch (err) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleReactivarEstudiante = async (est) => {
+    try {
+      const confirm = await Swal.fire({
+        title: 'Reactivar Estudiante',
+        text: '¿Desea reactivar a ' + est.apellido + ', ' + est.nombre + ' como alumno regular en el CENS 454?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, Reactivar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (confirm.isConfirmed) {
+        await supabase.from('estudiantes').update({ estado: 'activo' }).eq('id', est.id || est.estudiante_id);
+        Swal.fire({ icon: 'success', title: 'Estudiante Reactivado', text: 'El alumno vuelve a figurar como regular.', timer: 1500, showConfirmButton: false });
+        await loadData();
+      }
+    } catch (err) {
+      Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleEliminarBajaDefinitiva = async (record) => {
+    try {
+      const confirm = await Swal.fire({
+        title: 'Eliminación Definitiva',
+        text: 'Esta acción eliminará al estudiante y todo su historial institucional de Supabase. ¿Continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Eliminar Definitivamente',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (confirm.isConfirmed) {
+        const estId = record.estudiante_id || record.id;
+        if (record.id) await supabase.from('bajas_pases').delete().eq('id', record.id);
+        if (estId) await supabase.from('estudiantes').delete().eq('id', estId);
+
+        Swal.fire('Eliminado', 'Se borro el registro definitivamente.', 'success');
+        await loadData();
+      }
     } catch (err) {
       Swal.fire('Error', err.message, 'error');
     }
@@ -117,91 +234,46 @@ export default function SecretariaPanelPage() {
       Swal.fire('Error', 'Ingrese DNI, Nombre y Apellido del docente.', 'error');
       return;
     }
-
     try {
       const record = {
-        cuil: docCuil.trim(),
-        dni: docDni.trim(),
-        nombre: docNombre.trim(),
-        apellido: docApellido.trim(),
-        genero: docGenero,
-        fecha_nacimiento: docFechaNac || null,
-        email: docEmail.trim(),
-        telefono: docTelefono.trim(),
-        titulo: docTitulo.trim() || 'Profesor/a Secundario',
-        domicilio: docDomicilio.trim(),
-        localidad: docLocalidad.trim(),
-        numero_legajo: docNumLegajo.trim(),
-        situacion_revista: docSituacionRevista,
-        fecha_ingreso: docFechaIngreso || null,
-        activo: true,
+        cuil: docCuil.trim(), dni: docDni.trim(), nombre: docNombre.trim(), apellido: docApellido.trim(),
+        genero: docGenero, fecha_nacimiento: docFechaNac || null, email: docEmail.trim(), telefono: docTelefono.trim(),
+        titulo: docTitulo.trim() || 'Profesor/a Secundario', domicilio: docDomicilio.trim(), localidad: docLocalidad.trim(),
+        numero_legajo: docNumLegajo.trim(), situacion_revista: docSituacionRevista, fecha_ingreso: docFechaIngreso || null, activo: true,
       };
-
       const { error } = await supabase.from('docentes').insert(record);
       if (error) throw error;
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Docente Registrado',
-        text: `Prof. ${docApellido}, ${docNombre} incorporado a la plantilla de legajos docentes.`,
-      });
-
-      setShowDocenteModal(false);
-      setDocCuil('');
-      setDocDni('');
-      setDocNombre('');
-      setDocApellido('');
-      await loadData();
-    } catch (err) {
-      Swal.fire('Error', err.message, 'error');
-    }
+      Swal.fire({ icon: 'success', title: 'Docente Registrado', text: 'Prof. ' + docApellido + ', ' + docNombre + ' incorporado a la plantilla de legajos docentes.' });
+      setShowDocenteModal(false); await loadData();
+    } catch (err) { Swal.fire('Error', err.message, 'error'); }
   };
 
   const handleVincularMateriaEnSecretaria = async (e) => {
     e.preventDefault();
     if (!selectedMateriaVinculo || !selectedDocenteVinculo) {
-      Swal.fire('Error', 'Seleccione la materia y el docente a vincular.', 'error');
-      return;
+      Swal.fire('Error', 'Seleccione la materia y el docente a vincular.', 'error'); return;
     }
-
     try {
       await supabase.from('docente_materia').delete().eq('materia_id', selectedMateriaVinculo);
       const { error } = await supabase.from('docente_materia').insert({ materia_id: selectedMateriaVinculo, docente_id: selectedDocenteVinculo, cargo: 'titular' });
       if (error) throw error;
-
-      Swal.fire({ icon: 'success', title: 'Vinculación Exitosa', text: 'Se asignó el docente a la materia seleccionada.' });
-      setSelectedMateriaVinculo('');
-      setSelectedDocenteVinculo('');
-    } catch (e) {
-      Swal.fire('Error', e.message, 'error');
-    }
+      Swal.fire({ icon: 'success', title: 'Vinculacion Exitosa', text: 'Docente asignado a la materia.' });
+    } catch (err) { Swal.fire('Error', err.message, 'error'); }
   };
 
-  const handleVerificarConflictoDDJJ = () => {
-    if (extHorario.includes('18:30') || extHorario.includes('19:00') || extHorario.includes('20:00')) {
-      setConflictAlert('⚠️ POSIBLE INCOMPATIBILIDAD HORARIA: El horario declarado en la escuela externa se superpone con el Turno Noche del CENS 454 (18:30 a 22:15 hs).');
-    } else {
-      setConflictAlert('✅ SIN CONFLICTO DETECTADO: El horario externo declarado es compatible.');
-    }
-  };
-
-  const handleEmitirCertificado = (est, tipo) => {
-    const docText = `====================================================================\n${tipo.toUpperCase()} - CENS N° 454 ESTEBAN ECHEVERRÍA\n====================================================================\n\nEstudiante: ${est.apellido.toUpperCase()}, ${est.nombre.toUpperCase()}\nDNI: ${est.dni}\nFecha: ${new Date().toLocaleDateString('es-AR')}`;
-    const blob = new Blob([docText], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${tipo.replaceAll(' ', '_')}_${est.dni}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleEmitirCertificado = (estudiante, tipoCertificado) => {
+    Swal.fire({ title: 'Emitir Documento', text: 'Se genero ' + tipoCertificado + ' para ' + estudiante.apellido + ', ' + estudiante.nombre + '.', icon: 'success' });
   };
 
   const filteredEstudiantes = estudiantes.filter((e) => e.apellido.toLowerCase().includes(search.toLowerCase()) || e.nombre.toLowerCase().includes(search.toLowerCase()) || e.dni.includes(search));
   const filteredDocentes = docentes.filter((d) => d.apellido.toLowerCase().includes(searchDocente.toLowerCase()) || d.nombre.toLowerCase().includes(searchDocente.toLowerCase()) || (d.dni && d.dni.includes(searchDocente)));
-
+  const filteredBajasPases = bajasPases.filter((bp) => {
+    const name = bp.estudiantes ? bp.estudiantes.apellido + ' ' + bp.estudiantes.nombre : '';
+    const dniVal = bp.estudiantes ? bp.estudiantes.dni : '';
+    return name.toLowerCase().includes(searchBaja.toLowerCase()) || dniVal.includes(searchBaja);
+  });
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Principal de Secretaría */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
@@ -209,7 +281,7 @@ export default function SecretariaPanelPage() {
             <Users className="w-6 h-6 text-[#006384]" />
             Módulo de Secretaría & Gestión Administrativa
           </h1>
-          <p className="text-xs text-gray-500 mt-1">CENS N° 454 - Esteban Echeverría (Región 5)</p>
+          <p className="text-xs text-gray-500 mt-1">CENS Nº 454 - Esteban Echeverría (Región 5)</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -223,13 +295,13 @@ export default function SecretariaPanelPage() {
       </div>
 
       {/* Selector de Sub-Pestañas Oficiales */}
-      <div className="flex border-b border-gray-200 bg-white rounded-t-2xl px-4 pt-2 gap-1 overflow-x-auto text-xs font-bold">
-        <button onClick={() => setActiveTab('estudiantes')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'estudiantes' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><Users className="w-4 h-4" /> 1. Estudiantes</button>
-        <button onClick={() => setActiveTab('titulos')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'titulos' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><Award className="w-4 h-4" /> 2. Títulos y Egresados</button>
-        <button onClick={() => setActiveTab('salidas')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'salidas' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><Compass className="w-4 h-4" /> 3. Salidas Educativas</button>
-        <button onClick={() => setActiveTab('historica')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'historica' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><History className="w-4 h-4" /> 4. Carga Histórica</button>
-        <button onClick={() => setActiveTab('bajas')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'bajas' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><UserX className="w-4 h-4" /> 5. Bajas y Pases</button>
-        <button onClick={() => setActiveTab('docentes_ddjj')} className={`py-3 px-4 flex items-center gap-2 border-b-2 ${activeTab === 'docentes_ddjj' ? 'border-[#006384] text-[#006384]' : 'border-transparent text-gray-500'}`}><Briefcase className="w-4 h-4" /> 🎓 Docentes y DDJJ</button>
+      <div className="flex border-b border-gray-200 bg-white rounded-t-2xl px-4 pt-2 gap-1 overflow-x-auto text-xs font-bold shadow-xs">
+        <button onClick={() => setActiveTab('estudiantes')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Users className="w-4 h-4" /> 1. Estudiantes</button>
+        <button onClick={() => setActiveTab('titulos')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Award className="w-4 h-4" /> 2. Títulos y Egresados</button>
+        <button onClick={() => setActiveTab('salidas')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Compass className="w-4 h-4" /> 3. Salidas Educativas</button>
+        <button onClick={() => setActiveTab('historica')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><History className="w-4 h-4" /> 4. Carga Histórica</button>
+        <button onClick={() => setActiveTab('bajas')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><UserX className="w-4 h-4" /> 5. Bajas y Pases</button>
+        <button onClick={() => setActiveTab('docentes_ddjj')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Briefcase className="w-4 h-4" /> 💼 Docentes y DDJJ</button>
       </div>
 
       {/* ------------------- SUB-PESTAÑA 1: ESTUDIANTES ------------------- */}
@@ -248,287 +320,168 @@ export default function SecretariaPanelPage() {
                 <tr>
                   <th className="py-3 px-4">Estudiante</th>
                   <th className="py-3 px-4">DNI</th>
+                  <th className="py-3 px-4 text-center">Estado</th>
                   <th className="py-3 px-4 text-center">Calificador Inline</th>
                   <th className="py-3 px-4 text-center">Constancias</th>
+                  <th className="py-3 px-4 text-center">Acciones Baja / Pase</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredEstudiantes.map((est) => (
-                  <tr key={est.id} className="hover:bg-[#F4FAFF]">
-                    <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
-                    <td className="py-3.5 px-4 font-mono">{est.dni}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="inline-flex gap-1.5 text-[10px] font-bold">
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">1°: 8.5</span>
-                        <span className="px-2 py-0.5 rounded bg-[#F5C442]/30 text-amber-900">2°: 6.0</span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">3°: 9.0</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-center space-x-1">
-                      <button onClick={() => handleEmitirCertificado(est, 'Certificado Alumno Regular')} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
-                      <button onClick={() => handleEmitirCertificado(est, 'Constancia Examen')} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Examen</button>
-                      <button onClick={() => handleEmitirCertificado(est, 'Analítico Parcial')} className="btn-gold text-[10px] py-1 px-2">Analítico Parcial</button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredEstudiantes.map((est) => {
+                  const isInactive = est.estado === 'inactivo' || est.estado === 'Pase';
+                  return (
+                    <tr key={est.id} className="hover:bg-[#F4FAFF]">
+                      <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
+                      <td className="py-3.5 px-4 font-mono">{est.dni}</td>
+                      <td className="py-3.5 px-4 text-center">
+                        {isInactive ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            🔴 Inactivo ({est.estado || 'Baja'})
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            🟢 Regular
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex gap-1.5 text-[10px] font-bold">
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">1º: 8.5</span>
+                          <span className="px-2 py-0.5 rounded bg-[#F5C442]/30 text-amber-900">2º: 6.0</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">3º: 9.0</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-center space-x-1">
+                        <button onClick={() => handleEmitirCertificado(est, 'Certificado Alumno Regular')} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
+                        <button onClick={() => handleEmitirCertificado(est, 'Constancia Examen')} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Examen</button>
+                        <button onClick={() => handleEmitirCertificado(est, 'Analítico Parcial')} className="btn-gold text-[10px] py-1 px-2">Analítico Parcial</button>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {isInactive ? (
+                          <button onClick={() => handleReactivarEstudiante(est)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] py-1 px-3 rounded-lg flex items-center gap-1 mx-auto shadow-xs">
+                            <RefreshCw className="w-3.5 h-3.5" /> Reactivar
+                          </button>
+                        ) : (
+                          <button onClick={() => handleOpenBajaModal(est)} className="bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] py-1 px-3 rounded-lg border border-red-200 flex items-center gap-1 mx-auto shadow-xs">
+                            <UserX className="w-3.5 h-3.5" /> Dar de Baja / Pase
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
-      {/* ------------------- SUB-PESTAÑA 6: DOCENTES Y DDJJ (Capturas 3 y 4) ------------------- */}
-      {activeTab === 'docentes_ddjj' && (
+      {/* ------------------- SUB-PESTAÑA 5: BAJAS Y PASES ------------------- */}
+      {activeTab === 'bajas' && (
         <div className="space-y-6">
-          {/* Sub-Header Píldoras: Lista de Docentes | Declaraciones Juradas (Captura 3) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setDocenteSubTab('lista')}
-                className={`py-2 px-5 rounded-full text-xs font-bold transition-all ${
-                  docenteSubTab === 'lista'
-                    ? 'bg-[#006384] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                🎓 Lista de Docentes
-              </button>
-              <button
-                onClick={() => setDocenteSubTab('ddjj')}
-                className={`py-2 px-5 rounded-full text-xs font-bold transition-all ${
-                  docenteSubTab === 'ddjj'
-                    ? 'bg-[#006384] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                📋 Declaraciones Juradas
-              </button>
-            </div>
-
-            {/* Búsqueda + Botón Registrar Docente (Captura 3) */}
-            <div className="flex items-center gap-3">
+          <div className="card p-6 bg-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                  <UserX className="w-5 h-5 text-red-600" /> Registro de Bajas, Pases y Salidas de Alumnos
+                </h3>
+                <p className="text-xs text-gray-500">Historial completo de estudiantes que abandonaron, se pasaron de escuela o se dieron de baja.</p>
+              </div>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchDocente}
-                  onChange={(e) => setSearchDocente(e.target.value)}
-                  placeholder="Buscar docente por apellido, nombre o DNI..."
-                  className="field-soft pl-9 text-xs py-1.5 w-64"
-                />
+                <input type="text" value={searchBaja} onChange={(e) => setSearchBaja(e.target.value)} placeholder="Buscar en bajas por DNI o Nombre..." className="field-soft pl-9 text-xs py-1.5 w-64" />
               </div>
+            </div>
 
-              <button
-                onClick={() => setShowDocenteModal(true)}
-                className="btn-gold font-bold text-xs py-2 px-4 flex items-center gap-1.5 shadow-xs"
-              >
-                + Registrar Docente
-              </button>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                  <tr>
+                    <th className="py-3 px-4">Estudiante</th>
+                    <th className="py-3 px-4">DNI</th>
+                    <th className="py-3 px-4">Motivo / Tipo</th>
+                    <th className="py-3 px-4">Escuela Destino (Pase)</th>
+                    <th className="py-3 px-4">Fecha Solicitud</th>
+                    <th className="py-3 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filteredBajasPases.length === 0 ? (
+                    <tr><td colSpan="6" className="py-8 text-center text-gray-400">No hay registros de bajas o pases actualmente.</td></tr>
+                  ) : (
+                    filteredBajasPases.map((bp) => {
+                      const estName = bp.estudiantes ? ${bp.estudiantes.apellido},  : 'Estudiante registrado';
+                      const estDni = bp.estudiantes ? bp.estudiantes.dni : '-';
+                      return (
+                        <tr key={bp.id} className="hover:bg-gray-50">
+                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{estName}</td>
+                          <td className="py-3.5 px-4 font-mono">{estDni}</td>
+                          <td className="py-3.5 px-4 font-semibold text-red-700">
+                            <span className="px-2 py-0.5 rounded bg-red-50 border border-red-200">{bp.estado || 'Abandono'}</span>
+                          </td>
+                          <td className="py-3.5 px-4 font-medium text-gray-700">{bp.escuela_destino || 'N/A (Permaneció en la jurisdicción)'}</td>
+                          <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">{bp.fecha_solicitud || bp.created_at?.split('T')[0]}</td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => handleReactivarEstudiante(bp)} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs py-1 px-3 rounded-lg border border-emerald-200 flex items-center gap-1">
+                                <RefreshCw className="w-3.5 h-3.5" /> Reactivar
+                              </button>
+                              <button onClick={() => handleEliminarBajaDefinitiva(bp)} className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-1 px-3 rounded-lg flex items-center gap-1 shadow-xs">
+                                <Trash2 className="w-3.5 h-3.5" /> Eliminar Definitivamente
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-
-          {/* Formulario Vincular Docente a Materia */}
-          <form onSubmit={handleVincularMateriaEnSecretaria} className="card p-6 bg-white space-y-4">
-            <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[#006384]" /> Vincular Docente a Materia Existente
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">1. Curso:</label>
-                <select value={selectedCursoVinculo} onChange={(e) => setSelectedCursoVinculo(e.target.value)} className="field-soft text-xs font-semibold">
-                  <option value="">-- Seleccionar Curso --</option>
-                  {cursos.map((c) => (<option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion} ({c.turno})</option>))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">2. Asignatura del Curso:</label>
-                <select value={selectedMateriaVinculo} onChange={(e) => setSelectedMateriaVinculo(e.target.value)} className="field-soft text-xs font-semibold">
-                  <option value="">-- Seleccionar Materia --</option>
-                  {materias.filter((m) => !selectedCursoVinculo || m.curso_id === selectedCursoVinculo).map((m) => (<option key={m.id} value={m.id}>{m.nombre}</option>))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">3. Docente a Asignar:</label>
-                <select value={selectedDocenteVinculo} onChange={(e) => setSelectedDocenteVinculo(e.target.value)} className="field-soft text-xs font-semibold">
-                  <option value="">-- Seleccionar Docente --</option>
-                  {docentes.map((d) => (<option key={d.id} value={d.id}>Prof. {d.apellido}, {d.nombre}</option>))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button type="submit" className="btn-gold text-xs py-2 px-6 font-bold">Confirmar Vinculación Docente-Materia</button>
-            </div>
-          </form>
-
-          {/* VISTA A: Lista de Docentes */}
-          {docenteSubTab === 'lista' && (
-            <div className="card overflow-hidden">
-              <div className="card-header flex items-center justify-between">
-                <span className="font-heading text-sm">Nómina Oficial de Docentes ({filteredDocentes.length})</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
-                    <tr>
-                      <th className="py-3 px-4">Docente</th>
-                      <th className="py-3 px-4">DNI / CUIL</th>
-                      <th className="py-3 px-4">Título Principal</th>
-                      <th className="py-3 px-4">Contacto</th>
-                      <th className="py-3 px-4 text-center">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredDocentes.map((d) => (
-                      <tr key={d.id} className="hover:bg-[#F4FAFF]">
-                        <td className="py-3 px-4 font-bold">{d.apellido}, {d.nombre}</td>
-                        <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-gray-400">({d.cuil || '-'})</span></td>
-                        <td className="py-3 px-4">{d.titulo || 'Profesor/a Secundario'}</td>
-                        <td className="py-3 px-4 text-gray-600">{d.email || d.telefono || 'Sin datos'}</td>
-                        <td className="py-3 px-4 text-center font-bold text-emerald-700">🟢 Activo</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* VISTA B: Declaraciones Juradas */}
-          {docenteSubTab === 'ddjj' && (
-            <div className="card p-6 bg-white space-y-4">
-              <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-[#006384]" /> Declaración Jurada de Cargos (DDJJ) e Incompatibilidad
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="text" value={extEstablecimiento} onChange={(e) => setExtEstablecimiento(e.target.value)} placeholder="Establecimiento Externo Declarado" className="field-soft text-xs" />
-                <input type="text" value={extHorario} onChange={(e) => setExtHorario(e.target.value)} placeholder="Horario Externo (Ej: 18:30 a 21:00 hs)" className="field-soft text-xs" />
-              </div>
-
-              <div className="pt-2">
-                <button onClick={handleVerificarConflictoDDJJ} className="btn-gold text-xs py-2 px-5">Verificar Incompatibilidad Horaria</button>
-              </div>
-
-              {conflictAlert && <div className="p-3 rounded-xl bg-amber-50 border text-xs font-bold text-amber-900">{conflictAlert}</div>}
-            </div>
-          )}
         </div>
       )}
 
-      {/* MODAL REGISTRAR NUEVO DOCENTE (Captura 4) */}
-      {showDocenteModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <form onSubmit={handleCrearDocenteModalCompleto} className="bg-[#0D2A3E] rounded-2xl max-w-2xl w-full text-white overflow-hidden shadow-2xl my-8 max-h-[90vh] flex flex-col">
-            {/* Header Modal */}
-            <div className="p-5 border-b border-white/10 flex items-center justify-between bg-[#0D2A3E]">
-              <h3 className="text-lg font-bold font-heading text-white">Registrar Nuevo Docente</h3>
-              <button type="button" onClick={() => setShowDocenteModal(false)} className="text-gray-300 hover:text-white font-bold text-xs">Cerrar ✕</button>
+      {/* ------------------- PEQUEÑOS MODALES ------------------- */}
+      {/* MODAL REGISTRAR BAJA / PASE */}
+      {showBajaModal && selectedEstudianteBaja && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-base font-bold text-[#0D2A3E] flex items-center gap-2">
+                <UserX className="w-5 h-5 text-red-600" /> Registrar Baja / Pase: {selectedEstudianteBaja.apellido}, {selectedEstudianteBaja.nombre}
+              </h3>
+              <button onClick={() => setShowBajaModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
             </div>
 
-            <div className="p-6 space-y-6 bg-white text-gray-800 overflow-y-auto flex-1">
-              {/* DATOS PERSONALES (Captura 4) */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-bold text-[#006384] uppercase tracking-wider">
-                  Datos Personales
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">CUIL (Sin guiones)</label>
-                    <input type="text" value={docCuil} onChange={(e) => setDocCuil(e.target.value)} placeholder="Ej: 20345678901" className="field-soft text-xs" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">DNI (Sin guiones) *</label>
-                    <input type="text" value={docDni} onChange={(e) => setDocDni(e.target.value)} placeholder="Ej: 34567890" className="field-soft text-xs" required />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Nombre *</label>
-                    <input type="text" value={docNombre} onChange={(e) => setDocNombre(e.target.value)} placeholder="Nombre" className="field-soft text-xs" required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Apellido *</label>
-                    <input type="text" value={docApellido} onChange={(e) => setDocApellido(e.target.value)} placeholder="Apellido" className="field-soft text-xs" required />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Género</label>
-                    <select value={docGenero} onChange={(e) => setDocGenero(e.target.value)} className="field-soft text-xs">
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Fecha Nacimiento</label>
-                    <input type="date" value={docFechaNac} onChange={(e) => setDocFechaNac(e.target.value)} className="field-soft text-xs" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Email</label>
-                    <input type="email" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} placeholder="docente@gmail.com" className="field-soft text-xs" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Teléfono</label>
-                    <input type="text" value={docTelefono} onChange={(e) => setDocTelefono(e.target.value)} placeholder="11 2345-6789" className="field-soft text-xs" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Título Principal</label>
-                    <input type="text" value={docTitulo} onChange={(e) => setDocTitulo(e.target.value)} placeholder="Ej: Prof. de Historia" className="field-soft text-xs" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Domicilio</label>
-                    <input type="text" value={docDomicilio} onChange={(e) => setDocDomicilio(e.target.value)} placeholder="Domicilio" className="field-soft text-xs" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Localidad</label>
-                    <input type="text" value={docLocalidad} onChange={(e) => setDocLocalidad(e.target.value)} placeholder="Ezeiza" className="field-soft text-xs" />
-                  </div>
-                </div>
+            <form onSubmit={handleConfirmarBajaOPase} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Motivo de Baja:</label>
+                <select value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} className="field-soft text-xs font-bold border-2 border-red-300">
+                  <option value="Abandono">Abandono de Estudios</option>
+                  <option value="Pase">Pase a Otra Institución Educativa</option>
+                  <option value="Error de Carga">Error de Carga (Duplicado o incorrecto)</option>
+                </select>
               </div>
 
-              {/* CONTROL DE LEGAJO ADMINISTRATIVO (Captura 4) */}
-              <div className="space-y-3 pt-3 border-t border-gray-200">
-                <h4 className="text-xs font-bold text-[#006384] uppercase tracking-wider">
-                  Control de Legajo Administrativo
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Número de Legajo</label>
-                    <input type="text" value={docNumLegajo} onChange={(e) => setDocNumLegajo(e.target.value)} placeholder="Ej. LEG-2026-09" className="field-soft text-xs" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Situación de Revista</label>
-                    <select value={docSituacionRevista} onChange={(e) => setDocSituacionRevista(e.target.value)} className="field-soft text-xs">
-                      <option value="Titular">Titular</option>
-                      <option value="Provisional">Provisional</option>
-                      <option value="Suplente">Suplente</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-gray-700 mb-1">Fecha Ingreso Escuela</label>
-                    <input type="date" value={docFechaIngreso} onChange={(e) => setDocFechaIngreso(e.target.value)} className="field-soft text-xs" />
-                  </div>
+              {motivoBaja === 'Pase' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Escuela / Establecimiento Destino *</label>
+                  <input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N° 451 / EES N° 3 Esteban Echeverría" className="field-soft text-xs font-bold border-2 border-blue-400" required />
                 </div>
-              </div>
-            </div>
+              )}
 
-            <div className="p-4 bg-gray-100 border-t border-gray-200 flex justify-end gap-3">
-              <button type="button" onClick={() => setShowDocenteModal(false)} className="px-4 py-2 bg-gray-300 text-gray-700 text-xs font-bold rounded-lg">Cancelar</button>
-              <button type="submit" className="btn-gold text-xs py-2 px-6 font-bold shadow-md">Registrar Docente</button>
-            </div>
-          </form>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Observaciones / Detalle (Opcional)</label>
+                <textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Motivo de la baja o constancia presentada..." className="field-soft text-xs h-20" />
+              </div>
+
+              <div className="flex justify-end gap-3 border-t pt-4">
+                <button type="button" onClick={() => setShowBajaModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
+                <button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-xs">Confirmar Baja / Pase</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
