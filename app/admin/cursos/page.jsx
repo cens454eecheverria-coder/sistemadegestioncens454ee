@@ -320,16 +320,38 @@ export default function CourseManagerPage() {
           <p className="text-xs text-gray-500 mt-1">Estructura curricular CENS 454 según Res. 2993/22 y rectificativa 3463/22 DGCyE</p>
         </div>
 
-        <button onClick={toggleBloqueoGlobalNotas} className={	ext-xs font-bold py-2.5 px-4 rounded-full flex items-center gap-2 border }>
+        <button
+          onClick={toggleBloqueoGlobalNotas}
+          className={
+            gradesLocked
+              ? "text-xs font-bold py-2.5 px-4 rounded-full flex items-center gap-2 border bg-red-100 text-red-800 border-red-300"
+              : "text-xs font-bold py-2.5 px-4 rounded-full flex items-center gap-2 border bg-emerald-100 text-emerald-800 border-emerald-300"
+          }
+        >
           {gradesLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
           {gradesLocked ? 'Notas Bloqueadas' : 'Notas Abiertas'}
         </button>
       </div>
 
       <div className="flex border-b border-gray-200 bg-white rounded-t-xl px-4 pt-2 gap-2 overflow-x-auto text-xs font-bold">
-        <button onClick={() => setActiveTab('cursos')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Layers className="w-4 h-4" /> Estructura de Cursos</button>
-        <button onClick={() => setActiveTab('ciclos')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Calendar className="w-4 h-4" /> Ciclos Lectivos</button>
-        <button onClick={() => setActiveTab('migrar')} className={py-3 px-4 flex items-center gap-2 border-b-2 }><Users className="w-4 h-4" /> Migración y Promoción Masiva</button>
+        <button
+          onClick={() => setActiveTab('cursos')}
+          className={activeTab === 'cursos' ? "py-3 px-4 flex items-center gap-2 border-b-2 border-[#006384] text-[#006384]" : "py-3 px-4 flex items-center gap-2 border-b-2 border-transparent text-gray-500"}
+        >
+          <Layers className="w-4 h-4" /> Estructura de Cursos
+        </button>
+        <button
+          onClick={() => setActiveTab('ciclos')}
+          className={activeTab === 'ciclos' ? "py-3 px-4 flex items-center gap-2 border-b-2 border-[#006384] text-[#006384]" : "py-3 px-4 flex items-center gap-2 border-b-2 border-transparent text-gray-500"}
+        >
+          <Calendar className="w-4 h-4" /> Ciclos Lectivos
+        </button>
+        <button
+          onClick={() => setActiveTab('migrar')}
+          className={activeTab === 'migrar' ? "py-3 px-4 flex items-center gap-2 border-b-2 border-[#006384] text-[#006384]" : "py-3 px-4 flex items-center gap-2 border-b-2 border-transparent text-gray-500"}
+        >
+          <Users className="w-4 h-4" /> Migración y Promoción Masiva
+        </button>
       </div>
 
       {activeTab === 'cursos' && (
@@ -430,9 +452,9 @@ export default function CourseManagerPage() {
 
           <div className="space-y-3">
             {ciclosList.map((ciclo) => (
-              <div key={ciclo.id} className={p-5 rounded-2xl border flex items-center justify-between }>
+              <div key={ciclo.id} className={ciclo.estado === 'ACTIVO' ? "p-5 rounded-2xl border flex items-center justify-between bg-blue-50/50 border-blue-200" : "p-5 rounded-2xl border flex items-center justify-between bg-gray-50"}>
                 <div>
-                  <span className={px-3 py-1 rounded-full text-[10px] font-bold }>{ciclo.estado}</span>
+                  <span className={ciclo.estado === 'ACTIVO' ? "px-3 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-[#006384]" : "px-3 py-1 rounded-full text-[10px] font-bold bg-gray-200 text-gray-600"}>{ciclo.estado}</span>
                   <h4 className="text-xl font-bold text-[#0D2A3E] mt-1">{ciclo.anio}</h4>
                   <p className="text-xs text-gray-500">{ciclo.inicio} ➔ {ciclo.fin}</p>
                 </div>
