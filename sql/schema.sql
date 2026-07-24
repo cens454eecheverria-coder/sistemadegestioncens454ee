@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.cursos (
     nombre_materia VARCHAR(150),
     anio INTEGER NOT NULL CHECK (anio IN (1, 2, 3)),
     division VARCHAR(10) NOT NULL,
-    orientacion VARCHAR(100) NOT NULL, -- Ej: 'Sociales', 'Perito Mercantil', 'Ciencias Naturales'
+    orientacion VARCHAR(100) NOT NULL,
     turno VARCHAR(20) NOT NULL CHECK (turno IN ('Mañana', 'Tarde', 'Noche', 'Manana')),
     ciclo_lectivo_id UUID REFERENCES public.ciclos_lectivos(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -190,28 +190,37 @@ ALTER TABLE public.cursos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.preinscripciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bitacora_observaciones ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Permitir insercion publica de preinscripciones" ON public.preinscripciones;
 CREATE POLICY "Permitir insercion publica de preinscripciones" 
-ON public.preinscripciones 
-FOR INSERT 
-WITH CHECK (true);
+ON public.preinscripciones FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Permitir lectura general autenticada preinscripciones" ON public.preinscripciones;
 CREATE POLICY "Permitir lectura general autenticada preinscripciones" 
-ON public.preinscripciones 
-FOR SELECT 
-USING (true);
+ON public.preinscripciones FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Permitir modificacion de preinscripciones" ON public.preinscripciones;
 CREATE POLICY "Permitir modificacion de preinscripciones" 
-ON public.preinscripciones 
-FOR UPDATE 
-USING (true);
+ON public.preinscripciones FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Permitir todo acceso estudiantes" ON public.estudiantes;
 CREATE POLICY "Permitir todo acceso estudiantes" ON public.estudiantes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Permitir todo acceso asistencias" ON public.asistencias;
 CREATE POLICY "Permitir todo acceso asistencias" ON public.asistencias FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Permitir todo acceso calificaciones" ON public.calificaciones;
 CREATE POLICY "Permitir todo acceso calificaciones" ON public.calificaciones FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Permitir todo acceso docentes" ON public.docentes;
 CREATE POLICY "Permitir todo acceso docentes" ON public.docentes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Permitir todo acceso cursos" ON public.cursos;
 CREATE POLICY "Permitir todo acceso cursos" ON public.cursos FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Permitir todo acceso bitacora" ON public.bitacora_observaciones;
 CREATE POLICY "Permitir todo acceso bitacora" ON public.bitacora_observaciones FOR ALL USING (true);
 
+-- RPC: Eliminar estudiante en cascada de forma definitiva
 CREATE OR REPLACE FUNCTION public.rpc_eliminar_estudiante_definitivo(p_estudiante_id UUID)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
