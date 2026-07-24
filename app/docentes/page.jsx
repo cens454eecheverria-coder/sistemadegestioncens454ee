@@ -4,41 +4,81 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
-import { User, BookOpen, Calendar, FileText, Printer, LogOut, Plus, Save, CheckCircle, Clock, ShieldCheck, Award } from "lucide-react";
+import { User, BookOpen, Calendar, FileText, Printer, LogOut, Plus, Save, Clock, AlertCircle } from "lucide-react";
 
 export default function TeacherPortalPage() {
   const { user, role, cicloLectivo, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("ficha");
-  const [docenteData, setDocenteData] = useState({ nombre: "Erica", apellido: "Alvarez", cuil: "27-29704196-2", dni: "29704196", genero: "Femenino", email: "erica.alvarez@cens454.edu.ar", telefono: "11-2345-6789", fechaNac: "1982-09-18", titulo: "Prof. de Ciencias Sociales" });
+
+  const [docenteData, setDocenteData] = useState({ id: "", nombre: "", apellido: "", cuil: "", dni: "", genero: "Femenino", email: "", telefono: "", fechaNac: "", titulo: "" });
   const [materiasAsignadas, setMateriasAsignadas] = useState([]);
   const [selectedMateriaId, setSelectedMateriaId] = useState("");
-  const [cargosExternos, setCargosExternos] = useState([
-    { id: 1, escuela: "CENS N° 456", distrito: "Ezeiza", cargo: "Materia: Ciudadania Cultura y Sociedad (2do C)", revista: "Carga en Escuela", horario: "Jueves 20:40 a 22:00" },
-    { id: 2, escuela: "CENS N° 456", distrito: "Ezeiza", cargo: "Materia: Relaciones Laborales y orientacion profesional (2do C)", revista: "Carga en Escuela", horario: "Sin horario asignado" },
-    { id: 3, escuela: "CENS N° 456", distrito: "Ezeiza", cargo: "Materia: Legislacion y Practicas impositivas (3ro A)", revista: "Carga en Escuela", horario: "Jueves 18:40 a 20:40" },
-    { id: 4, escuela: "CENS N° 456", distrito: "Ezeiza", cargo: "Materia: Herramientas Legales para microemprendimientos (3ro A)", revista: "Carga en Escuela", horario: "Sin horario asignado" }
-  ]);
+  const [cargosExternos, setCargosExternos] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
   const [calificacionesMap, setCalificacionesMap] = useState({});
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
   const [printingModal, setPrintingModal] = useState(false);
   const [printType, setPrintType] = useState("DDJJ");
 
-  useEffect(() => { loadDocenteProfileYMaterias(); }, [user, cicloLectivo]);
+  useEffect(() => { loadDocenteDataAndMaterias(); }, [user, cicloLectivo]);
   useEffect(() => { if (selectedMateriaId) { loadAlumnosYCalificaciones(selectedMateriaId); } }, [selectedMateriaId]);
 
-  async function loadDocenteProfileYMaterias() {
+  async function loadDocenteDataAndMaterias() {
+    setLoadingProfile(true);
     try {
-      const { data: mData } = await supabase.from("materias").select("*");
-      const { data: cData } = await supabase.from("cursos").select("*");
-      const cursosMap = {};
-      if (cData) { cData.forEach((c) => { cursosMap[c.id] = c.anio + "ro " + c.division; }); }
-      if (mData) {
-        const list = mData.map((m) => ({ id: m.id, nombre: m.nombre, cursoNombre: cursosMap[m.curso_id] || "1ro A", ciclo: "Ciclo 2026" }));
-        setMateriasAsignadas(list);
-        if (list.length > 0) { setSelectedMateriaId(list[0].id); }
+      let realDocente = null;
+      if (user?.cuil) {
+        const { data: dData } = await supabase.from("docentes").select("*").eq("cuil", user.cuil).single();
+        realDocente = dData;
       }
-    } catch (e) { console.error(e); }
+      if (!realDocente && user?.email) {
+        const { data: dData } = await supabase.from("docentes").select("*").eq("email", user.email).single();
+        realDocente = dData;
+      }
+      if (!realDocente) {
+        const { data: allDoc } = await supabase.from("docentes").select("*").limit(1);
+        if (allDoc && allDoc.length > 0) realDocente = allDoc[0];
+      }
+      const profile = {
+        id: realDocente?.id || user?.id || "",
+        nombre: realDocente?.nombre || user?.nombre || "Docente",
+        apellido: realDocente?.apellido || "",
+        cuil: realDocente?.cuil || user?.cuil || "CUIL no registrado",
+        dni: realDocente?.dni || user?.dni || "DNI no registrado",
+        genero: realDocente?.genero || "Femenino",
+        email: realDocente?.email || user?.email || "",
+        telefono: realDocente?.telefono || "",
+        fechaNac: realDocente?.fecha_nacimiento || "",
+        titulo: realDocente?.titulo || "Profesor/a",
+      };
+      setDocenteData(profile);
+
+      if (profile.id) {
+        const { data: dmData } = await supabase.from("docente_materia").select("materia_id").eq("docente_id", profile.id);
+        if (dmData && dmData.length > 0) {
+          const matIds = dmData.map((dm) => dm.materia_id);
+          const { data: mData } = await supabase.from("materias").select("*").in("id", matIds);
+          const { data: cData } = await supabase.from("cursos").select("*");
+          const cursosMap = {};
+          if (cData) cData.forEach((c) => { cursosMap[c.id] = c.anio + "ro " + c.division; });
+          if (mData) {
+            const list = mData.map((m) => ({ id: m.id, nombre: m.nombre, cursoNombre: cursosMap[m.curso_id] || "Curso", ciclo: "Ciclo 2026" }));
+            setMateriasAsignadas(list);
+            if (list.length > 0) setSelectedMateriaId(list[0].id);
+          }
+        } else {
+          setMateriasAsignadas([]);
+          setSelectedMateriaId("");
+        }
+        const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*").eq("docente_id", profile.id);
+        if (ddjjData) { setCargosExternos(ddjjData); }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingProfile(false);
+    }
   }
 
   async function loadAlumnosYCalificaciones(materiaId) {
@@ -49,17 +89,12 @@ export default function TeacherPortalPage() {
         { id: "3", apellido: "Campos", nombre: "Tobias" },
         { id: "4", apellido: "Contreras", nombre: "Candela" },
         { id: "5", apellido: "Martinez", nombre: "Leonor Veronica" },
-        { id: "6", apellido: "Molina", nombre: "Susana Miguelina" },
-        { id: "7", apellido: "Ortiz", nombre: "Angela Soledad" },
-        { id: "8", apellido: "Perez", nombre: "Christian" },
-        { id: "9", apellido: "Ruiz", nombre: "Claudia Elizabeth" },
-        { id: "10", apellido: "Salazar", nombre: "Aldana" },
-        { id: "11", apellido: "Yedro", nombre: "Aylen Romina" }
+        { id: "6", apellido: "Molina", nombre: "Susana Miguelina" }
       ];
       setAlumnos(sampleAlumnos);
       const initialMap = {};
       sampleAlumnos.forEach((a, idx) => {
-        initialMap[a.id] = { valoracion: idx % 3 === 0 ? "TED" : idx % 5 === 0 ? "TEP" : "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: "2026-05-25" };
+        initialMap[a.id] = { valoracion: idx % 2 === 0 ? "TEA" : "TEP", nota: "", intensificacion: "", notaFinal: "", fecha: "2026-05-25" };
       });
       setCalificacionesMap(initialMap);
     } catch (e) { console.error(e); }
@@ -77,15 +112,20 @@ export default function TeacherPortalPage() {
     }, 600);
   };
 
-  const handleGuardarFichaDocente = (e) => {
+  const handleGuardarFichaDocente = async (e) => {
     e.preventDefault();
-    Swal.fire({ icon: "success", title: "Datos Actualizados", text: "Se guardó tu información de contacto.", timer: 1500, showConfirmButton: false });
+    try {
+      if (docenteData.id) {
+        await supabase.from("docentes").upsert({ id: docenteData.id, nombre: docenteData.nombre, apellido: docenteData.apellido, email: docenteData.email, telefono: docenteData.telefono, genero: docenteData.genero, titulo: docenteData.titulo });
+      }
+      Swal.fire({ icon: "success", title: "Datos Actualizados", text: "Se guardó tu información personal y de contacto en Supabase.", timer: 1500, showConfirmButton: false });
+    } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
 
   const handleAgregarCargoModal = () => {
     Swal.fire({
       title: "Agregar Cargo en Otra Institución",
-      html: `<input id="sw-escuela" class="swal2-input" placeholder="Escuela (Ej: CENS 456)" /><input id="sw-distrito" class="swal2-input" placeholder="Distrito (Ej: Esteban Echeverría)" /><input id="sw-cargo" class="swal2-input" placeholder="Cargo / Materia" /><input id="sw-revista" class="swal2-input" placeholder="Revista" /><input id="sw-horario" class="swal2-input" placeholder="Horarios" />`,
+      html: `<input id="sw-escuela" class="swal2-input" placeholder="Escuela / Establecimiento" /><input id="sw-distrito" class="swal2-input" placeholder="Distrito (Ej: Esteban Echeverría)" /><input id="sw-cargo" class="swal2-input" placeholder="Cargo / Materia y Hs" /><input id="sw-revista" class="swal2-input" placeholder="Situación de Revista" /><input id="sw-horario" class="swal2-input" placeholder="Días y Horarios" />`,
       showCancelButton: true,
       confirmButtonText: "Agregar a la DDJJ",
       preConfirm: () => {
@@ -94,11 +134,14 @@ export default function TeacherPortalPage() {
         const cargo = document.getElementById("sw-cargo").value;
         const revista = document.getElementById("sw-revista").value;
         const horario = document.getElementById("sw-horario").value;
-        if (!escuela || !cargo) { Swal.showValidationMessage("Complete la escuela y el cargo."); }
+        if (!escuela || !cargo) Swal.showValidationMessage("Complete la escuela y el cargo.");
         return { escuela, distrito, cargo, revista, horario };
       }
-    }).then((res) => {
+    }).then(async (res) => {
       if (res.isConfirmed && res.value) {
+        if (docenteData.id) {
+          await supabase.from("ddjj_docentes").insert({ docente_id: docenteData.id, establecimiento_externo: res.value.escuela, cargo_externo: res.value.cargo, horario_externo: res.value.horario, dias_externos: res.value.distrito });
+        }
         setCargosExternos((prev) => [...prev, { id: Date.now(), ...res.value }]);
         Swal.fire("Cargo Agregado", "Se incorporó a tu Declaración Jurada.", "success");
       }
@@ -113,7 +156,7 @@ export default function TeacherPortalPage() {
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#006384] flex items-center justify-center font-bold text-xl border border-blue-100"><User className="w-6 h-6" /></div>
           <div>
-            <h1 className="text-2xl font-bold font-heading text-[#0D2A3E]">{docenteData.apellido}, {docenteData.nombre}</h1>
+            <h1 className="text-2xl font-bold font-heading text-[#0D2A3E]">{docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre}</h1>
             <p className="text-xs text-gray-500 font-medium mt-0.5">CUIL: {docenteData.cuil} • DNI: {docenteData.dni}</p>
           </div>
         </div>
@@ -124,10 +167,10 @@ export default function TeacherPortalPage() {
       </div>
 
       <div className="bg-white p-1.5 rounded-2xl border border-gray-200 flex flex-wrap gap-2 text-xs font-bold shadow-xs">
-        <button onClick={() => setActiveTab("ficha")} className={activeTab === "ficha" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200 shadow-2xs" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Mi Ficha y Cursos</button>
-        <button onClick={() => setActiveTab("ddjj")} className={activeTab === "ddjj" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200 shadow-2xs" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Declaración Jurada de Cargos</button>
-        <button onClick={() => setActiveTab("notas")} className={activeTab === "notas" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200 shadow-2xs" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Calificaciones</button>
-        <button onClick={() => setActiveTab("horarios")} className={activeTab === "horarios" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200 shadow-2xs" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Mis Horarios</button>
+        <button onClick={() => setActiveTab("ficha")} className={activeTab === "ficha" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Mi Ficha y Cursos</button>
+        <button onClick={() => setActiveTab("ddjj")} className={activeTab === "ddjj" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Declaración Jurada de Cargos</button>
+        <button onClick={() => setActiveTab("notas")} className={activeTab === "notas" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Calificaciones</button>
+        <button onClick={() => setActiveTab("horarios")} className={activeTab === "horarios" ? "py-2.5 px-5 rounded-xl bg-blue-50/80 text-[#006384] border border-blue-200" : "py-2.5 px-5 rounded-xl text-gray-600 hover:bg-gray-50"}>Mis Horarios</button>
       </div>
 
       {activeTab === "ficha" && (
@@ -148,14 +191,21 @@ export default function TeacherPortalPage() {
           </form>
           <div className="card p-6 bg-white space-y-4">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Materias Asignadas en CENS 454</h3>
-            <div className="space-y-3">
-              {materiasAsignadas.map((m) => (
-                <div key={m.id} className="p-4 rounded-xl border border-gray-100 bg-[#F8FAFC] flex items-center justify-between">
-                  <div><h4 className="text-xs font-bold text-[#0D2A3E]">{m.nombre}</h4><p className="text-[11px] text-gray-500 font-medium">Curso: {m.cursoNombre}</p></div>
-                  <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-[#006384]">CENS 454</span>
-                </div>
-              ))}
-            </div>
+            {materiasAsignadas.length === 0 ? (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
+                <p className="font-bold flex items-center gap-1.5"><AlertCircle className="w-4 h-4 text-amber-600" /> Sin asignaciones activas</p>
+                <p className="text-[11px] leading-relaxed">No tienes asignaturas vinculadas actualmente en CENS 454. Solicita a Secretaría/Dirección que te asigne tus horas.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {materiasAsignadas.map((m) => (
+                  <div key={m.id} className="p-4 rounded-xl border border-gray-100 bg-[#F8FAFC] flex items-center justify-between">
+                    <div><h4 className="text-xs font-bold text-[#0D2A3E]">{m.nombre}</h4><p className="text-[11px] text-gray-500 font-medium">Curso: {m.cursoNombre}</p></div>
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-[#006384]">CENS 454</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -172,16 +222,20 @@ export default function TeacherPortalPage() {
                 <tr><th className="py-3 px-4">Escuela / Establecimiento</th><th className="py-3 px-4">Distrito</th><th className="py-3 px-4">Cargo / Hs</th><th className="py-3 px-4">Revista</th><th className="py-3 px-4">Días y Horarios</th><th className="py-3 px-4 text-center">Acción</th></tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {cargosExternos.map((cg) => (
-                  <tr key={cg.id} className="hover:bg-gray-50/80">
-                    <td className="py-4 px-4 font-bold text-[#0D2A3E]">{cg.escuela}</td>
-                    <td className="py-4 px-4 text-gray-600 font-medium">{cg.distrito}</td>
-                    <td className="py-4 px-4 font-semibold text-gray-800 max-w-xs">{cg.cargo}</td>
-                    <td className="py-4 px-4 text-[#006384] font-bold">{cg.revista}</td>
-                    <td className="py-4 px-4 text-gray-500 font-mono text-[11px]">{cg.horario}</td>
-                    <td className="py-4 px-4 text-center text-gray-400">-</td>
-                  </tr>
-                ))}
+                {cargosExternos.length === 0 ? (
+                  <tr><td colSpan="6" className="py-6 text-center text-gray-400">No registras cargos externos declarados. haz clic en + Agregar Cargo para sumar otra escuela.</td></tr>
+                ) : (
+                  cargosExternos.map((cg) => (
+                    <tr key={cg.id} className="hover:bg-gray-50/80">
+                      <td className="py-4 px-4 font-bold text-[#0D2A3E]">{cg.establecimiento_externo || cg.escuela}</td>
+                      <td className="py-4 px-4 text-gray-600 font-medium">{cg.dias_externos || cg.distrito}</td>
+                      <td className="py-4 px-4 font-semibold text-gray-800 max-w-xs">{cg.cargo_externo || cg.cargo}</td>
+                      <td className="py-4 px-4 text-[#006384] font-bold">Carga Declarada</td>
+                      <td className="py-4 px-4 text-gray-500 font-mono text-[11px]">{cg.horario_externo || cg.horario}</td>
+                      <td className="py-4 px-4 text-center text-gray-400">-</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -191,13 +245,13 @@ export default function TeacherPortalPage() {
       {activeTab === "notas" && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><User className="w-4 h-4 text-purple-600" /> Seleccione el Profesor</label><input type="text" value={docenteData.apellido + ", " + docenteData.nombre} disabled className="field-soft text-xs font-bold bg-gray-50 text-gray-700 cursor-not-allowed" /></div>
+            <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><User className="w-4 h-4 text-purple-600" /> Seleccione el Profesor</label><input type="text" value={docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre} disabled className="field-soft text-xs font-bold bg-gray-50 text-gray-700 cursor-not-allowed" /></div>
             <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-purple-600" /> Seleccione Asignatura</label><select value={selectedMateriaId} onChange={(e) => setSelectedMateriaId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-500 focus:ring-2 focus:ring-blue-200"><option value="">Seleccionar Asignatura...</option>{materiasAsignadas.map((m) => (<option key={m.id} value={m.id}>{m.nombre} - {m.cursoNombre} ({m.ciclo})</option>))}</select></div>
           </div>
-          {materiaActual && (
+          {materiaActual ? (
             <div className="card p-0 bg-white shadow-xs overflow-hidden rounded-2xl border border-gray-200">
               <div className="bg-[#1E293B] text-white p-4 px-6 flex items-center justify-between">
-                <h4 className="text-xs font-bold tracking-wide">Profesor a Cargo: <span className="text-blue-400 font-extrabold">{docenteData.apellido}, {docenteData.nombre}</span></h4>
+                <h4 className="text-xs font-bold tracking-wide">Profesor a Cargo: <span className="text-blue-400 font-extrabold">{docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre}</span></h4>
                 <button onClick={() => { setPrintType("NOTAS"); setPrintingModal(true); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-2"><Printer className="w-4 h-4" /> Planilla PDF</button>
               </div>
               <div className="p-6 space-y-4">
@@ -226,6 +280,8 @@ export default function TeacherPortalPage() {
                 <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
               </div>
             </div>
+          ) : (
+            <div className="card p-8 bg-white text-center space-y-3"><AlertCircle className="w-8 h-8 text-amber-500 mx-auto" /><h4 className="font-bold text-sm text-[#0D2A3E]">Sin asignaturas para calificar</h4><p className="text-xs text-gray-500">No posees materias vinculadas a tu legajo docente en CENS 454.</p></div>
           )}
         </div>
       )}
@@ -233,10 +289,15 @@ export default function TeacherPortalPage() {
       {activeTab === "horarios" && (
         <div className="card p-6 bg-white space-y-4">
           <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><Clock className="w-5 h-5 text-[#006384]" /> Mis Horarios Asignados CENS 454</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200"><h4 className="font-bold text-xs text-[#0D2A3E]">Ciudadanía Cultura y Sociedad (2do C)</h4><p className="text-xs text-gray-500 mt-1">📅 Jueves: 20:40 a 22:00 hs (Aula 4)</p></div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200"><h4 className="font-bold text-xs text-[#0D2A3E]">Legislación y Prácticas Impositivas (3ro A)</h4><p className="text-xs text-gray-500 mt-1">📅 Jueves: 18:40 a 20:40 hs (Aula 2)</p></div>
-          </div>
+          {materiasAsignadas.length === 0 ? (
+            <p className="text-xs text-gray-500 italic">No posees horarios cargados en CENS 454.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {materiasAsignadas.map((m) => (
+                <div key={m.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200"><h4 className="font-bold text-xs text-[#0D2A3E]">{m.nombre} ({m.cursoNombre})</h4><p className="text-xs text-gray-500 mt-1">📅 Horario oficial de CENS 454</p></div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -251,7 +312,7 @@ export default function TeacherPortalPage() {
               </div>
               <div className="flex justify-between items-end border-b pb-3">
                 <div><h3 className="text-xl font-black text-[#0D2A3E]">CENS 454 {printType === "DDJJ" ? "Legajo Docente" : "Calificaciones"}</h3><p className="text-[10px] font-bold text-blue-800 uppercase tracking-widest mt-0.5">MODO: CICLO ACTIVO (2026)</p></div>
-                <div className="text-right"><h4 className="text-sm font-bold text-gray-900">{materiaActual?.nombre || "Ciudadania Cultura y Sociedad"}</h4><p className="text-xs text-gray-600 font-medium">Curso: {materiaActual?.cursoNombre || "2do C"} (Ciclo 2026)</p><p className="text-xs font-bold text-gray-900 mt-0.5">PROF: {docenteData.apellido.toUpperCase()}, {docenteData.nombre.toUpperCase()}</p></div>
+                <div className="text-right"><h4 className="text-sm font-bold text-gray-900">{materiaActual?.nombre || "Sin Asignatura"}</h4><p className="text-xs text-gray-600 font-medium">Curso: {materiaActual?.cursoNombre || "-"} (Ciclo 2026)</p><p className="text-xs font-bold text-gray-900 mt-0.5">PROF: {docenteData.apellido.toUpperCase()}, {docenteData.nombre.toUpperCase()}</p></div>
               </div>
               <table className="w-full text-left text-xs border border-gray-900 border-collapse">
                 <thead className="bg-gray-100 text-gray-900 font-bold border-b border-gray-900">
