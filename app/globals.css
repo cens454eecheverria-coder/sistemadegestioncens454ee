@@ -1,0 +1,136 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --primary-azul: #006384;
+  --primary-container: #0B7EA5;
+  --primary-light: #C1E8FF;
+  --secondary-oscuro: #0D2A3E;
+  --tertiary-dorado: #F5C442;
+  --surface-canvas: #F4FAFF;
+  --surface-card: #FFFFFF;
+  --surface-low: #EEF5FA;
+  --text-main: #151D20;
+  --text-variant: #3F484E;
+}
+
+body {
+  background-color: var(--surface-canvas);
+  color: var(--text-main);
+  font-family: 'Work Sans', sans-serif;
+  min-height: 100vh;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+}
+
+.card {
+  background: var(--surface-card);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(13, 42, 62, 0.05);
+  overflow: hidden;
+  border: 1px solid #e2e9ee;
+}
+
+.card-header {
+  padding: 1rem 1.25rem;
+  background: var(--surface-low);
+  border-bottom: 1px solid #e2e9ee;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #006384 0%, #0b7ea5 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.65rem 1.35rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 99, 132, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 99, 132, 0.3);
+}
+
+.btn-gold {
+  background: linear-gradient(135deg, #F5C442 0%, #e8a800 100%);
+  color: #251a00;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.65rem 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(245, 196, 66, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-gold:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 196, 66, 0.45);
+}
+
+.field-soft {
+  background: #eef5fa;
+  border: 1px solid #bec8cf;
+  border-radius: 8px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+
+.field-soft:focus {
+  background: #ffffff;
+  border-color: #006384;
+  box-shadow: 0 0 0 3px rgba(0, 99, 132, 0.15);
+}
+
+.badge-final {
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.badge-final-aprobado {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-final-recupera {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-final-info {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+.pulse-glow-red {
+  animation: pulseGlow 2s infinite;
+}
