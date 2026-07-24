@@ -13,7 +13,6 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check initial user from localStorage or Supabase session
     const savedUser = localStorage.getItem('cens454_user');
     if (savedUser) {
       try {
@@ -29,8 +28,10 @@ export function AuthProvider({ children }) {
     setLoading(true);
     let userData = null;
 
-    if (roleType === 'admin' || roleType === 'preceptor') {
-      const { email, password } = credentials;
+    if (roleType === 'admin' || roleType === 'preceptor' || roleType === 'staff') {
+      const email = credentials.email || credentials;
+      const password = credentials.password || arguments[1];
+      
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setLoading(false);
@@ -43,19 +44,21 @@ export function AuthProvider({ children }) {
         nombre: isDirectivo ? 'Director/Secretaría CENS 454' : 'Preceptoría CENS 454',
         role: isDirectivo ? 'admin' : 'preceptor',
       };
-    } else if (roleType === 'profesor') {
+    } else if (roleType === 'profesor' || roleType === 'docente') {
+      const cuilVal = typeof credentials === 'object' ? credentials.cuil : credentials;
       userData = {
         id: 'docente_temp_id',
-        nombre: `Prof. ${credentials.cuil || 'Docente'}`,
+        nombre: `Prof. ${cuilVal || 'Docente'}`,
         role: 'profesor',
-        cuil: credentials.cuil,
+        cuil: cuilVal,
       };
     } else if (roleType === 'estudiante') {
+      const dniVal = typeof credentials === 'object' ? credentials.dni : credentials;
       userData = {
         id: 'estudiante_temp_id',
-        nombre: `Estudiante (DNI ${credentials.dni})`,
+        nombre: `Estudiante (DNI ${dniVal})`,
         role: 'estudiante',
-        dni: credentials.dni,
+        dni: dniVal,
       };
     }
 
@@ -71,6 +74,22 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
+  const loginStaff = async (email, password) => {
+    return login('staff', { email, password });
+  };
+
+  const loginProfesor = async (cuil) => {
+    return login('profesor', { cuil });
+  };
+
+  const loginDocente = async (cuil) => {
+    return login('profesor', { cuil });
+  };
+
+  const loginEstudiante = async (dni) => {
+    return login('estudiante', { dni });
+  };
+
   const logout = async () => {
     setUser(null);
     localStorage.removeItem('cens454_user');
@@ -79,7 +98,6 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.warn(e);
     }
-    // REDIRECCIÓN AUTOMÁTICA A LOGIN
     router.push('/login');
   };
 
@@ -95,6 +113,10 @@ export function AuthProvider({ children }) {
         loading,
         cicloLectivo,
         login,
+        loginStaff,
+        loginProfesor,
+        loginDocente,
+        loginEstudiante,
         logout,
         changeCicloLectivo,
       }}
