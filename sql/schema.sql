@@ -151,3 +151,13 @@ CREATE POLICY "horas_n_frente_all_policy" ON horas_n_frente FOR ALL TO public, a
 ALTER TABLE titulos_egresados ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "titulos_egresados_all_policy" ON titulos_egresados;
 CREATE POLICY "titulos_egresados_all_policy" ON titulos_egresados FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
+
+-- AGREGAR COLUMNAS DE LEGAJO A ESTUDIANTES SI NO EXISTEN
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_libro TEXT;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_folio TEXT;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS fotocopia_dni BOOLEAN DEFAULT false;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS partida_nacimiento BOOLEAN DEFAULT false;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS certificado_estudios BOOLEAN DEFAULT false;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS tipo_certificado TEXT;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS materias_adeudadas TEXT;
+ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS ciudad_nacimiento TEXT;
