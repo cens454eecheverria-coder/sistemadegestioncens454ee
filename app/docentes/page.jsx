@@ -146,9 +146,10 @@ export default function TeacherPortalPage() {
   };
 
   const handleAgregarCargoModal = () => {
+    const htmlForm = '<input id="sw-escuela" class="swal2-input" placeholder="Escuela / Establecimiento" /><input id="sw-distrito" class="swal2-input" placeholder="Distrito" /><input id="sw-cargo" class="swal2-input" placeholder="Cargo / Materia" /><input id="sw-horario" class="swal2-input" placeholder="Días y Horarios" />';
     Swal.fire({
       title: "Agregar Cargo en Otra Institución",
-      html: <input id="sw-escuela" class="swal2-input" placeholder="Escuela / Establecimiento" /><input id="sw-distrito" class="swal2-input" placeholder="Distrito (Ej: Esteban Echeverría)" /><input id="sw-cargo" class="swal2-input" placeholder="Cargo / Materia y Hs" /><input id="sw-horario" class="swal2-input" placeholder="Días y Horarios" />,
+      html: htmlForm,
       showCancelButton: true,
       confirmButtonText: "Agregar a la DDJJ",
       preConfirm: () => {
