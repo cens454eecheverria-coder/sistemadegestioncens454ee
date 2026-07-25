@@ -296,7 +296,7 @@ export default function PreceptorPage() {
     }
 
     try {
-      const fullStudentData = {
+      const studentData = {
         dni: dni.trim(),
         nombre: nombre.trim(),
         apellido: apellido.trim(),
@@ -320,24 +320,11 @@ export default function PreceptorPage() {
 
       const { data: newEst, error: estErr } = await supabase
         .from("estudiantes")
-        .insert(fullStudentData)
+        .insert(studentData)
         .select()
         .single();
 
-      if (estErr) {
-        if (estErr.message && estErr.message.includes("schema cache")) {
-          const sqlSnippet = "ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS genero TEXT DEFAULT 'Masculino'; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS ciudad_nacimiento TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS direccion TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS orientacion TEXT DEFAULT 'Ciencias Sociales'; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS fotocopia_dni BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS partida_nacimiento BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS certificado_estudios BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS tipo_certificado TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS materias_adeudadas TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_libro TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_folio TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS curso_id UUID; NOTIFY pgrst, 'reload schema';";
-          
-          Swal.fire({
-            icon: "warning",
-            title: "Incorporar Columnas a Supabase",
-            html: '<p class="text-xs text-left mb-2">Para guardar todos los datos sin pérdidas, copiá y ejecutá este script en el <strong>SQL Editor de Supabase</strong> (archivo disponible en <code>sql/update_estudiantes_schema.sql</code>):</p><textarea readonly class="w-full h-32 text-[10px] font-mono p-2 bg-slate-100 rounded border border-slate-300">' + sqlSnippet + '</textarea>',
-            confirmButtonText: "Entendido"
-          });
-          return;
-        }
-        throw estErr;
-      }
+      if (estErr) throw estErr;
 
       if (newEst && cursoAsignadoId) {
         try {
@@ -366,132 +353,31 @@ export default function PreceptorPage() {
     }
   };
 
-      let newEst = null;
-      let estErr = null;
-
-      const res1 = await supabase
-        .from("estudiantes")
-        .insert(fullStudentData)
-        .select()
-        .single();
-
-      newEst = res1.data;
-      estErr = res1.error;
-
-      if (estErr && estErr.message && estErr.message.includes("schema cache")) {
-        const baseStudentData = {
-          dni: dni.trim(),
-          nombre: nombre.trim(),
-          apellido: apellido.trim(),
-          fecha_nacimiento: fechaNacimiento || null,
-          ciudad_nacimiento: ciudadNacimiento.trim() || null,
-          direccion: direccion.trim() || null,
-          email: email.trim() || null,
-          telefono: telefono.trim() || null,
-          orientacion: orientacion || "Ciencias Sociales",
-          fotocopia_dni: fotocopiaDni,
-          partida_nacimiento: partidaNacimiento,
-          certificado_estudios: certificadoEstudios,
-          numero_libro: numeroLibro.trim() || null,
-          numero_folio: numeroFolio.trim() || null,
-          curso_id: cursoAsignadoId || null,
-          estado: "activo"
-        };
-
-        const res2 = await supabase
-          .from("estudiantes")
-          .insert(baseStudentData)
-          .select()
-          .single();
-
-        newEst = res2.data;
-        estErr = res2.error;
-
-        if (estErr && estErr.message && estErr.message.includes("schema cache")) {
-          const minimalStudentData = {
-            dni: dni.trim(),
-            nombre: nombre.trim(),
-            apellido: apellido.trim(),
-            estado: "activo"
-          };
-          if (cursoAsignadoId) minimalStudentData.curso_id = cursoAsignadoId;
-
-          const res3 = await supabase
-            .from("estudiantes")
-            .insert(minimalStudentData)
-            .select()
-            .single();
-
-          newEst = res3.data;
-          estErr = res3.error;
-        }
-      }
-
-      if (estErr) throw estErr;
-
-      if (newEst && cursoAsignadoId) {
-        try {
-          await supabase.from("alumnos_cursos").insert({
-            estudiante_id: newEst.id,
-            curso_id: cursoAsignadoId
-          });
-        } catch (acErr) {
-          console.log("alumnos_cursos notice:", acErr);
-        }
-      }
-
-      Swal.fire({
-        icon: "success",
-        title: "Inscripción Exitosa",
-        text: "Estudiante " + apellido + ", " + nombre + " inscripto correctamente.",
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      setShowInscribirModal(false);
-      setDni(""); setNombre(""); setApellido(""); setGenero(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setEmail(""); setTelefono(""); setOrientacion(""); setTipoCertificado(""); setMateriasAdeudadas(""); setNumeroLibro(""); setNumeroFolio("");
-      if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
-    } catch (err) {
-      Swal.fire("Error al inscribir", err.message, "error");
-    }
-  };
-
   const handleUpdateLegajoSubmit = async (e) => {
     e.preventDefault();
     if (!selectedLegajoStudent) return;
     try {
-      const fullUpdate = {
-        dni: selectedLegajoStudent.dni,
-        nombre: selectedLegajoStudent.nombre,
-        apellido: selectedLegajoStudent.apellido,
-        genero: selectedLegajoStudent.genero,
-        fecha_nacimiento: selectedLegajoStudent.fecha_nacimiento || null,
-        ciudad_nacimiento: selectedLegajoStudent.ciudad_nacimiento || null,
-        direccion: selectedLegajoStudent.direccion || null,
-        email: selectedLegajoStudent.email || null,
-        telefono: selectedLegajoStudent.telefono || null,
-        numero_libro: selectedLegajoStudent.numero_libro || null,
-        numero_folio: selectedLegajoStudent.numero_folio || null,
-        fotocopia_dni: selectedLegajoStudent.fotocopia_dni || false,
-        partida_nacimiento: selectedLegajoStudent.partida_nacimiento || false,
-        certificado_estudios: selectedLegajoStudent.certificado_estudios || false
-      };
-
-      const res1 = await supabase
+      const { error } = await supabase
         .from("estudiantes")
-        .update(fullUpdate)
+        .update({
+          dni: selectedLegajoStudent.dni,
+          nombre: selectedLegajoStudent.nombre,
+          apellido: selectedLegajoStudent.apellido,
+          genero: selectedLegajoStudent.genero,
+          fecha_nacimiento: selectedLegajoStudent.fecha_nacimiento || null,
+          ciudad_nacimiento: selectedLegajoStudent.ciudad_nacimiento || null,
+          direccion: selectedLegajoStudent.direccion || null,
+          email: selectedLegajoStudent.email || null,
+          telefono: selectedLegajoStudent.telefono || null,
+          numero_libro: selectedLegajoStudent.numero_libro || null,
+          numero_folio: selectedLegajoStudent.numero_folio || null,
+          fotocopia_dni: selectedLegajoStudent.fotocopia_dni || false,
+          partida_nacimiento: selectedLegajoStudent.partida_nacimiento || false,
+          certificado_estudios: selectedLegajoStudent.certificado_estudios || false
+        })
         .eq("id", selectedLegajoStudent.id);
 
-      if (res1.error && res1.error.message && res1.error.message.includes("schema cache")) {
-        delete fullUpdate.genero;
-        const res2 = await supabase
-          .from("estudiantes")
-          .update(fullUpdate)
-          .eq("id", selectedLegajoStudent.id);
-        if (res2.error) throw res2.error;
-      } else if (res1.error) {
-        throw res1.error;
-      }
+      if (error) throw error;
 
       Swal.fire({
         icon: "success",
