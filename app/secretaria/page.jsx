@@ -16,6 +16,7 @@ export default function SecretariaPanelPage() {
   const [cursos, setCursos] = useState([]);
   const [materias, setMaterias] = useState([]);
   const [bajasPases, setBajasPases] = useState([]);
+  const [ddjjDocentes, setDdjjDocentes] = useState([]);
 
   const [search, setSearch] = useState("");
   const [searchDocente, setSearchDocente] = useState("");
@@ -84,6 +85,8 @@ export default function SecretariaPanelPage() {
       setMaterias(matData || []);
       const { data: bpData } = await supabase.from("bajas_pases").select("*, estudiantes(nombre, apellido, dni)").order("created_at", { ascending: false });
       setBajasPases(bpData || []);
+      const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*, docentes(nombre, apellido, dni, cuil)").order("created_at", { ascending: false });
+      setDdjjDocentes(ddjjData || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
 
@@ -147,6 +150,27 @@ export default function SecretariaPanelPage() {
         await loadData();
       }
     } catch (err) { Swal.fire("Error", err.message, "error"); }
+  };
+
+  const handleEliminarDdjj = async (ddjjId) => {
+    try {
+      const confirm = await Swal.fire({
+        title: "Eliminar Declaraci?n Jurada",
+        text: "?Deseas borrar esta declaraci?n jurada cargada?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        confirmButtonText: "S?, Eliminar",
+        cancelButtonText: "Cancelar"
+      });
+      if (confirm.isConfirmed) {
+        await supabase.from("ddjj_docentes").delete().eq("id", ddjjId);
+        Swal.fire("Eliminado", "Declaraci?n jurada borrada con ?xito.", "success");
+        await loadData();
+      }
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
   };
 
   const handleMarcarTituloEntregado = async (est) => {
@@ -523,22 +547,62 @@ export default function SecretariaPanelPage() {
               <div className="p-4 bg-[#F8FAFC] border-b font-bold text-xs text-[#0D2A3E]">Nómina Oficial de Docentes Legajados ({filteredDocentes.length})</div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
-                    <tr><th className="py-3 px-4">Docente</th><th className="py-3 px-4">DNI / CUIL</th><th className="py-3 px-4">Título Principal</th><th className="py-3 px-4">Contacto</th><th className="py-3 px-4 text-center">Estado</th></tr>
+                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
+                    <tr>
+                      <th className="py-3 px-4">Docente</th>
+                      <th className="py-3 px-4">DNI / CUIL</th>
+                      <th className="py-3 px-4">T?tulo Principal</th>
+                      <th className="py-3 px-4">Contacto</th>
+                      <th className="py-3 px-4 text-center">Estado</th>
+                      <th className="py-3 px-4 text-center">Acciones</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {filteredDocentes.length === 0 ? (
-                      <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay docentes registrados. Haz clic en "+ Registrar Docente".</td></tr>
+                      <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay docentes registrados. Haz clic en "+ Registrar Docente".</td></tr>
                     ) : (
-                      filteredDocentes.map((d) => (
-                        <tr key={d.id} className="hover:bg-[#F4FAFF]">
-                          <td className="py-3 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
-                          <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-[#006384]">({d.cuil || "-"})</span></td>
-                          <td className="py-3 px-4">{d.titulo || "Profesor/a Secundario"}</td>
-                          <td className="py-3 px-4 text-gray-600">{d.email || d.telefono || "Sin datos"}</td>
-                          <td className="py-3 px-4 text-center font-bold text-emerald-700">🟢 Activo</td>
-                        </tr>
-                      ))
+                      filteredDocentes.map((d) => {
+                        const isInactive = d.estado === "inactivo" || d.activo === false;
+                        return (
+                          <tr key={d.id} className="hover:bg-[#F4FAFF] transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
+                            <td className="py-3.5 px-4 font-mono text-gray-700">{d.dni} <span className="text-[10px] text-[#006384]">({d.cuil || "-"})</span></td>
+                            <td className="py-3.5 px-4 text-gray-700">{d.titulo || "Profesor/a Secundario"}</td>
+                            <td className="py-3.5 px-4 text-gray-600">{d.email || d.telefono || "Sin datos"}</td>
+                            <td className="py-3.5 px-4 text-center">
+                              {isInactive ? (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-300">Inactivo</span>
+                              ) : (
+                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Activo</span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleEstadoDocente(d)}
+                                  className={
+                                    "text-[11px] font-bold py-1 px-3 rounded-lg border transition-all " +
+                                    (isInactive
+                                      ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                                      : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100")
+                                  }
+                                >
+                                  {isInactive ? "Reactivar" : "Baja / Inactivar"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEliminarDocenteModal(d)}
+                                  className="text-[11px] font-bold py-1 px-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all inline-flex items-center gap-1"
+                                  title="Eliminar legajo"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -547,16 +611,77 @@ export default function SecretariaPanelPage() {
           )}
 
           {docenteSubTab === "ddjj" && (
-            <div className="card p-6 bg-white space-y-4">
-              <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3"><Briefcase className="w-5 h-5 text-[#006384]" /> Declaración Jurada de Cargos (DDJJ) e Incompatibilidad</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="text" value={extEstablecimiento} onChange={(e) => setExtEstablecimiento(e.target.value)} placeholder="Establecimiento Externo Declarado" className="field-soft text-xs" />
-                <input type="text" value={extHorario} onChange={(e) => setExtHorario(e.target.value)} placeholder="Horario Externo (Ej: 18:30 a 21:00 hs)" className="field-soft text-xs" />
+            <div className="space-y-6">
+              <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3">
+                  <Briefcase className="w-5 h-5 text-[#006384]" />
+                  Control de Declaraciones Juradas (DDJJ) e Incompatibilidad Horaria
+                </h3>
+                
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-900 leading-relaxed">
+                  En este panel se visualizan en tiempo real todos los cargos y franjas horarias externas declaradas formalmente por el cuerpo docente activo del CENS N? 454.
+                </div>
               </div>
-              <div className="pt-2"><button onClick={handleVerificarConflictoDDJJ} className="btn-gold text-xs py-2 px-5 font-bold">Verificar Incompatibilidad Horaria</button></div>
-              {conflictAlert && <div className="p-3 rounded-xl bg-amber-50 border text-xs font-bold text-amber-900">{conflictAlert}</div>}
+
+              <div className="card p-0 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-xs">
+                <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold flex justify-between items-center">
+                  <span>N?mina de Declaraciones Juradas Presentadas ({ddjjDocentes.length})</span>
+                  <span className="text-[11px] text-blue-200 font-normal">Carga activa por docentes</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
+                      <tr>
+                        <th className="py-3.5 px-4">Docente</th>
+                        <th className="py-3.5 px-4">DNI / CUIL</th>
+                        <th className="py-3.5 px-4">Establecimiento Externo</th>
+                        <th className="py-3.5 px-4">Cargo / Funci?n</th>
+                        <th className="py-3.5 px-4">Horario Declarado</th>
+                        <th className="py-3.5 px-4">D?as / Distrito</th>
+                        <th className="py-3.5 px-4 text-center">Acci?n</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {ddjjDocentes.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="py-10 text-center text-gray-400 font-bold space-y-2">
+                            <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-1" />
+                            <p>No hay Declaraciones Juradas externas registradas actualmente.</p>
+                            <p className="text-[11px] text-gray-400 font-normal">Los docentes pueden cargar sus cargos externos directamente desde el Portal Docente.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        ddjjDocentes.map((ddjj) => {
+                          const docName = ddjj.docentes ? ddjj.docentes.apellido + ", " + ddjj.docentes.nombre : "Docente Registrado";
+                          const docDni = ddjj.docentes ? ddjj.docentes.dni + " (" + (ddjj.docentes.cuil || "-") + ")" : "-";
+                          return (
+                            <tr key={ddjj.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{docName}</td>
+                              <td className="py-3.5 px-4 font-mono text-gray-600">{docDni}</td>
+                              <td className="py-3.5 px-4 font-semibold text-[#006384]">{ddjj.establecimiento_externo || "Sin especificar"}</td>
+                              <td className="py-3.5 px-4 font-medium text-gray-700">{ddjj.cargo_externo || "Docente / Preceptor"}</td>
+                              <td className="py-3.5 px-4 font-bold text-gray-800">{ddjj.horario_externo || "18:30 a 22:00"}</td>
+                              <td className="py-3.5 px-4 text-gray-600">{ddjj.dias_externos || "Esteban Echeverr?a"}</td>
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEliminarDdjj(ddjj.id)}
+                                  className="text-[11px] font-bold py-1 px-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all inline-flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Borrar DDJJ
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          )}
+          )} 
         </div>
       )}
 
