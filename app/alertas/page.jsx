@@ -134,13 +134,19 @@ export default function AlertasPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setFilterRiesgo('todos')}
-            className={px-3 py-1.5 rounded-lg text-xs font-bold transition-colors }
+            className={
+              "px-3 py-1.5 rounded-lg text-xs font-bold transition-colors " +
+              (filterRiesgo === 'todos' ? 'bg-[#006384] text-white' : 'bg-gray-100 text-gray-700')
+            }
           >
             Todos ({estudiantesAlertas.length})
           </button>
           <button
             onClick={() => setFilterRiesgo('rojo')}
-            className={px-3 py-1.5 rounded-lg text-xs font-bold transition-colors }
+            className={
+              "px-3 py-1.5 rounded-lg text-xs font-bold transition-colors " +
+              (filterRiesgo === 'rojo' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-700')
+            }
           >
             Críticos ({estudiantesAlertas.filter(e => e.nivel === 'rojo').length})
           </button>
