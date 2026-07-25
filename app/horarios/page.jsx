@@ -76,7 +76,7 @@ export default function HorariosPage() {
       const map = {};
       if (horData) {
         horData.forEach((h) => {
-          map[${h.dia_semana}_] = {
+          map[h.dia_semana + "_" + h.modulo] = {
             materiaId: h.materia_id,
             docenteId: h.docente_id,
           };
@@ -99,8 +99,8 @@ export default function HorariosPage() {
         const formatted = data.map((h) => {
           const diaNombre = DIAS[h.dia_semana] || 'Día';
           const materiaNombre = h.materias?.nombre || 'Materia';
-          const cursoNombre = h.cursos ? ${h.cursos.anio}º "" () : 'Curso';
-          return ${diaNombre} º Módulo:  ();
+          const cursoNombre = h.cursos ? h.cursos.anio + "º " + h.cursos.division + " (" + h.cursos.turno + ")" : 'Curso';
+          return diaNombre + " " + h.modulo + "º Módulo: " + materiaNombre + " (" + cursoNombre + ")";
         });
         setDocenteHorariosList(formatted);
       } else {
@@ -113,7 +113,7 @@ export default function HorariosPage() {
   }
 
   const handleCellChange = (diaIdx, moduloNum, materiaId) => {
-    const key = ${diaIdx}_;
+    const key = diaIdx + "_" + moduloNum;
     setGrillaHoraria((prev) => ({
       ...prev,
       [key]: {
@@ -129,7 +129,9 @@ export default function HorariosPage() {
     try {
       const records = [];
       Object.keys(grillaHoraria).forEach((key) => {
-        const [diaStr, modStr] = key.split('_');
+        const parts = key.split('_');
+        const diaStr = parts[0];
+        const modStr = parts[1];
         const item = grillaHoraria[key];
         if (item.materiaId) {
           records.push({
@@ -161,17 +163,19 @@ export default function HorariosPage() {
   };
 
   const getFranja = (modIdx) => {
-    const [h, m] = horaInicioBase.split(':').map(Number);
+    const parts = horaInicioBase.split(':').map(Number);
+    const h = parts[0];
+    const m = parts[1];
     const startMinutes = (h || 18) * 60 + (m || 30) + modIdx * 40;
     const endMinutes = startMinutes + 40;
 
     const formatMinutes = (mins) => {
       const hrs = Math.floor(mins / 60) % 24;
       const mnts = mins % 60;
-      return ${hrs.toString().padStart(2, '0')}:;
+      return (hrs < 10 ? '0' + hrs : hrs) + ":" + (mnts < 10 ? '0' + mnts : mnts);
     };
 
-    return ${formatMinutes(startMinutes)} - ;
+    return formatMinutes(startMinutes) + " - " + formatMinutes(endMinutes);
   };
 
   const selectedCursoObj = cursos.find((c) => c.id === selectedCursoId) || {};
@@ -280,7 +284,7 @@ export default function HorariosPage() {
                   </td>
 
                   {DIAS.map((dia, diaIdx) => {
-                    const cellKey = ${diaIdx}_;
+                    const cellKey = diaIdx + "_" + mod;
                     const cell = grillaHoraria[cellKey] || {};
                     return (
                       <td key={diaIdx} className="p-2 border-r border-gray-200 text-center">
