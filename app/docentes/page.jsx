@@ -100,6 +100,7 @@ export default function TeacherPortalPage() {
       }
     } catch (e) { console.error(e); } finally { setLoadingProfile(false); }
   }
+
   async function loadAlumnosYCalificaciones(materiaId) {
     try {
       const sampleAlumnos = [
@@ -120,7 +121,10 @@ export default function TeacherPortalPage() {
   }
 
   const handleUpdateNotaField = (estId, field, val) => {
-    setCalificacionesMap((prev) => ({ ...prev, [estId]: { ...prev[estId]: val } }));
+    setCalificacionesMap((prev) => ({
+      ...prev,
+      [estId]: { ...(prev[estId] || {}), [field]: val }
+    }));
   };
 
   const handleGuardarCalificaciones = async () => {
@@ -283,6 +287,7 @@ export default function TeacherPortalPage() {
       </div>
     );
   }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
