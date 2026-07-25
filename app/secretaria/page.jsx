@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
+import { generateAnexo4SalidaDocx, generateAnexo5SalidaDocx } from '@/lib/generateSalidasDocx';
 import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap } from "lucide-react";
 
 export default function SecretariaPanelPage() {
@@ -17,6 +18,26 @@ export default function SecretariaPanelPage() {
   const [materias, setMaterias] = useState([]);
   const [bajasPases, setBajasPases] = useState([]);
   const [ddjjDocentes, setDdjjDocentes] = useState([]);
+  // State Salidas Educativas (Anexos 4 y 5)
+  const [salidaProyecto, setSalidaProyecto] = useState("Visita Pedag?gica Tecnol?gica y Cultural 2026");
+  const [salidaLugar, setSalidaLugar] = useState("Museo de Ciencias Naturales de La Plata");
+  const [salidaCursoId, setSalidaCursoId] = useState("");
+  const [salidaFechaSalida, setSalidaFechaSalida] = useState("");
+  const [salidaHoraSalida, setSalidaHoraSalida] = useState("08:00 hs");
+  const [salidaLugarSalida, setSalidaLugarSalida] = useState("Sede CENS N? 454 - Av. Pedro Dreyer 1234");
+  const [salidaFechaRegreso, setSalidaFechaRegreso] = useState("");
+  const [salidaHoraRegreso, setSalidaHoraRegreso] = useState("18:00 hs");
+  const [salidaLugarRegreso, setSalidaLugarRegreso] = useState("Sede CENS N? 454");
+  const [salidaObsFechas, setSalidaObsFechas] = useState("Sujeto a condiciones clim?ticas favorables");
+  const [salidaItinerario, setSalidaItinerario] = useState("08:00 Salida desde sede CENS. 10:00 Recorrido guiado. 13:00 Almuerzo. 15:00 Taller interactivo. 16:30 Retorno.");
+  const [salidaActividades, setSalidaActividades] = useState("An?lisis de patrimonio hist?rico, observaciones de campo y producci?n de informe s?ntesis.");
+  const [salidaObjetivos, setSalidaObjetivos] = useState("Fomentar el conocimiento directo del patrimonio cient?fico e integrarlo con los contenidos curriculares.");
+  const [salidaCronograma, setSalidaCronograma] = useState("Jornada escolar de salida educativa de 08:00 a 18:00 hs.");
+  const [salidaDocenteNombre, setSalidaDocenteNombre] = useState("");
+  const [salidaDocenteCargo, setSalidaDocenteCargo] = useState("Profesor/a Titular");
+  const [salidaCantDocentes, setSalidaCantDocentes] = useState("2");
+  const [salidaCantNoDocentes, setSalidaCantNoDocentes] = useState("1");
+  const [salidaAlumnos, setSalidaAlumnos] = useState([]);
 
   const [search, setSearch] = useState("");
   const [searchDocente, setSearchDocente] = useState("");
@@ -170,6 +191,96 @@ export default function SecretariaPanelPage() {
       }
     } catch (err) {
       Swal.fire("Error", err.message, "error");
+    }
+  };
+
+    const handleSalidaCursoChange = (cId) => {
+    setSalidaCursoId(cId);
+    if (!cId) {
+      setSalidaAlumnos([]);
+      return;
+    }
+    const filtered = estudiantes.filter(e => e.curso_id === cId || !e.curso_id).map(e => ({
+      ...e,
+      seleccionado: true,
+      asistencia: 'P',
+      rol: 'estudiante'
+    }));
+    setSalidaAlumnos(filtered);
+  };
+
+  const toggleAlumnoSeleccionado = (id) => {
+    setSalidaAlumnos(prev => prev.map(a => a.id === id ? { ...a, seleccionado: !a.seleccionado } : a));
+  };
+
+  const changeAlumnoAsistencia = (id, st) => {
+    setSalidaAlumnos(prev => prev.map(a => a.id === id ? { ...a, asistencia: st } : a));
+  };
+
+  const handleDescargarAnexo4 = async () => {
+    try {
+      const activeAlumnos = salidaAlumnos.filter(a => a.seleccionado);
+      await generateAnexo4SalidaDocx({
+        distrito: 'Esteban Echeverr?a',
+        institucion: 'CENS',
+        numero: '454',
+        domicilio: 'Av. Pedro Dreyer 1234',
+        telefono: '11-4290-0000',
+        proyecto: salidaProyecto,
+        lugar: salidaLugar,
+        fechaSalida: salidaFechaSalida || new Date().toLocaleDateString('es-AR'),
+        horaSalida: salidaHoraSalida,
+        lugarSalida: salidaLugarSalida,
+        fechaRegreso: salidaFechaRegreso || new Date().toLocaleDateString('es-AR'),
+        horaRegreso: salidaHoraRegreso,
+        lugarRegreso: salidaLugarRegreso,
+        obsFechas: salidaObsFechas,
+        itinerario: salidaItinerario,
+        actividades: salidaActividades,
+        objetivos: salidaObjetivos,
+        cronograma: salidaCronograma,
+        tit1Nombre: salidaDocenteNombre || 'Prof. Responsable Titular',
+        tit1Cargo: salidaDocenteCargo,
+        cantAlumnos: activeAlumnos.length,
+        cantDocentes: salidaCantDocentes,
+        cantNoDocentes: salidaCantNoDocentes
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Anexo 4 Generado',
+        text: 'Se descarg? el documento Word del Anexo 4 exitosamente.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo generar el Anexo 4: ' + err.message, 'error');
+    }
+  };
+
+  const handleDescargarAnexo5 = async () => {
+    try {
+      const activeAlumnos = salidaAlumnos.filter(a => a.seleccionado);
+      if (activeAlumnos.length === 0) {
+        Swal.fire('Atenci?n', 'Selecciona al menos un estudiante en la n?mina para generar el Anexo 5.', 'warning');
+        return;
+      }
+      await generateAnexo5SalidaDocx({
+        institucion: 'CENS N? 454',
+        distrito: 'Esteban Echeverr?a',
+        lugar: salidaLugar,
+        fechaSalida: salidaFechaSalida || new Date().toLocaleDateString('es-AR'),
+        alumnos: activeAlumnos,
+        proyecto: salidaProyecto
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Anexo 5 Generado',
+        text: 'Se descarg? el documento Word del Anexo 5 exitosamente.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo generar el Anexo 5: ' + err.message, 'error');
     }
   };
 
