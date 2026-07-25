@@ -19,7 +19,7 @@ export default function Navbar({ showSidebar, sidebarOpen, toggleSidebar }) {
               title={sidebarOpen ? 'Ocultar Barra Lateral' : 'Mostrar Barra Lateral'}
             >
               {sidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              <span className="hidden sm:inline">{sidebarOpen ? 'Ocultar Menú' : 'Menú Principal'}</span>
+              <span className="hidden sm:inline">{sidebarOpen ? 'Ocultar Men?ú' : 'Menú Principal'}</span>
             </button>
           )}
 

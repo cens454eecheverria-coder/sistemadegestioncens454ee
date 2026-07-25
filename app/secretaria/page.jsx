@@ -569,7 +569,7 @@ export default function SecretariaPanelPage() {
         </div>
       </div>
 
-      <div className="flex border-b border-gray-200 bg-white rounded-t-2xl px-4 pt-2 gap-1 overflow-x-auto text-xs font-bold shadow-xs">
+      <div className="flex border-b border-gray-200 bg-white rounded-t-2xl px-3 sm:px-4 pt-2 gap-1 overflow-x-auto whitespace-nowrap scrollbar-none text-xs font-bold shadow-xs">
         <button onClick={() => setActiveTab("estudiantes")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "estudiantes" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Users className="w-4 h-4" /> 1. Estudiantes</button>
         <button onClick={() => setActiveTab("titulos")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "titulos" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Award className="w-4 h-4" /> 2. Títulos y Egresados</button>
         <button onClick={() => setActiveTab("salidas")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "salidas" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Compass className="w-4 h-4" /> 3. Salidas Educativas</button>
