@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
-import { BookMarked, Plus, Calendar, Save, CheckCircle } from 'lucide-react';
+import { BookMarked, Plus, Calendar, Save, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function LibroDicytPage() {
   const [registros, setRegistros] = useState([]);
@@ -27,20 +27,7 @@ export default function LibroDicytPage() {
         .select('*')
         .order('fecha', { ascending: false });
 
-      if (data && data.length > 0) {
-        setRegistros(data);
-      } else {
-        setRegistros([
-          {
-            id: 'd1',
-            fecha: fecha,
-            modulo: 1,
-            contenido_desarrollado: 'Introducción a la Literatura Argentina del siglo XX. Lectura de textos seleccionados.',
-            actividades: 'Análisis comprensivo y debate en clase sobre contexto histórico.',
-            docente_nombre: 'Prof. Roberto Martínez',
-          },
-        ]);
-      }
+      setRegistros(data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -57,9 +44,9 @@ export default function LibroDicytPage() {
       const newRecord = {
         fecha: fecha,
         modulo: parseInt(modulo),
-        contenido_desarrollado: contenido,
-        actividades: actividades,
-        observaciones: docenteNombre ? `Dictado por: ${docenteNombre}` : '',
+        contenido_desarrollado: contenido.trim(),
+        actividades: actividades.trim() || null,
+        observaciones: docenteNombre.trim() ? Dictado por:  : null,
       };
 
       const { error } = await supabase.from('libro_dicyt').insert(newRecord);
@@ -89,7 +76,7 @@ export default function LibroDicytPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
@@ -103,7 +90,7 @@ export default function LibroDicytPage() {
       </div>
 
       {/* Formulario de Carga de Tema */}
-      <form onSubmit={handleGuardarRegistro} className="card p-6 bg-white space-y-4">
+      <form onSubmit={handleGuardarRegistro} className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
         <h3 className="text-sm font-bold font-heading text-[#0D2A3E]">
           Cargar Nuevo Registro de Clase / Módulo
         </h3>
@@ -127,9 +114,9 @@ export default function LibroDicytPage() {
               onChange={(e) => setModulo(e.target.value)}
               className="field-soft font-semibold text-xs"
             >
-              <option value="1">1° Módulo</option>
-              <option value="2">2° Módulo</option>
-              <option value="3">3° Módulo</option>
+              <option value="1">1º Módulo</option>
+              <option value="2">2º Módulo</option>
+              <option value="3">3º Módulo</option>
             </select>
           </div>
 
@@ -183,25 +170,36 @@ export default function LibroDicytPage() {
       </form>
 
       {/* Historial de Registros DICYT */}
-      <div className="card overflow-hidden">
-        <div className="card-header font-heading text-sm">Historial de Partes Diarios Registrados</div>
-        <div className="divide-y divide-gray-200 bg-white">
-          {registros.map((r) => (
-            <div key={r.id} className="p-5 space-y-2 hover:bg-[#F4FAFF] transition-colors">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[#006384] bg-[#EEF5FA] px-2.5 py-1 rounded-md">
-                  📅 {r.fecha} - {r.modulo}° Módulo
-                </span>
-                <span className="text-gray-500 font-semibold">{r.observaciones || 'Docente Titular'}</span>
-              </div>
-              <p className="text-xs font-bold text-gray-800">{r.contenido_desarrollado}</p>
-              {r.actividades && (
-                <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                  <strong>Actividades:</strong> {r.actividades}
-                </p>
-              )}
+      <div className="card p-0 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-xs">
+        <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold">
+          Historial de Partes Diarios Registrados
+        </div>
+        <div className="divide-y divide-gray-100 bg-white">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-gray-500 font-bold">Cargando Libro DICYT...</div>
+          ) : registros.length === 0 ? (
+            <div className="p-10 text-center text-xs text-gray-400 font-bold space-y-2">
+              <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-1" />
+              <p>No hay registros cargados en el Libro de Temas DICYT actualmente.</p>
             </div>
-          ))}
+          ) : (
+            registros.map((r) => (
+              <div key={r.id} className="p-5 space-y-2 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-[#006384] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                    Fecha: {r.fecha} • {r.modulo}º Módulo
+                  </span>
+                  <span className="text-gray-500 font-semibold">{r.observaciones || 'Docente Titular'}</span>
+                </div>
+                <p className="text-xs font-bold text-[#0D2A3E]">{r.contenido_desarrollado}</p>
+                {r.actividades && (
+                  <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                    <strong>Actividades:</strong> {r.actividades}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
