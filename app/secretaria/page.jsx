@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
-import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer } from "lucide-react";
+import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap } from "lucide-react";
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
@@ -20,6 +20,7 @@ export default function SecretariaPanelPage() {
   const [search, setSearch] = useState("");
   const [searchDocente, setSearchDocente] = useState("");
   const [searchBaja, setSearchBaja] = useState("");
+  const [searchTitulo, setSearchTitulo] = useState("");
   const [loading, setLoading] = useState(true);
 
   // Modal Nuevo Legajo Estudiante
@@ -147,6 +148,14 @@ export default function SecretariaPanelPage() {
     } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
 
+  const handleMarcarTituloEntregado = async (est) => {
+    try {
+      await supabase.from("estudiantes").update({ estado_titulo: "Entregado" }).eq("id", est.id);
+      Swal.fire({ icon: "success", title: "Título Registrado como Entregado", text: Se actualizó el estado de , ., timer: 1500, showConfirmButton: false });
+      await loadData();
+    } catch (err) { Swal.fire("Error", err.message, "error"); }
+  };
+
   const handleCrearDocenteModalCompleto = async (e) => {
     e.preventDefault();
     if (!docDni || !docNombre || !docApellido) { Swal.fire("Error", "Ingrese DNI, Nombre y Apellido.", "error"); return; }
@@ -187,6 +196,8 @@ export default function SecretariaPanelPage() {
     const dniVal = bp.estudiantes ? bp.estudiantes.dni : "";
     return name.toLowerCase().includes(searchBaja.toLowerCase()) || dniVal.includes(searchBaja);
   });
+
+  const estudiantesTitulos = estudiantes.filter((e) => e.en_condicion_titulo || e.estado === "egresado" || e.estado_titulo);
 
   if (role !== "admin") {
     return (
@@ -269,6 +280,91 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
+      {/* ------------------- TAB 2: TÍTULOS Y EGRESADOS ------------------- */}
+      {activeTab === "titulos" && (
+        <div className="space-y-6">
+          <div className="card p-6 bg-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-600" /> Registro Oficial de Títulos y Egresados CENS 454
+                </h3>
+                <p className="text-xs text-gray-500">Estudiantes enviados a titularización desde Preceptoría / Calificador.</p>
+              </div>
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTitulo}
+                  onChange={(e) => setSearchTitulo(e.target.value)}
+                  placeholder="Buscar egresado..."
+                  className="field-soft pl-9 text-xs py-1.5 w-64"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                  <tr>
+                    <th className="py-3 px-4">Estudiante Egresado</th>
+                    <th className="py-3 px-4">DNI</th>
+                    <th className="py-3 px-4">Libro / Folio</th>
+                    <th className="py-3 px-4 text-center">Estado del Título</th>
+                    <th className="py-3 px-4 text-center">Acciones de Secretaría</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {estudiantesTitulos.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-gray-400">
+                        <GraduationCap className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                        <p className="font-bold">No hay estudiantes en condición de titularización actualmente.</p>
+                        <p className="text-[11px] text-gray-400">Desde Preceptoría / Calificador podés presionar <strong>"Mandar a Titular"</strong> para enviar un estudiante a esta lista.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    estudiantesTitulos
+                      .filter((e) => e.apellido.toLowerCase().includes(searchTitulo.toLowerCase()) || e.nombre.toLowerCase().includes(searchTitulo.toLowerCase()) || (e.dni && e.dni.includes(searchTitulo)))
+                      .map((est) => (
+                        <tr key={est.id} className="hover:bg-amber-50/40">
+                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
+                          <td className="py-3.5 px-4 font-mono">{est.dni}</td>
+                          <td className="py-3.5 px-4 font-mono text-gray-600">Libro: {est.numero_libro || "9"} / Folio: {est.numero_folio || "13"}</td>
+                          <td className="py-3.5 px-4 text-center font-bold">
+                            {est.estado_titulo === "Entregado" ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1 w-28 mx-auto">
+                                <Check className="w-3 h-3" /> Entregado
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-100 text-amber-900 flex items-center justify-center gap-1 w-28 mx-auto">
+                                ⏳ En Trámite
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center space-x-2">
+                            <button
+                              onClick={() => handleEmitirCertificado(est, "Analítico Parcial")}
+                              className="btn-gold text-[10px] py-1 px-3"
+                            >
+                              📜 Ver Analítico Final
+                            </button>
+                            <button
+                              onClick={() => handleMarcarTituloEntregado(est)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] py-1 px-3 rounded-lg"
+                            >
+                              ✅ Marcar Entregado
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {activeTab === "bajas" && (
         <div className="space-y-6">
           <div className="card p-6 bg-white space-y-4">
@@ -371,7 +467,7 @@ export default function SecretariaPanelPage() {
                       filteredDocentes.map((d) => (
                         <tr key={d.id} className="hover:bg-[#F4FAFF]">
                           <td className="py-3 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
-                          <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-gray-400">({d.cuil || "-"})</span></td>
+                          <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-[#006384]">({d.cuil || "-"})</span></td>
                           <td className="py-3 px-4">{d.titulo || "Profesor/a Secundario"}</td>
                           <td className="py-3 px-4 text-gray-600">{d.email || d.telefono || "Sin datos"}</td>
                           <td className="py-3 px-4 text-center font-bold text-emerald-700">🟢 Activo</td>
