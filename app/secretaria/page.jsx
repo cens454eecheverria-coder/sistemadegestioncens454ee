@@ -19,19 +19,19 @@ export default function SecretariaPanelPage() {
   const [bajasPases, setBajasPases] = useState([]);
   const [ddjjDocentes, setDdjjDocentes] = useState([]);
   // State Salidas Educativas (Anexos 4 y 5)
-  const [salidaProyecto, setSalidaProyecto] = useState("Visita Pedag?gica Tecnol?gica y Cultural 2026");
+  const [salidaProyecto, setSalidaProyecto] = useState("Visita Pedagógica Tecnológica y Cultural 2026");
   const [salidaLugar, setSalidaLugar] = useState("Museo de Ciencias Naturales de La Plata");
   const [salidaCursoId, setSalidaCursoId] = useState("");
   const [salidaFechaSalida, setSalidaFechaSalida] = useState("");
   const [salidaHoraSalida, setSalidaHoraSalida] = useState("08:00 hs");
-  const [salidaLugarSalida, setSalidaLugarSalida] = useState("Sede CENS N?? 454 - Av. Pedro Dreyer 1234");
+  const [salidaLugarSalida, setSalidaLugarSalida] = useState("Sede CENS Nº 454 - Av. Pedro Dreyer 1234");
   const [salidaFechaRegreso, setSalidaFechaRegreso] = useState("");
   const [salidaHoraRegreso, setSalidaHoraRegreso] = useState("18:00 hs");
-  const [salidaLugarRegreso, setSalidaLugarRegreso] = useState("Sede CENS N?? 454");
-  const [salidaObsFechas, setSalidaObsFechas] = useState("Sujeto a condiciones clim?ticas favorables");
+  const [salidaLugarRegreso, setSalidaLugarRegreso] = useState("Sede CENS Nº 454");
+  const [salidaObsFechas, setSalidaObsFechas] = useState("Sujeto a condiciones climáticas favorables");
   const [salidaItinerario, setSalidaItinerario] = useState("08:00 Salida desde sede CENS. 10:00 Recorrido guiado. 13:00 Almuerzo. 15:00 Taller interactivo. 16:30 Retorno.");
-  const [salidaActividades, setSalidaActividades] = useState("An?lisis de patrimonio hist?rico, observaciones de campo y producci?n de informe s?ntesis.");
-  const [salidaObjetivos, setSalidaObjetivos] = useState("Fomentar el conocimiento directo del patrimonio cient?fico e integrarlo con los contenidos curriculares.");
+  const [salidaActividades, setSalidaActividades] = useState("Análisis de patrimonio histórico, observaciones de campo y producción de informe síntesis.");
+  const [salidaObjetivos, setSalidaObjetivos] = useState("Fomentar el conocimiento directo del patrimonio científico e integrarlo con los contenidos curriculares.");
   const [salidaCronograma, setSalidaCronograma] = useState("Jornada escolar de salida educativa de 08:00 a 18:00 hs.");
   const [salidaDocenteNombre, setSalidaDocenteNombre] = useState("");
   const [salidaDocenteCargo, setSalidaDocenteCargo] = useState("Profesor/a Titular");
@@ -134,7 +134,7 @@ export default function SecretariaPanelPage() {
         Swal.fire("Atención", "Ingrese la Escuela o Establecimiento Destino para el Pase.", "warning"); return;
       }
       if (motivoBaja === "Error de Carga") {
-        const confirm = await Swal.fire({ title: "Confirmar Eliminación por Error de Carga", text: "¿Deseas eliminar definitivamente el legajo cargado por error?", icon: "warning", showCancelButton: true, confirmButtonText: "Eliminar Registro Completo" });
+        const confirm = await Swal.fire({ title: "Confirmar Eliminación por Error de Carga", text: "?Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acci?n eliminar? el registro de la instituci?n.", icon: "warning", showCancelButton: true, confirmButtonText: "Eliminar Registro Completo" });
         if (confirm.isConfirmed) {
           await supabase.from("estudiantes").delete().eq("id", selectedEstudianteBaja.id);
           Swal.fire("Eliminado", "Se eliminó el estudiante cargado por error.", "success");
@@ -176,8 +176,8 @@ export default function SecretariaPanelPage() {
   const handleEliminarDdjj = async (ddjjId) => {
     try {
       const confirm = await Swal.fire({
-        title: "Eliminar Declaraci?n Jurada",
-        text: "?Deseas borrar esta declaraci?n jurada cargada?",
+        title: "Eliminar Declaración Jurada",
+        text: "¿Deseas borrar esta declaración jurada cargada?",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
@@ -186,7 +186,7 @@ export default function SecretariaPanelPage() {
       });
       if (confirm.isConfirmed) {
         await supabase.from("ddjj_docentes").delete().eq("id", ddjjId);
-        Swal.fire("Eliminado", "Declaraci?n jurada borrada con ?xito.", "success");
+        Swal.fire("Eliminado", "Declaración jurada borrada con éxito.", "success");
         await loadData();
       }
     } catch (err) {
@@ -221,7 +221,7 @@ export default function SecretariaPanelPage() {
     try {
       const activeAlumnos = salidaAlumnos.filter(a => a.seleccionado);
       await generateAnexo4SalidaDocx({
-        distrito: 'Esteban Echeverr?a',
+        distrito: 'Esteban Echeverría',
         institucion: 'CENS',
         numero: '454',
         domicilio: 'Av. Pedro Dreyer 1234',
@@ -248,7 +248,7 @@ export default function SecretariaPanelPage() {
       Swal.fire({
         icon: 'success',
         title: 'Anexo 4 Generado',
-        text: 'Se descarg? el documento Word del Anexo 4 exitosamente.',
+        text: 'Se descargó el documento Word del Anexo 4 exitosamente.',
         timer: 2000,
         showConfirmButton: false
       });
@@ -261,12 +261,12 @@ export default function SecretariaPanelPage() {
     try {
       const activeAlumnos = salidaAlumnos.filter(a => a.seleccionado);
       if (activeAlumnos.length === 0) {
-        Swal.fire('Atenci?n', 'Selecciona al menos un estudiante en la n?mina para generar el Anexo 5.', 'warning');
+        Swal.fire('Atención', 'Selecciona al menos un estudiante en la nómina para generar el Anexo 5.', 'warning');
         return;
       }
       await generateAnexo5SalidaDocx({
-        institucion: 'CENS N?? 454',
-        distrito: 'Esteban Echeverr?a',
+        institucion: 'CENS Nº 454',
+        distrito: 'Esteban Echeverría',
         lugar: salidaLugar,
         fechaSalida: salidaFechaSalida || new Date().toLocaleDateString('es-AR'),
         alumnos: activeAlumnos,
@@ -275,7 +275,7 @@ export default function SecretariaPanelPage() {
       Swal.fire({
         icon: 'success',
         title: 'Anexo 5 Generado',
-        text: 'Se descarg? el documento Word del Anexo 5 exitosamente.',
+        text: 'Se descargó el documento Word del Anexo 5 exitosamente.',
         timer: 2000,
         showConfirmButton: false
       });
@@ -333,7 +333,7 @@ export default function SecretariaPanelPage() {
     try {
       const confirm = await Swal.fire({
         title: "Eliminar Legajo Docente",
-        text: "¿Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
+        text: "?Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acci?n eliminar? el registro de la instituci?n." + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
@@ -414,7 +414,7 @@ export default function SecretariaPanelPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2"><Users className="w-6 h-6 text-[#006384]" /> Módulo de Secretaría & Gestión Administrativa</h1>
-          <p className="text-xs text-gray-500 mt-1">CENS N?º 454 - Esteban Echeverría (Región 5)</p>
+          <p className="text-xs text-gray-500 mt-1">CENS Nº 454 - Esteban Echeverría (Región 5)</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setShowAddModal(true)} className="btn-gold font-bold text-xs py-2.5 px-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> Crear Legajo Estudiante</button>
@@ -574,10 +574,10 @@ export default function SecretariaPanelPage() {
               <div>
                 <h2 className="text-xl font-bold font-heading flex items-center gap-2 text-[#F5C442]">
                   <Compass className="w-6 h-6" />
-                  Salidas Educativas y Representaci?n Institucional (Anexos 4 y 5)
+                  Salidas Educativas y Representación Institucional (Anexos 4 y 5)
                 </h2>
                 <p className="text-xs text-blue-100 mt-1 max-w-3xl leading-relaxed">
-                  Formulario oficial de confecci?n de proyectos pedag?gicos de salida, itinerarios, franjas horarias y n?mina de asistencia. Generaci?n e impresi?n directa en formato Microsoft Word (.docx) normativos de la Provincia de Buenos Aires.
+                  Formulario oficial de confección de proyectos pedagógicos de salida, itinerarios, franjas horarias y nómina de asistencia. Generación e impresión directa en formato Microsoft Word (.docx) normativos de la Provincia de Buenos Aires.
                 </p>
               </div>
 
@@ -611,12 +611,12 @@ export default function SecretariaPanelPage() {
                 </h3>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Denominaci?n del Proyecto *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Denominación del Proyecto *</label>
                   <input
                     type="text"
                     value={salidaProyecto}
                     onChange={(e) => setSalidaProyecto(e.target.value)}
-                    placeholder="Ej: Visita Pedag?gica Tecnol?gica y Cultural 2026"
+                    placeholder="Ej: Visita Pedagógica Tecnológica y Cultural 2026"
                     className="field-soft text-xs font-bold"
                   />
                 </div>
@@ -655,7 +655,7 @@ export default function SecretariaPanelPage() {
                       type="text"
                       value={salidaDocenteNombre}
                       onChange={(e) => setSalidaDocenteNombre(e.target.value)}
-                      placeholder="Ej: Prof. G?mez, Ana Paula"
+                      placeholder="Ej: Prof. Gómez, Ana Paula"
                       className="field-soft text-xs font-semibold"
                     />
                   </div>
@@ -673,7 +673,7 @@ export default function SecretariaPanelPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Docentes Acompa?antes</label>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Docentes Acompañantes</label>
                     <input
                       type="number"
                       value={salidaCantDocentes}
@@ -773,12 +773,12 @@ export default function SecretariaPanelPage() {
               </div>
             </div>
 
-            {/* Columna Derecha: Fundamentaci?n y N?mina Anexo 5 */}
+            {/* Columna Derecha: Fundamentación y Nómina Anexo 5 */}
             <div className="space-y-6">
               <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
                 <h3 className="text-sm font-bold text-[#0D2A3E] border-b pb-2 flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[#006384]" />
-                  3. Fundamentaci?n Pedag?gica e Itinerario (Anexo 4)
+                  3. Fundamentación Pedagógica e Itinerario (Anexo 4)
                 </h3>
 
                 <div>
@@ -802,7 +802,7 @@ export default function SecretariaPanelPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Actividades Pedag?gicas a Realizar *</label>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Actividades Pedagógicas a Realizar *</label>
                   <textarea
                     rows={2}
                     value={salidaActividades}
@@ -822,12 +822,12 @@ export default function SecretariaPanelPage() {
                 </div>
               </div>
 
-              {/* N?mina de Asistencia Anexo 5 */}
+              {/* Nómina de Asistencia Anexo 5 */}
               <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
                 <div className="flex items-center justify-between border-b pb-2">
                   <h3 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-600" />
-                    4. N?mina de Participantes y Asistencia (Anexo 5)
+                    4. Nómina de Participantes y Asistencia (Anexo 5)
                   </h3>
                   <span className="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
                     {salidaAlumnos.filter(a => a.seleccionado).length} Inscriptos
@@ -837,7 +837,7 @@ export default function SecretariaPanelPage() {
                 {salidaCursoId === "" ? (
                   <div className="p-6 text-center text-gray-400 font-bold border-2 border-dashed rounded-xl space-y-1">
                     <AlertCircle className="w-6 h-6 text-amber-500 mx-auto" />
-                    <p className="text-xs">Selecciona un Curso en el paso 1 para cargar la n?mina de estudiantes.</p>
+                    <p className="text-xs">Selecciona un Curso en el paso 1 para cargar la nómina de estudiantes.</p>
                   </div>
                 ) : (
                   <div className="overflow-y-auto max-h-64 border rounded-xl divide-y">
@@ -997,7 +997,7 @@ export default function SecretariaPanelPage() {
                     <tr>
                       <th className="py-3 px-4">Docente</th>
                       <th className="py-3 px-4">DNI / CUIL</th>
-                      <th className="py-3 px-4">T?tulo Principal</th>
+                      <th className="py-3 px-4">Título Principal</th>
                       <th className="py-3 px-4">Contacto</th>
                       <th className="py-3 px-4 text-center">Estado</th>
                       <th className="py-3 px-4 text-center">Acciones</th>
@@ -1065,13 +1065,13 @@ export default function SecretariaPanelPage() {
                 </h3>
                 
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-900 leading-relaxed">
-                  En este panel se visualizan en tiempo real todos los cargos y franjas horarias externas declaradas formalmente por el cuerpo docente activo del CENS N?? 454.
+                  En este panel se visualizan en tiempo real todos los cargos y franjas horarias externas declaradas formalmente por el cuerpo docente activo del CENS Nº 454.
                 </div>
               </div>
 
               <div className="card p-0 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-xs">
                 <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold flex justify-between items-center">
-                  <span>N?mina de Declaraciones Juradas Presentadas ({ddjjDocentes.length})</span>
+                  <span>Nómina de Declaraciones Juradas Presentadas ({ddjjDocentes.length})</span>
                   <span className="text-[11px] text-blue-200 font-normal">Carga activa por docentes</span>
                 </div>
 
@@ -1082,10 +1082,10 @@ export default function SecretariaPanelPage() {
                         <th className="py-3.5 px-4">Docente</th>
                         <th className="py-3.5 px-4">DNI / CUIL</th>
                         <th className="py-3.5 px-4">Establecimiento Externo</th>
-                        <th className="py-3.5 px-4">Cargo / Funci?n</th>
+                        <th className="py-3.5 px-4">Cargo / Función</th>
                         <th className="py-3.5 px-4">Horario Declarado</th>
-                        <th className="py-3.5 px-4">D?as / Distrito</th>
-                        <th className="py-3.5 px-4 text-center">Acci?n</th>
+                        <th className="py-3.5 px-4">Días / Distrito</th>
+                        <th className="py-3.5 px-4 text-center">Acción</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -1108,7 +1108,7 @@ export default function SecretariaPanelPage() {
                               <td className="py-3.5 px-4 font-semibold text-[#006384]">{ddjj.establecimiento_externo || "Sin especificar"}</td>
                               <td className="py-3.5 px-4 font-medium text-gray-700">{ddjj.cargo_externo || "Docente / Preceptor"}</td>
                               <td className="py-3.5 px-4 font-bold text-gray-800">{ddjj.horario_externo || "18:30 a 22:00"}</td>
-                              <td className="py-3.5 px-4 text-gray-600">{ddjj.dias_externos || "Esteban Echeverr?a"}</td>
+                              <td className="py-3.5 px-4 text-gray-600">{ddjj.dias_externos || "Esteban Echeverría"}</td>
                               <td className="py-3.5 px-4 text-center">
                                 <button
                                   type="button"
@@ -1131,7 +1131,7 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
-      {/* MODAL IMPRESI?NÓN? DOCUMENTOS Y CONSTANCIAS OFICIALES */}
+      {/* MODAL IMPRESIÓNÓN? DOCUMENTOS Y CONSTANCIAS OFICIALES */}
       {showDocModal && docEstudiante && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200">
@@ -1139,7 +1139,7 @@ export default function SecretariaPanelPage() {
             <div className="border p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
               <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
                 <div>
-                  <h2 className="text-xl font-black text-gray-900">CENS N?º 454 - ESTEBAN? ECHEVERRÍA</h2>
+                  <h2 className="text-xl font-black text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍAÍA</h2>
                   <p className="text-xs text-gray-600 font-bold">Dirección General de Cultura y Educación • Provincia de Buenos Aires</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">Distrito: Esteban Echeverría • Región 5</p>
                 </div>
@@ -1165,13 +1165,13 @@ export default function SecretariaPanelPage() {
                   <p>Se hace constar por la presente que en el Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría existe <strong>VACANTE OTORGADA Y RESERVADA</strong> para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, a efectos de formalizar su inscripción en el ciclo lectivo en curso.</p>
                 )}
                 {docTipo === "Analítico Parcial" && (
-                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS N?º 454.</p>
+                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS Nº 454.</p>
                 )}
                 <p>A pedido del/de la interesado/a y a los efectos de ser presentado ante las autoridades que lo requieran, se expide la presente constancia en Esteban Echeverría a los {new Date().getDate()} días del mes de {new Date().toLocaleDateString("es-AR", { month: "long" })} de {new Date().getFullYear()}.</p>
               </div>
 
               <div className="pt-16 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
-                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS N?º 454 ESTEBAN? ECHEVERRÍA</p></div>
+                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS Nº 454 ESTEBAN ECHEVERRÍAÍA</p></div>
                 <div className="border-t border-gray-900 pt-2"><p>FIRMA Y SELLO DE DIRECCIÓN</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">Autoridad Escolar Responsable</p></div>
               </div>
             </div>
@@ -1200,14 +1200,14 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
-      {/* MODAL BAJA / PASE */}
+      {/* MODAL Baja / Pase */}
       {showBajaModal && selectedEstudianteBaja && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-gray-200">
             <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Registrar Baja / Pase: {selectedEstudianteBaja.apellido}, {selectedEstudianteBaja.nombre}</h3><button onClick={() => setShowBajaModal(false)} className="text-gray-400 font-bold">✕</button></div>
             <form onSubmit={handleConfirmarBajaOPase} className="space-y-4">
               <div><label className="block text-xs font-bold mb-1">Motivo de Baja:</label><select value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} className="field-soft text-xs font-bold border-2 border-red-300"><option value="Abandono">Abandono de Estudios</option><option value="Pase">Pase a Otra Institución Educativa</option><option value="Error de Carga">Error de Carga (Duplicado o incorrecto)</option></select></div>
-              {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N?° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
+              {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS Nº° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
               <div><label className="block text-xs font-semibold mb-1">Observaciones / Detalle</label><textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Detalle de la baja..." className="field-soft text-xs h-20" /></div>
               <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={() => setShowBajaModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="bg-red-600 text-white font-bold text-xs py-2.5 px-6 rounded-xl">Confirmar Baja / Pase</button></div>
             </form>

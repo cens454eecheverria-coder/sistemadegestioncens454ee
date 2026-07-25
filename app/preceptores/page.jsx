@@ -1273,7 +1273,7 @@ export default function PreceptorPage() {
                     Boletín Digital: {selectedBoletinStudent.apellido}, {selectedBoletinStudent.nombre}
                   </h3>
                   <p className="text-xs text-[#F5C442] font-semibold">
-                    DNI: {selectedBoletinStudent.dni} • CENS N?º 454 Esteban Echeverría
+                    DNI: {selectedBoletinStudent.dni} • CENS Nº 454 Esteban Echeverría
                   </p>
                 </div>
               </div>

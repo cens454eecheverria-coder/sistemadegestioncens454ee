@@ -286,7 +286,7 @@ export default function TeacherPortalPage() {
               <div className="flex justify-between items-center border-b pb-4"><h3 className="text-lg font-bold text-[#0D2A3E]">Vista Previa de Impresión Oficial - Calificaciones</h3><button onClick={() => setPrintingModal(false)} className="text-gray-400 font-bold">✕</button></div>
               <div className="border p-8 rounded-xl bg-white space-y-6">
                 <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
-                  <div><h2 className="text-lg font-extrabold text-gray-900">CENS N?º 454 - ESTEBAN? ECHEVERRÍA</h2><p className="text-[11px] text-gray-600 font-medium">Dirección General de Cultura y Educación - Provincia de Buenos Aires</p></div>
+                  <div><h2 className="text-lg font-extrabold text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍAÍA</h2><p className="text-[11px] text-gray-600 font-medium">Dirección General de Cultura y Educación - Provincia de Buenos Aires</p></div>
                   <div className="text-right"><h3 className="text-xs font-bold text-gray-800 uppercase">PLANILLA DE CALIFICACIONES</h3><p className="text-[10px] text-gray-500 mt-1">Fecha: {new Date().toLocaleDateString("es-AR")}</p></div>
                 </div>
                 <div className="flex justify-between items-end border-b pb-3">
@@ -315,7 +315,7 @@ export default function TeacherPortalPage() {
                 </table>
                 <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-800">
                   <div className="border-t border-gray-900 pt-2"><p>FIRMA DEL PROFESOR</p></div>
-                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DE DIRECCIÓN? INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS 454 ESTEBAN? ECHEVERRÍA</p></div>
+                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DE DIRECCIÓN? INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS 454 ESTEBAN ECHEVERRÍAÍA</p></div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 border-t pt-4">

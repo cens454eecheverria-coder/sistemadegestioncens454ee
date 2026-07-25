@@ -174,7 +174,7 @@ export default function DashboardPage() {
             Dashboard Directivo & Analítica Institucional
           </h1>
           <p className="text-xs text-gray-500 mt-1">
-            Resumen estadístico y control general en tiempo real del CENS N?º 454.
+            Resumen estadístico y control general en tiempo real del CENS Nº 454.
           </p>
         </div>
 

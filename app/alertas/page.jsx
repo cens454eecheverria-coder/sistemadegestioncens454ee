@@ -243,7 +243,7 @@ export default function AlertasPage() {
                 ACTA DE NOTIFICACIÓN? Y COMPROMISO DE ASISTENCIA
               </h3>
               <p className="text-xs text-gray-500 font-semibold mt-1">
-                CENS N?º 454 - Esteban Echeverría (Región 5)
+                CENS Nº 454 - Esteban Echeverría (Región 5)
               </p>
             </div>
 

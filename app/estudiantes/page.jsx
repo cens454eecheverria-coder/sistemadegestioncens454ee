@@ -204,7 +204,7 @@ export default function StudentPortalPage() {
 
           <div className="w-full sm:w-1/2">
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-              <User className="w-3.5 h-3.5 text-emerald-600" /> 2. Seleccionar Estudiante (N?mina):
+              <User className="w-3.5 h-3.5 text-emerald-600" /> 2. Seleccionar Estudiante (Nómina):
             </label>
             <select
               value={selectedEstudianteId}
@@ -236,7 +236,7 @@ export default function StudentPortalPage() {
               {estudianteInfo?.apellido ? estudianteInfo.apellido + ", " + estudianteInfo.nombre : (estudianteInfo?.nombre || 'Seleccione un estudiante')}
             </h1>
             <p className="text-xs text-[#F5C442] font-semibold">
-              DNI: {estudianteInfo?.dni || '-'} | CENS N?? 454 Esteban Echeverr?a
+              DNI: {estudianteInfo?.dni || '-'} | CENS Nº 454 Esteban Echeverría
             </p>
           </div>
         </div>
@@ -249,9 +249,9 @@ export default function StudentPortalPage() {
       {/* Resumen Inasistencias */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="card p-5 bg-white border-l-4 border-l-emerald-500 shadow-xs">
-          <p className="text-xs font-bold text-gray-500 uppercase">D?as Presente</p>
+          <p className="text-xs font-bold text-gray-500 uppercase">Días Presente</p>
           <h3 className="text-2xl font-extrabold font-heading text-emerald-700 mt-1">
-            {asistenciaSummary.presentes} D?as
+            {asistenciaSummary.presentes} Días
           </h3>
         </div>
         <div className="card p-5 bg-white border-l-4 border-l-red-500 shadow-xs">

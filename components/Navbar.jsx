@@ -26,7 +26,7 @@ export default function Navbar({ showSidebar, sidebarOpen, toggleSidebar }) {
           <Link href="/" className="flex items-center gap-2">
             <img src="/logo.png" alt="CENS 454" className="w-8 h-8 object-contain" />
             <span className="font-heading font-bold text-gray-800 text-sm md:text-base">
-              CENS N?° 454 - Esteban Echeverría
+              CENS Nº° 454 - Esteban Echeverría
             </span>
             <span className="bg-[#006384] text-white text-[10px] md:text-xs font-semibold px-2.5 py-0.5 rounded-full">
               Región 5
