@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
-import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle } from "lucide-react";
+import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer } from "lucide-react";
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
@@ -22,12 +22,14 @@ export default function SecretariaPanelPage() {
   const [searchBaja, setSearchBaja] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Modal Nuevo Legajo Estudiante
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDni, setNewDni] = useState("");
   const [newCuil, setNewCuil] = useState("");
   const [newApellido, setNewApellido] = useState("");
   const [newNombre, setNewNombre] = useState("");
 
+  // Modal Registrar Docente
   const [showDocenteModal, setShowDocenteModal] = useState(false);
   const [docCuil, setDocCuil] = useState("");
   const [docDni, setDocDni] = useState("");
@@ -44,16 +46,24 @@ export default function SecretariaPanelPage() {
   const [docSituacionRevista, setDocSituacionRevista] = useState("Titular");
   const [docFechaIngreso, setDocFechaIngreso] = useState("");
 
+  // Modal Emisión Documento PDF
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [docEstudiante, setDocEstudiante] = useState(null);
+  const [docTipo, setDocTipo] = useState("");
+
+  // Vincular Docente a Materia
   const [selectedCursoVinculo, setSelectedCursoVinculo] = useState("");
   const [selectedMateriaVinculo, setSelectedMateriaVinculo] = useState("");
   const [selectedDocenteVinculo, setSelectedDocenteVinculo] = useState("");
 
+  // Modal Dar de Baja / Pase Estudiante
   const [showBajaModal, setShowBajaModal] = useState(false);
   const [selectedEstudianteBaja, setSelectedEstudianteBaja] = useState(null);
   const [motivoBaja, setMotivoBaja] = useState("Abandono");
   const [escuelaDestino, setEscuelaDestino] = useState("");
   const [observacionesBaja, setObservacionesBaja] = useState("");
 
+  // DDJJ
   const [extEstablecimiento, setExtEstablecimiento] = useState("");
   const [extHorario, setExtHorario] = useState("18:30 - 22:00");
   const [conflictAlert, setConflictAlert] = useState(null);
@@ -165,7 +175,9 @@ export default function SecretariaPanelPage() {
   };
 
   const handleEmitirCertificado = (est, tipo) => {
-    Swal.fire({ title: "Emitir Documento", text: "Se generó " + tipo + " para " + est.apellido + ", " + est.nombre + ".", icon: "success" });
+    setDocEstudiante(est);
+    setDocTipo(tipo);
+    setShowDocModal(true);
   };
 
   const filteredEstudiantes = estudiantes.filter((e) => e.apellido.toLowerCase().includes(search.toLowerCase()) || e.nombre.toLowerCase().includes(search.toLowerCase()) || (e.dni && e.dni.includes(search)));
@@ -223,7 +235,7 @@ export default function SecretariaPanelPage() {
                   <th className="py-3 px-4">DNI</th>
                   <th className="py-3 px-4 text-center">Estado</th>
                   <th className="py-3 px-4 text-center">Calificador Inline</th>
-                  <th className="py-3 px-4 text-center">Constancias</th>
+                  <th className="py-3 px-4 text-center">Emisión de Constancias</th>
                   <th className="py-3 px-4 text-center">Acciones Baja / Pase</th>
                 </tr>
               </thead>
@@ -237,8 +249,8 @@ export default function SecretariaPanelPage() {
                       <td className="py-3.5 px-4 text-center font-bold">{isInactive ? <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-100 text-red-800">🔴 Inactivo</span> : <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800">🟢 Regular</span>}</td>
                       <td className="py-3.5 px-4 text-center"><div className="inline-flex gap-1.5 text-[10px] font-bold"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">1º: 8.5</span><span className="px-2 py-0.5 rounded bg-[#F5C442]/30 text-amber-900">2º: 6.0</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">3º: 9.0</span></div></td>
                       <td className="py-3.5 px-4 text-center space-x-1">
-                        <button onClick={() => handleEmitirCertificado(est, "Certificado Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
-                        <button onClick={() => handleEmitirCertificado(est, "Constancia Examen")} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Examen</button>
+                        <button onClick={() => handleEmitirCertificado(est, "Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
+                        <button onClick={() => handleEmitirCertificado(est, "Constancia Vacante")} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Vacante</button>
                         <button onClick={() => handleEmitirCertificado(est, "Analítico Parcial")} className="btn-gold text-[10px] py-1 px-2">Analítico Parcial</button>
                       </td>
                       <td className="py-3.5 px-4 text-center">
@@ -300,7 +312,6 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
-      {/* ------------------- SUB-PESTAÑA 6: DOCENTES Y DDJJ ------------------- */}
       {activeTab === "docentes_ddjj" && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
@@ -384,6 +395,75 @@ export default function SecretariaPanelPage() {
               {conflictAlert && <div className="p-3 rounded-xl bg-amber-50 border text-xs font-bold text-amber-900">{conflictAlert}</div>}
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL IMPRESIÓN DOCUMENTOS Y CONSTANCIAS OFICIALES */}
+      {showDocModal && docEstudiante && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-4"><h3 className="text-lg font-bold text-[#0D2A3E]">Vista Previa e Impresión de Documento Oficial</h3><button onClick={() => setShowDocModal(false)} className="text-gray-400 font-bold text-lg">✕</button></div>
+            <div className="border p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
+              <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2>
+                  <p className="text-xs text-gray-600 font-bold">Dirección General de Cultura y Educación • Provincia de Buenos Aires</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Distrito: Esteban Echeverría • Región 5</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold px-3 py-1 bg-gray-100 rounded border border-gray-400">DOCUMENTO OFICIAL</span>
+                  <p className="text-[11px] text-gray-500 mt-2 font-mono">Fecha: {new Date().toLocaleDateString("es-AR")}</p>
+                </div>
+              </div>
+
+              <div className="text-center py-4 space-y-1">
+                <h3 className="text-lg font-black tracking-wider uppercase border-b-2 border-gray-900 inline-block pb-1">
+                  {docTipo === "Alumno Regular" && "CERTIFICADO DE ALUMNO REGULAR"}
+                  {docTipo === "Constancia Vacante" && "CONSTANCIA DE VACANTE INSTITUCIONAL"}
+                  {docTipo === "Analítico Parcial" && "CERTIFICADO ANALÍTICO PARCIAL DE ESTUDIOS"}
+                </h3>
+              </div>
+
+              <div className="text-xs leading-relaxed space-y-4 text-justify px-2">
+                {docTipo === "Alumno Regular" && (
+                  <p>Se hace constar por la presente que el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, titular del DNI Nº <strong>{docEstudiante.dni}</strong>, es alumno/a <strong>REGULAR</strong> del Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría, cursando los estudios secundarios en el Ciclo Lectivo 2026.</p>
+                )}
+                {docTipo === "Constancia Vacante" && (
+                  <p>Se hace constar por la presente que en el Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría existe <strong>VACANTE OTORGADA Y RESERVADA</strong> para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, a efectos de formalizar su inscripción en el ciclo lectivo en curso.</p>
+                )}
+                {docTipo === "Analítico Parcial" && (
+                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS Nº 454.</p>
+                )}
+                <p>A pedido del/de la interesado/a y a los efectos de ser presentado ante las autoridades que lo requieran, se expide la presente constancia en Esteban Echeverría a los {new Date().getDate()} días del mes de {new Date().toLocaleDateString("es-AR", { month: "long" })} de {new Date().getFullYear()}.</p>
+              </div>
+
+              <div className="pt-16 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
+                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS Nº 454 ESTEBAN ECHEVERRÍA</p></div>
+                <div className="border-t border-gray-900 pt-2"><p>FIRMA Y SELLO DE DIRECCIÓN</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">Autoridad Escolar Responsable</p></div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t pt-4">
+              <button onClick={() => setShowDocModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cerrar</button>
+              <button onClick={() => window.print()} className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-md"><Printer className="w-4 h-4" /> Imprimir / Descargar PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CREAR LEGAJO ESTUDIANTE */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Nuevo Legajo Estudiante</h3><button onClick={() => setShowAddModal(false)} className="text-gray-400 font-bold">✕</button></div>
+            <form onSubmit={handleCrearEstudiante} className="space-y-3">
+              <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={newDni} onChange={(e) => setNewDni(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              <div><label className="block text-xs font-semibold mb-1">CUIL</label><input type="text" value={newCuil} onChange={(e) => setNewCuil(e.target.value)} className="field-soft text-xs" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={newApellido} onChange={(e) => setNewApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={newNombre} onChange={(e) => setNewNombre(e.target.value)} className="field-soft text-xs" required /></div>
+              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guardar Legajo</button></div>
+            </form>
+          </div>
         </div>
       )}
 
