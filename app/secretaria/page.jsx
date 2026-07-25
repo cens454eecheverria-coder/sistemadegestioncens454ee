@@ -245,7 +245,7 @@ export default function SecretariaPanelPage() {
                   <th className="py-3 px-4">Estudiante</th>
                   <th className="py-3 px-4">DNI</th>
                   <th className="py-3 px-4 text-center">Estado</th>
-                  <th className="py-3 px-4 text-center">Calificador Inline</th>
+                  <th className="py-3 px-4 text-center">Orientación / Legajo</th>
                   <th className="py-3 px-4 text-center">Emisión de Constancias</th>
                   <th className="py-3 px-4 text-center">Acciones Baja / Pase</th>
                 </tr>
@@ -258,7 +258,7 @@ export default function SecretariaPanelPage() {
                       <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
                       <td className="py-3.5 px-4 font-mono">{est.dni}</td>
                       <td className="py-3.5 px-4 text-center font-bold">{isInactive ? <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-100 text-red-800">🔴 Inactivo</span> : <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800">🟢 Regular</span>}</td>
-                      <td className="py-3.5 px-4 text-center"><div className="inline-flex gap-1.5 text-[10px] font-bold"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">1º: 8.5</span><span className="px-2 py-0.5 rounded bg-[#F5C442]/30 text-amber-900">2º: 6.0</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">3º: 9.0</span></div></td>
+                      <td className="py-3.5 px-4 text-center"><span className="text-xs font-semibold text-gray-700">{est.orientacion || "Ciencias Sociales"}</span></td>
                       <td className="py-3.5 px-4 text-center space-x-1">
                         <button onClick={() => handleEmitirCertificado(est, "Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
                         <button onClick={() => handleEmitirCertificado(est, "Constancia Vacante")} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Vacante</button>
@@ -330,7 +330,7 @@ export default function SecretariaPanelPage() {
                         <tr key={est.id} className="hover:bg-amber-50/40">
                           <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
                           <td className="py-3.5 px-4 font-mono">{est.dni}</td>
-                          <td className="py-3.5 px-4 font-mono text-gray-600">Libro: {est.numero_libro || "9"} / Folio: {est.numero_folio || "13"}</td>
+                          <td className="py-3.5 px-4 font-mono text-gray-600">Libro: {est.numero_libro || "-"} / Folio: {est.numero_folio || "-"}</td>
                           <td className="py-3.5 px-4 text-center font-bold">
                             {est.estado_titulo === "Entregado" ? (
                               <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1 w-28 mx-auto">

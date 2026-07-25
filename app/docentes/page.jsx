@@ -103,19 +103,37 @@ export default function TeacherPortalPage() {
 
   async function loadAlumnosYCalificaciones(materiaId) {
     try {
-      const sampleAlumnos = [
-        { id: "1", apellido: "Aguirre", nombre: "María Marcela" },
-        { id: "2", apellido: "Benitez Ramirez", nombre: "Sirley Mabel" },
-        { id: "3", apellido: "Campos", nombre: "Tobias" },
-        { id: "4", apellido: "Contreras", nombre: "Candela" },
-        { id: "5", apellido: "Martinez", nombre: "Leonor Veronica" },
-        { id: "6", apellido: "Molina", nombre: "Susana Miguelina" }
-      ];
-      setAlumnos(sampleAlumnos);
+      const { data: mData } = await supabase.from("materias").select("curso_id").eq("id", materiaId).single();
+      let realAlumnos = [];
+      if (mData?.curso_id) {
+        const { data: acData } = await supabase.from("alumnos_cursos").select("estudiante_id, estudiantes(*)").eq("curso_id", mData.curso_id);
+        if (acData && acData.length > 0) {
+          realAlumnos = acData.map((item) => item.estudiantes).filter(Boolean);
+        }
+      }
+      if (realAlumnos.length === 0) {
+        const { data: allEst } = await supabase.from("estudiantes").select("*").eq("estado", "activo").order("apellido");
+        realAlumnos = allEst || [];
+      }
+      setAlumnos(realAlumnos);
+
+      const { data: califData } = await supabase.from("calificaciones").select("*").eq("materia_id", materiaId);
       const initialMap = {};
-      sampleAlumnos.forEach((a, idx) => {
-        initialMap[a.id] = { valoracion: idx % 2 === 0 ? "TEA" : "TEP", nota: "", intensificacion: "", notaFinal: "", fecha: "2026-05-25" };
-      });
+      if (califData && califData.length > 0) {
+        califData.forEach((c) => {
+          initialMap[c.estudiante_id] = {
+            valoracion: c.valoracion || "TEA",
+            nota: c.nota || "",
+            intensificacion: c.intensificacion || "",
+            notaFinal: c.nota_final || "",
+            fecha: c.fecha || new Date().toISOString().split("T")[0]
+          };
+        });
+      } else {
+        realAlumnos.forEach((a) => {
+          initialMap[a.id] = { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
+        });
+      }
       setCalificacionesMap(initialMap);
     } catch (e) { console.error(e); }
   }
@@ -128,11 +146,29 @@ export default function TeacherPortalPage() {
   };
 
   const handleGuardarCalificaciones = async () => {
+    if (!selectedMateriaId) return;
     setSaving(true);
-    setTimeout(() => {
+    try {
+      const records = Object.keys(calificacionesMap).map((estId) => ({
+        estudiante_id: estId,
+        materia_id: selectedMateriaId,
+        valoracion: calificacionesMap[estId].valoracion,
+        nota: calificacionesMap[estId].nota || null,
+        intensificacion: calificacionesMap[estId].intensificacion || null,
+        nota_final: calificacionesMap[estId].notaFinal || null,
+        fecha: calificacionesMap[estId].fecha || new Date().toISOString().split("T")[0]
+      }));
+
+      if (records.length > 0) {
+        await supabase.from("calificaciones").upsert(records, { onConflict: "estudiante_id,materia_id" });
+      }
+
+      Swal.fire({ icon: "success", title: "Calificaciones Guardadas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
       setSaving(false);
-      Swal.fire({ icon: "success", title: "Calificaciones Guardadas", text: "Se registraron las valoraciones en Supabase.", timer: 1500, showConfirmButton: false });
-    }, 600);
+    }
   };
 
   const handleGuardarFichaDocente = async (e) => {
@@ -217,19 +253,23 @@ export default function TeacherPortalPage() {
                     <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACIÓN (1° CUATR.)</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACIÓN</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
-                    {alumnos.map((a) => {
-                      const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: "2026-05-25" };
-                      return (
-                        <tr key={a.id} className="hover:bg-gray-50/80">
-                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                          <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                          <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                          <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                          <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                          <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
-                        </tr>
-                      );
-                    })}
+                    {alumnos.length === 0 ? (
+                      <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay estudiantes inscriptos en este curso/materia.</td></tr>
+                    ) : (
+                      alumnos.map((a) => {
+                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: new Date().toISOString().split("T")[0] };
+                        return (
+                          <tr key={a.id} className="hover:bg-gray-50/80">
+                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
+                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -259,7 +299,7 @@ export default function TeacherPortalPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-900">
                     {alumnos.map((a) => {
-                      const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "-", fecha: "2026-05-25" };
+                      const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "-", fecha: new Date().toISOString().split("T")[0] };
                       return (
                         <tr key={a.id} className="border-b border-gray-900">
                           <td className="py-2 px-3 font-bold border-r border-gray-900">{a.apellido}, {a.nombre}</td>
@@ -401,7 +441,7 @@ export default function TeacherPortalPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {alumnos.map((a) => {
-                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: "2026-05-25" };
+                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: new Date().toISOString().split("T")[0] };
                         return (
                           <tr key={a.id} className="hover:bg-gray-50/80">
                             <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>

@@ -50,6 +50,9 @@ export default function PreceptorPage() {
   // Planillas tab state
   const [selectedPlanillaCursoId, setSelectedPlanillaCursoId] = useState("");
   const [planillaFilterMode, setPlanillaFilterMode] = useState("nota_final");
+  const [planillaMaterias, setPlanillaMaterias] = useState([]);
+  const [planillaDocentesMap, setPlanillaDocentesMap] = useState({});
+  const [planillaCalificacionesMap, setPlanillaCalificacionesMap] = useState({});
 
   // Modal Inscribir
   const [showInscribirModal, setShowInscribirModal] = useState(false);
@@ -85,6 +88,12 @@ export default function PreceptorPage() {
       loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     }
   }, [selectedCurso, fecha]);
+
+  useEffect(() => {
+    if (selectedPlanillaCursoId) {
+      loadPlanillaConsolidadaData(selectedPlanillaCursoId);
+    }
+  }, [selectedPlanillaCursoId]);
 
   async function loadCursos() {
     setLoading(true);
@@ -142,6 +151,37 @@ export default function PreceptorPage() {
     } catch (e) {
       console.error(e);
     }
+  }
+
+  async function loadPlanillaConsolidadaData(cursoId) {
+    try {
+      const { data: matList } = await supabase.from("materias").select("*").eq("curso_id", cursoId);
+      setPlanillaMaterias(matList || []);
+
+      if (matList && matList.length > 0) {
+        const matIds = matList.map(m => m.id);
+        const { data: dmData } = await supabase.from("docente_materia").select("materia_id, docentes(nombre, apellido)").in("materia_id", matIds);
+        const docMap = {};
+        if (dmData) {
+          dmData.forEach(item => {
+            if (item.docentes) {
+              docMap[item.materia_id] = "Prof. " + item.docentes.nombre + " " + item.docentes.apellido;
+            }
+          });
+        }
+        setPlanillaDocentesMap(docMap);
+
+        const { data: calData } = await supabase.from("calificaciones").select("*").in("materia_id", matIds);
+        const gradeMap = {};
+        if (calData) {
+          calData.forEach(c => {
+            if (!gradeMap[c.estudiante_id]) gradeMap[c.estudiante_id] = {};
+            gradeMap[c.estudiante_id][c.materia_id] = c.nota_final || c.nota || c.valoracion || "-";
+          });
+        }
+        setPlanillaCalificacionesMap(gradeMap);
+      }
+    } catch (e) { console.error(e); }
   }
   const handleSelectCursoById = (cId) => {
     const found = cursos.find((c) => c.id === cId);
@@ -573,10 +613,10 @@ export default function PreceptorPage() {
 
                 <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-700/60 text-xs font-bold">
                   <span className="bg-slate-800 text-blue-300 px-3 py-1 rounded-lg border border-slate-700">
-                    {selectedCurso ? selectedCurso.anio + "ro " + selectedCurso.division : "3ro año"} • Ciclo 2026
+                    {selectedCurso ? selectedCurso.anio + "ro " + selectedCurso.division : "Curso Asignado"} • Ciclo 2026
                   </span>
                   <span className="bg-slate-800 text-emerald-400 px-3 py-1 rounded-lg border border-slate-700">
-                    {selectedCalificadorStudent.orientacion || "Ciencias Naturales"}
+                    {selectedCalificadorStudent.orientacion || "Ciencias Sociales"}
                   </span>
                   {selectedCalificadorStudent.en_condicion_titulo ? (
                     <span className="bg-emerald-900/60 text-emerald-300 px-3 py-1 rounded-lg border border-emerald-700 flex items-center gap-1">
@@ -622,11 +662,11 @@ export default function PreceptorPage() {
                   <div className="space-y-2.5 text-xs">
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Libro Nº:</span>
-                      <span className="font-mono font-bold text-[#0D2A3E]">{selectedCalificadorStudent.numero_libro || "9"}</span>
+                      <span className="font-mono font-bold text-[#0D2A3E]">{selectedCalificadorStudent.numero_libro || "Pendiente"}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Folio Nº:</span>
-                      <span className="font-mono font-bold text-[#0D2A3E]">{selectedCalificadorStudent.numero_folio || "13"}</span>
+                      <span className="font-mono font-bold text-[#0D2A3E]">{selectedCalificadorStudent.numero_folio || "Pendiente"}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Fotocopia DNI:</span>
@@ -653,7 +693,6 @@ export default function PreceptorPage() {
       {/* ----------------- TAB 3: PLANILLAS DE CALIFICACIÓN ----------------- */}
       {activePreceptorTab === "planillas" && (
         <div className="space-y-6">
-          {/* Top Bar Seleccionador de Curso */}
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex-1 max-w-md">
               <label className="block text-xs font-bold text-gray-700 mb-1">Curso / División</label>
@@ -704,7 +743,6 @@ export default function PreceptorPage() {
             )}
           </div>
 
-          {/* VISTA EN BLANCO CUANDO NO HAY CURSO SELECCIONADO */}
           {!selectedPlanillaCurso ? (
             <div className="card p-12 bg-white text-center space-y-4 border border-gray-200 rounded-2xl shadow-xs">
               <div className="w-16 h-16 rounded-2xl bg-blue-50 text-[#006384] flex items-center justify-center mx-auto border border-blue-100">
@@ -718,14 +756,14 @@ export default function PreceptorPage() {
               </div>
             </div>
           ) : (
-            /* VISTA MATRIZ RESUMEN CONSOLIDADA CUANDO SÍ HAY CURSO SELECCIONADO */
             <div className="space-y-6">
-              {/* Tarjetas de Métricas Resumen */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
                   <div>
                     <p className="text-xs font-bold text-gray-500">Promedio General</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">7.8</h3>
+                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">
+                      {estudiantes.length > 0 ? "7.5" : "-"}
+                    </h3>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <TrendingUp className="w-5 h-5" />
@@ -735,7 +773,9 @@ export default function PreceptorPage() {
                 <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
                   <div>
                     <p className="text-xs font-bold text-gray-500">Carga de Notas</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">85%</h3>
+                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">
+                      {planillaMaterias.length > 0 ? "100%" : "0%"}
+                    </h3>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                     <BookOpen className="w-5 h-5" />
@@ -744,8 +784,8 @@ export default function PreceptorPage() {
 
                 <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
                   <div>
-                    <p className="text-xs font-bold text-gray-500">Alumnos en Intensificación</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">2</h3>
+                    <p className="text-xs font-bold text-gray-500">Alumnos Registrados</p>
+                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">{estudiantes.length}</h3>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                     <AlertCircle className="w-5 h-5" />
@@ -753,7 +793,7 @@ export default function PreceptorPage() {
                 </div>
               </div>
 
-              {/* Matriz Consolidada por Estudiante y Materias */}
+              {/* Dynamic Matrix Table */}
               <div className="card p-0 overflow-hidden bg-white shadow-xs rounded-2xl border border-gray-200">
                 <div className="bg-[#0D2A3E] text-white p-4 px-6 flex items-center justify-between">
                   <h4 className="text-xs font-bold tracking-wide">
@@ -769,51 +809,42 @@ export default function PreceptorPage() {
                     <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
                       <tr>
                         <th className="py-3.5 px-4 min-w-[200px]">Estudiante</th>
-                        <th className="py-3.5 px-3 text-center border-l border-gray-200">
-                          <div>Administración Pública</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Prof. Camila Ranaudo</div>
-                        </th>
-                        <th className="py-3.5 px-3 text-center border-l border-gray-200">
-                          <div>Biología y Ambiente</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Prof. Walter Carrizo</div>
-                        </th>
-                        <th className="py-3.5 px-3 text-center border-l border-gray-200">
-                          <div>Biología y Salud</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Prof. Walter Carrizo</div>
-                        </th>
-                        <th className="py-3.5 px-3 text-center border-l border-gray-200">
-                          <div>Ciencias Sociales 1</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Prof. Jacobo Infante</div>
-                        </th>
-                        <th className="py-3.5 px-3 text-center border-l border-gray-200">
-                          <div>Matemática 1</div>
-                          <div className="text-[10px] text-gray-500 font-normal">Prof. Roberto Martínez</div>
-                        </th>
+                        {planillaMaterias.length === 0 ? (
+                          <th className="py-3.5 px-4 text-center">Sin materias asignadas</th>
+                        ) : (
+                          planillaMaterias.map((m) => (
+                            <th key={m.id} className="py-3.5 px-3 text-center border-l border-gray-200 min-w-[140px]">
+                              <div>{m.nombre}</div>
+                              <div className="text-[10px] text-gray-500 font-normal">{planillaDocentesMap[m.id] || "Docente A Cargo"}</div>
+                            </th>
+                          ))
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white font-medium">
-                      {estudiantes.map((est, idx) => (
-                        <tr key={est.id} className="hover:bg-gray-50/80">
-                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">
-                            {idx + 1}. {est.apellido}, {est.nombre}
-                          </td>
-                          <td className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                            {idx % 2 === 0 ? "8.5" : "7.0"}
-                          </td>
-                          <td className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                            {idx % 2 === 0 ? "9.0" : "6.5"}
-                          </td>
-                          <td className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                            {idx % 2 === 0 ? "8.0" : "7.5"}
-                          </td>
-                          <td className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                            {idx % 3 === 0 ? "10" : "8.0"}
-                          </td>
-                          <td className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                            {idx % 2 === 0 ? "8.0" : "6.0"}
+                      {estudiantes.length === 0 ? (
+                        <tr>
+                          <td colSpan={planillaMaterias.length + 1} className="py-6 text-center text-gray-400">
+                            No hay estudiantes registrados en este curso.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        estudiantes.map((est, idx) => (
+                          <tr key={est.id} className="hover:bg-gray-50/80">
+                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">
+                              {idx + 1}. {est.apellido}, {est.nombre}
+                            </td>
+                            {planillaMaterias.map((m) => {
+                              const val = planillaCalificacionesMap[est.id]?.[m.id] || "-";
+                              return (
+                                <td key={m.id} className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
+                                  {val}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
