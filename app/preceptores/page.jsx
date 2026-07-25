@@ -318,6 +318,54 @@ export default function PreceptorPage() {
         estado: "activo"
       };
 
+      const { data: newEst, error: estErr } = await supabase
+        .from("estudiantes")
+        .insert(fullStudentData)
+        .select()
+        .single();
+
+      if (estErr) {
+        if (estErr.message && estErr.message.includes("schema cache")) {
+          const sqlSnippet = "ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS genero TEXT DEFAULT 'Masculino'; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS ciudad_nacimiento TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS direccion TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS orientacion TEXT DEFAULT 'Ciencias Sociales'; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS fotocopia_dni BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS partida_nacimiento BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS certificado_estudios BOOLEAN DEFAULT false; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS tipo_certificado TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS materias_adeudadas TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_libro TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS numero_folio TEXT; ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS curso_id UUID; NOTIFY pgrst, 'reload schema';";
+          
+          Swal.fire({
+            icon: "warning",
+            title: "Incorporar Columnas a Supabase",
+            html: '<p class="text-xs text-left mb-2">Para guardar todos los datos sin pérdidas, copiá y ejecutá este script en el <strong>SQL Editor de Supabase</strong> (archivo disponible en <code>sql/update_estudiantes_schema.sql</code>):</p><textarea readonly class="w-full h-32 text-[10px] font-mono p-2 bg-slate-100 rounded border border-slate-300">' + sqlSnippet + '</textarea>',
+            confirmButtonText: "Entendido"
+          });
+          return;
+        }
+        throw estErr;
+      }
+
+      if (newEst && cursoAsignadoId) {
+        try {
+          await supabase.from("alumnos_cursos").insert({
+            estudiante_id: newEst.id,
+            curso_id: cursoAsignadoId
+          });
+        } catch (acErr) {
+          console.log("alumnos_cursos notice:", acErr);
+        }
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Inscripción Exitosa",
+        text: "Estudiante " + apellido + ", " + nombre + " inscripto correctamente con todos sus datos.",
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      setShowInscribirModal(false);
+      setDni(""); setNombre(""); setApellido(""); setGenero(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setEmail(""); setTelefono(""); setOrientacion(""); setTipoCertificado(""); setMateriasAdeudadas(""); setNumeroLibro(""); setNumeroFolio("");
+      if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
+    } catch (err) {
+      Swal.fire("Error al inscribir", err.message, "error");
+    }
+  };
+
       let newEst = null;
       let estErr = null;
 
