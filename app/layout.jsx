@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -6,12 +6,12 @@ import './globals.css';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
+import PwaRegister from '@/components/PwaRegister';
 
 function MainLayoutContent({ children }) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // Oculta por defecto según requerimiento
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isLoginPage = pathname === '/login';
@@ -47,8 +47,18 @@ function MainLayoutContent({ children }) {
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#006384" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="CENS 454" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body className="antialiased bg-[#F4FAFF]">
         <AuthProvider>
+          <PwaRegister />
           <MainLayoutContent>{children}</MainLayoutContent>
         </AuthProvider>
       </body>
