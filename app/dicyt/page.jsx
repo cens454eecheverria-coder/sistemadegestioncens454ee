@@ -46,7 +46,7 @@ export default function LibroDicytPage() {
         modulo: parseInt(modulo),
         contenido_desarrollado: contenido.trim(),
         actividades: actividades.trim() || null,
-        observaciones: docenteNombre.trim() ? Dictado por:  : null,
+        observaciones: docenteNombre.trim() ? "Dictado por: " + docenteNombre.trim() : null,
       };
 
       const { error } = await supabase.from('libro_dicyt').insert(newRecord);
