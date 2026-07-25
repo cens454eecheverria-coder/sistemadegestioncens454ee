@@ -56,7 +56,7 @@ export default function PreceptorPage() {
   const [planillaDocentesMap, setPlanillaDocentesMap] = useState({});
   const [planillaCalificacionesMap, setPlanillaCalificacionesMap] = useState({});
 
-  // Modal Inscribir - Todos los datos del formulario original
+  // Modal Inscribir state
   const [showInscribirModal, setShowInscribirModal] = useState(false);
   const [dni, setDni] = useState("");
   const [nombre, setNombre] = useState("");
@@ -77,11 +77,15 @@ export default function PreceptorPage() {
   const [numeroLibro, setNumeroLibro] = useState("");
   const [numeroFolio, setNumeroFolio] = useState("");
 
-  // Modales Legajo y Boletín
+  // Modales Legajo y Boletín state
   const [showLegajoModal, setShowLegajoModal] = useState(false);
   const [selectedLegajoStudent, setSelectedLegajoStudent] = useState(null);
+
   const [showBoletinModal, setShowBoletinModal] = useState(false);
   const [selectedBoletinStudent, setSelectedBoletinStudent] = useState(null);
+  const [boletinCalificaciones, setBoletinCalificaciones] = useState([]);
+  const [boletinAsistencia, setBoletinAsistencia] = useState({ presentes: 0, ausentes: 0, total: 0 });
+  const [loadingBoletin, setLoadingBoletin] = useState(false);
 
   useEffect(() => {
     loadCursos();
@@ -209,6 +213,75 @@ export default function PreceptorPage() {
         setPlanillaCalificacionesMap(gradeMap);
       }
     } catch (e) { console.error(e); }
+  }
+
+  async function loadBoletinData(student) {
+    if (!student) return;
+    setLoadingBoletin(true);
+    try {
+      let matList = [];
+      if (selectedCurso) {
+        const { data: mData } = await supabase.from("materias").select("*").eq("curso_id", selectedCurso.id);
+        matList = mData || [];
+      } else if (student.curso_id) {
+        const { data: mData } = await supabase.from("materias").select("*").eq("curso_id", student.curso_id);
+        matList = mData || [];
+      }
+
+      const { data: calData } = await supabase
+        .from("calificaciones")
+        .select("*, materias(nombre)")
+        .eq("estudiante_id", student.id);
+
+      const calMap = {};
+      if (calData) {
+        calData.forEach((c) => {
+          calMap[c.materia_id] = c;
+        });
+      }
+
+      let list = matList.map((m) => {
+        const entry = calMap[m.id] || {};
+        return {
+          id: m.id,
+          materia_nombre: m.nombre,
+          nota_q1: entry.nota_q1 !== undefined && entry.nota_q1 !== null ? entry.nota_q1 : null,
+          nota_q2: entry.nota_q2 !== undefined && entry.nota_q2 !== null ? entry.nota_q2 : null,
+          nota_final: entry.nota_final || entry.nota || entry.valoracion || null
+        };
+      });
+
+      if (list.length === 0) {
+        list = [
+          { id: "1", materia_nombre: "Lengua y Literatura", nota_q1: null, nota_q2: null, nota_final: null },
+          { id: "2", materia_nombre: "Matemática", nota_q1: null, nota_q2: null, nota_final: null },
+          { id: "3", materia_nombre: "Historia / Geografía", nota_q1: null, nota_q2: null, nota_final: null },
+          { id: "4", materia_nombre: "Física / Química", nota_q1: null, nota_q2: null, nota_final: null }
+        ];
+      }
+
+      setBoletinCalificaciones(list);
+
+      const { data: asisData } = await supabase
+        .from("asistencias")
+        .select("*")
+        .eq("estudiante_id", student.id);
+
+      let pres = 0;
+      let aus = 0;
+      if (asisData && asisData.length > 0) {
+        asisData.forEach((a) => {
+          if (a.estado === "P" || a.estado === "presente") pres += 1;
+          if (a.estado === "A" || a.estado === "ausente") aus += 1;
+          if (a.estado === "J" || a.estado === "justificado") pres += 1;
+        });
+      }
+      setBoletinAsistencia({ presentes: pres, ausentes: aus, total: pres + aus });
+    } catch (e) {
+      console.error("Error al cargar boletín:", e);
+    } finally {
+      setLoadingBoletin(false);
+    }
   }
   const handleSelectCursoById = (cId) => {
     const found = cursos.find((c) => c.id === cId);
@@ -363,17 +436,20 @@ export default function PreceptorPage() {
           dni: selectedLegajoStudent.dni,
           nombre: selectedLegajoStudent.nombre,
           apellido: selectedLegajoStudent.apellido,
-          genero: selectedLegajoStudent.genero,
+          genero: selectedLegajoStudent.genero || "Masculino",
           fecha_nacimiento: selectedLegajoStudent.fecha_nacimiento || null,
           ciudad_nacimiento: selectedLegajoStudent.ciudad_nacimiento || null,
           direccion: selectedLegajoStudent.direccion || null,
           email: selectedLegajoStudent.email || null,
           telefono: selectedLegajoStudent.telefono || null,
+          orientacion: selectedLegajoStudent.orientacion || null,
           numero_libro: selectedLegajoStudent.numero_libro || null,
           numero_folio: selectedLegajoStudent.numero_folio || null,
           fotocopia_dni: selectedLegajoStudent.fotocopia_dni || false,
           partida_nacimiento: selectedLegajoStudent.partida_nacimiento || false,
-          certificado_estudios: selectedLegajoStudent.certificado_estudios || false
+          certificado_estudios: selectedLegajoStudent.certificado_estudios || false,
+          tipo_certificado: selectedLegajoStudent.tipo_certificado || null,
+          materias_adeudadas: selectedLegajoStudent.materias_adeudadas || null
         })
         .eq("id", selectedLegajoStudent.id);
 
@@ -574,7 +650,11 @@ export default function PreceptorPage() {
                               <Edit className="w-3.5 h-3.5" /> Legajo
                             </button>
                             <button
-                              onClick={() => { setSelectedBoletinStudent(est); setShowBoletinModal(true); }}
+                              onClick={() => {
+                                setSelectedBoletinStudent(est);
+                                loadBoletinData(est);
+                                setShowBoletinModal(true);
+                              }}
                               className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs py-1.5 px-3 rounded-xl border border-amber-200 inline-flex items-center gap-1"
                             >
                               <FileText className="w-3.5 h-3.5" /> Boletín
@@ -895,12 +975,10 @@ export default function PreceptorPage() {
           )}
         </div>
       )}
-
-
-      {/* MODAL EDITAR LEGAJO ESTUDIANTE */}
+      {/* MODAL MODIFICAR LEGAJO COMPLETO CON TODOS LOS CAMPOS */}
       {showLegajoModal && selectedLegajoStudent && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
             <div className="p-5 border-b flex justify-between items-center bg-white shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-[#0D2A3E]">Modificar Legajo de Estudiante</h3>
@@ -910,74 +988,138 @@ export default function PreceptorPage() {
             </div>
 
             <form onSubmit={handleUpdateLegajoSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
-                    <input type="text" value={selectedLegajoStudent.dni || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, dni: e.target.value })} className="field-soft text-xs font-bold" required />
+              <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                {/* SECCIÓN DATOS PERSONALES */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-[#0D2A3E] uppercase tracking-wider border-b pb-1">Datos Personales</h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
+                      <input type="text" value={selectedLegajoStudent.dni || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, dni: e.target.value })} className="field-soft text-xs font-bold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
+                      <select value={selectedLegajoStudent.genero || "Masculino"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, genero: e.target.value })} className="field-soft text-xs">
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
-                    <select value={selectedLegajoStudent.genero || "Masculino"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, genero: e.target.value })} className="field-soft text-xs">
-                      <option value="Masculino">Masculino</option>
-                      <option value="Femenino">Femenino</option>
-                      <option value="Otro">Otro</option>
-                    </select>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                      <input type="text" value={selectedLegajoStudent.nombre || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, nombre: e.target.value })} className="field-soft text-xs" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                      <input type="text" value={selectedLegajoStudent.apellido || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, apellido: e.target.value })} className="field-soft text-xs font-bold" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
+                      <input type="date" value={selectedLegajoStudent.fecha_nacimiento || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, fecha_nacimiento: e.target.value })} className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">E-mail</label>
+                      <input type="email" value={selectedLegajoStudent.email || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, email: e.target.value })} placeholder="correo@ejemplo.com" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
+                      <input type="text" value={selectedLegajoStudent.telefono || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, telefono: e.target.value })} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
+                      <input type="text" value={selectedLegajoStudent.ciudad_nacimiento || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, ciudad_nacimiento: e.target.value })} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Dirección</label>
+                      <input type="text" value={selectedLegajoStudent.direccion || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, direccion: e.target.value })} placeholder="Ej. Av. Luciano Valette 120" className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
+                      <select value={selectedLegajoStudent.orientacion || "Ciencias Sociales"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, orientacion: e.target.value })} className="field-soft text-xs">
+                        <option value="Ciencias Sociales">Ciencias Sociales</option>
+                        <option value="Ciencias Naturales">Ciencias Naturales</option>
+                        <option value="Economía y Administración">Economía y Administración</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
-                    <input type="text" value={selectedLegajoStudent.nombre || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, nombre: e.target.value })} className="field-soft text-xs" required />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
-                    <input type="text" value={selectedLegajoStudent.apellido || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, apellido: e.target.value })} className="field-soft text-xs font-bold" required />
-                  </div>
-                </div>
+                {/* SECCIÓN REGISTRO OFICIAL Y DOCUMENTACIÓN */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="text-xs font-bold text-[#0D2A3E] uppercase tracking-wider border-b pb-1">Registro Oficial & Documentación</h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Libro Nº</label>
-                    <input type="text" value={selectedLegajoStudent.numero_libro || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_libro: e.target.value })} placeholder="Ej: 9" className="field-soft text-xs font-mono font-bold" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Libro Nº</label>
+                      <input type="text" value={selectedLegajoStudent.numero_libro || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_libro: e.target.value })} placeholder="Ej: 9" className="field-soft text-xs font-mono font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Folio Nº</label>
+                      <input type="text" value={selectedLegajoStudent.numero_folio || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_folio: e.target.value })} placeholder="Ej: 13" className="field-soft text-xs font-mono font-bold" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Folio Nº</label>
-                    <input type="text" value={selectedLegajoStudent.numero_folio || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_folio: e.target.value })} placeholder="Ej: 13" className="field-soft text-xs font-mono font-bold" />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs font-semibold">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={selectedLegajoStudent.fotocopia_dni || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, fotocopia_dni: e.target.checked })} className="rounded text-[#006384]" />
-                    <span>Fotocopia DNI</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={selectedLegajoStudent.partida_nacimiento || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, partida_nacimiento: e.target.checked })} className="rounded text-[#006384]" />
-                    <span>Partida Nacimiento</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={selectedLegajoStudent.certificado_estudios || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, certificado_estudios: e.target.checked })} className="rounded text-[#006384]" />
-                    <span>Certificado Estudios</span>
-                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={selectedLegajoStudent.fotocopia_dni || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, fotocopia_dni: e.target.checked })} className="rounded text-[#006384]" />
+                        <span>Fotocopia DNI</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={selectedLegajoStudent.partida_nacimiento || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, partida_nacimiento: e.target.checked })} className="rounded text-[#006384]" />
+                        <span>Partida de Nacimiento</span>
+                      </label>
+                    </div>
+
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={selectedLegajoStudent.certificado_estudios || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, certificado_estudios: e.target.checked })} className="rounded text-[#006384]" />
+                        <span>Certificado Últimos Estudios</span>
+                      </label>
+                      <div>
+                        <input type="text" value={selectedLegajoStudent.tipo_certificado || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, tipo_certificado: e.target.value })} placeholder="Tipo de certificado (ej. En trámite)" className="field-soft text-xs py-1 bg-white" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-1">
+                    <label className="block text-xs font-bold text-gray-800">Materias Adeudadas Previas</label>
+                    <textarea
+                      value={selectedLegajoStudent.materias_adeudadas || ""}
+                      onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, materias_adeudadas: e.target.value })}
+                      placeholder="Listar materias y año adeudado"
+                      className="field-soft text-xs h-16 bg-white"
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
                 <button type="button" onClick={() => setShowLegajoModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
-                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md">Guardar Modificaciones</button>
+                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Guardar Modificaciones</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE RESPONSIVE & MAX-HEIGHT 90VH */}
+      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE */}
       {showInscribirModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
-            {/* Header Fijo */}
             <div className="p-5 border-b flex justify-between items-center bg-white shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-[#0D2A3E]">Inscribir Nuevo Estudiante</h3>
@@ -986,10 +1128,8 @@ export default function PreceptorPage() {
               <button onClick={() => setShowInscribirModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg p-1">✕</button>
             </div>
 
-            {/* Formulario con Scroll Interno */}
             <form onSubmit={handleInscribirEstudiante} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                {/* SECCIÓN 1: DATOS PERSONALES */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
                     <User className="w-4 h-4 text-[#006384]" /> Datos Personales
@@ -1066,7 +1206,6 @@ export default function PreceptorPage() {
                   </div>
                 </div>
 
-                {/* SECCIÓN 2: DOCUMENTACIÓN ENTREGADA */}
                 <div className="space-y-4">
                   <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
                     <FileCheck2 className="w-4 h-4 text-emerald-600" /> Documentación Entregada
@@ -1111,12 +1250,129 @@ export default function PreceptorPage() {
                 </div>
               </div>
 
-              {/* Footer Fijo */}
               <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
                 <button type="button" onClick={() => setShowInscribirModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
                 <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Completar Inscripción</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BOLETÍN DE CALIFICACIONES Y ASISTENCIA */}
+      {showBoletinModal && selectedBoletinStudent && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
+            <div className="p-5 border-b flex justify-between items-center bg-[#0D2A3E] text-white shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#F5C442] text-[#0D2A3E] flex items-center justify-center font-bold text-lg">
+                  {selectedBoletinStudent.nombre ? selectedBoletinStudent.nombre.charAt(0).toUpperCase() : 'E'}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-heading text-white">
+                    Boletín Digital: {selectedBoletinStudent.apellido}, {selectedBoletinStudent.nombre}
+                  </h3>
+                  <p className="text-xs text-[#F5C442] font-semibold">
+                    DNI: {selectedBoletinStudent.dni} • CENS Nº 454 Esteban Echeverría
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded-lg flex items-center gap-1 shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" /> Imprimir
+                </button>
+                <button onClick={() => setShowBoletinModal(false)} className="text-gray-300 hover:text-white font-bold text-lg p-1">✕</button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
+              {/* Cards resumen de presentismo */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Días Presente</p>
+                  <h4 className="text-xl font-black text-emerald-700 mt-1">{boletinAsistencia.presentes} Días</h4>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-red-500 shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Inasistencias</p>
+                  <h4 className="text-xl font-black text-red-600 mt-1">{boletinAsistencia.ausentes} Faltas</h4>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-[#006384] shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Porcentaje Asistencia</p>
+                  <h4 className="text-xl font-black text-[#006384] mt-1">
+                    {boletinAsistencia.total > 0 ? Math.round((boletinAsistencia.presentes / boletinAsistencia.total) * 100) : 100}%
+                  </h4>
+                </div>
+              </div>
+
+              {/* Tabla de notas por materia */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+                <div className="bg-[#EEF5FA] p-3 px-4 border-b border-gray-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0D2A3E] flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[#006384]" /> Calificaciones del Ciclo Lectivo {cicloLectivo}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-gray-50 text-[#0D2A3E] font-bold border-b">
+                      <tr>
+                        <th className="py-3 px-4">Asignatura</th>
+                        <th className="py-3 px-4 text-center">1º Cuatrimestre</th>
+                        <th className="py-3 px-4 text-center">2º Cuatrimestre</th>
+                        <th className="py-3 px-4 text-center">Calificación Final</th>
+                        <th className="py-3 px-4 text-center">Estado Cursada</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {loadingBoletin ? (
+                        <tr>
+                          <td colSpan="5" className="text-center py-6 text-gray-400 font-bold">
+                            Cargando datos del boletín...
+                          </td>
+                        </tr>
+                      ) : boletinCalificaciones.map((c) => {
+                        const final = c.nota_final || (c.nota_q1 && c.nota_q2 ? Math.round((c.nota_q1 + c.nota_q2) / 2) : '-');
+                        const aprobado = typeof final === 'number' ? final >= 7 : false;
+
+                        return (
+                          <tr key={c.id} className="hover:bg-gray-50">
+                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{c.materia_nombre}</td>
+                            <td className="py-3.5 px-4 text-center font-semibold">{c.nota_q1 !== null ? c.nota_q1 : '-'}</td>
+                            <td className="py-3.5 px-4 text-center font-semibold">{c.nota_q2 !== null ? c.nota_q2 : '-'}</td>
+                            <td className="py-3.5 px-4 text-center font-extrabold text-sm text-[#006384]">{final}</td>
+                            <td className="py-3.5 px-4 text-center">
+                              {typeof final === 'number' ? (
+                                aprobado ? (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Aprobada</span>
+                                ) : (
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Intensificación</span>
+                                )
+                              ) : (
+                                <span className="text-gray-400 font-medium">En Cursada</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex justify-end bg-white shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowBoletinModal(false)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-6 rounded-xl"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}
