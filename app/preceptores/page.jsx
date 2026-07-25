@@ -26,7 +26,9 @@ import {
   Send,
   Check,
   Award,
-  TrendingUp
+  TrendingUp,
+  User,
+  FileCheck2
 } from "lucide-react";
 
 export default function PreceptorPage() {
@@ -54,22 +56,24 @@ export default function PreceptorPage() {
   const [planillaDocentesMap, setPlanillaDocentesMap] = useState({});
   const [planillaCalificacionesMap, setPlanillaCalificacionesMap] = useState({});
 
-  // Modal Inscribir
+  // Modal Inscribir - Todos los datos del formulario original
   const [showInscribirModal, setShowInscribirModal] = useState(false);
   const [dni, setDni] = useState("");
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
-  const [genero, setGenero] = useState("Masculino");
+  const [genero, setGenero] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [ciudadNacimiento, setCiudadNacimiento] = useState("");
   const [direccion, setDireccion] = useState("");
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [orientacion, setOrientacion] = useState("Ciencias Sociales");
+  const [orientacion, setOrientacion] = useState("");
   const [cursoAsignadoId, setCursoAsignadoId] = useState("");
   const [fotocopiaDni, setFotocopiaDni] = useState(false);
   const [partidaNacimiento, setPartidaNacimiento] = useState(false);
   const [certificadoEstudios, setCertificadoEstudios] = useState(false);
+  const [tipoCertificado, setTipoCertificado] = useState("");
+  const [materiasAdeudadas, setMateriasAdeudadas] = useState("");
   const [numeroLibro, setNumeroLibro] = useState("");
   const [numeroFolio, setNumeroFolio] = useState("");
 
@@ -296,16 +300,18 @@ export default function PreceptorPage() {
         dni: dni.trim(),
         nombre: nombre.trim(),
         apellido: apellido.trim(),
-        genero,
+        genero: genero || "Masculino",
         fecha_nacimiento: fechaNacimiento || null,
         ciudad_nacimiento: ciudadNacimiento.trim() || null,
         direccion: direccion.trim() || null,
         email: email.trim() || null,
         telefono: telefono.trim() || null,
-        orientacion,
+        orientacion: orientacion || "Ciencias Sociales",
         fotocopia_dni: fotocopiaDni,
         partida_nacimiento: partidaNacimiento,
         certificado_estudios: certificadoEstudios,
+        tipo_certificado: tipoCertificado.trim() || null,
+        materias_adeudadas: materiasAdeudadas.trim() || null,
         numero_libro: numeroLibro.trim() || null,
         numero_folio: numeroFolio.trim() || null,
         curso_id: cursoAsignadoId || null,
@@ -336,7 +342,7 @@ export default function PreceptorPage() {
       });
 
       setShowInscribirModal(false);
-      setDni(""); setNombre(""); setApellido(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setNumeroLibro(""); setNumeroFolio("");
+      setDni(""); setNombre(""); setApellido(""); setGenero(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setEmail(""); setTelefono(""); setOrientacion(""); setTipoCertificado(""); setMateriasAdeudadas(""); setNumeroLibro(""); setNumeroFolio("");
       if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     } catch (err) {
       Swal.fire("Error al inscribir", err.message, "error");
@@ -885,7 +891,6 @@ export default function PreceptorPage() {
           )}
         </div>
       )}
-
       {/* MODAL EDITAR LEGAJO ESTUDIANTE */}
       {showLegajoModal && selectedLegajoStudent && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -960,10 +965,10 @@ export default function PreceptorPage() {
         </div>
       )}
 
-      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE */}
+      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE COMPLETO CON TODAS LAS SECCIONES DE LAS CAPTURAS */}
       {showInscribirModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 space-y-6 relative border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200 my-8">
             <div className="flex justify-between items-center border-b pb-4">
               <div>
                 <h3 className="text-lg font-bold text-[#0D2A3E]">Inscribir Nuevo Estudiante</h3>
@@ -972,37 +977,131 @@ export default function PreceptorPage() {
               <button onClick={() => setShowInscribirModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg">✕</button>
             </div>
 
-            <form onSubmit={handleInscribirEstudiante} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
-                  <input type="text" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 38492011" className="field-soft text-xs font-bold" required />
+            <form onSubmit={handleInscribirEstudiante} className="space-y-6">
+              {/* SECCIÓN 1: DATOS PERSONALES */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
+                  <User className="w-4 h-4 text-[#006384]" /> Datos Personales
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
+                    <input type="text" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 38492011" className="field-soft text-xs font-bold" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                    <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del estudiante" className="field-soft text-xs" required />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Curso Asignado *</label>
-                  <select value={cursoAsignadoId} onChange={(e) => setCursoAsignadoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-400" required>
-                    <option value="">-- Seleccionar --</option>
-                    {cursos.map((c) => (
-                      <option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion}</option>
-                    ))}
-                  </select>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                    <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Apellido del estudiante" className="field-soft text-xs font-bold" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
+                    <select value={genero} onChange={(e) => setGenero(e.target.value)} className="field-soft text-xs">
+                      <option value="">Seleccionar...</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
+                    <input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} className="field-soft text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">E-mail</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className="field-soft text-xs" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
+                    <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
+                    <input type="text" value={ciudadNacimiento} onChange={(e) => setCiudadNacimiento(e.target.value)} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
+                    <select value={orientacion} onChange={(e) => setOrientacion(e.target.value)} className="field-soft text-xs">
+                      <option value="">Seleccionar...</option>
+                      <option value="Ciencias Sociales">Ciencias Sociales</option>
+                      <option value="Ciencias Naturales">Ciencias Naturales</option>
+                      <option value="Economía y Administración">Economía y Administración</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Curso Asignado *</label>
+                    <select value={cursoAsignadoId} onChange={(e) => setCursoAsignadoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-400" required>
+                      <option value="">Seleccione un curso...</option>
+                      {cursos.map((c) => (
+                        <option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
-                  <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del alumno" className="field-soft text-xs" required />
+              {/* SECCIÓN 2: DOCUMENTACIÓN ENTREGADA */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
+                  <FileCheck2 className="w-4 h-4 text-emerald-600" /> Documentación Entregada
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                      <input type="checkbox" checked={fotocopiaDni} onChange={(e) => setFotocopiaDni(e.target.checked)} className="rounded text-[#006384]" />
+                      <span>Fotocopia DNI</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                      <input type="checkbox" checked={partidaNacimiento} onChange={(e) => setPartidaNacimiento(e.target.checked)} className="rounded text-[#006384]" />
+                      <span>Partida de Nacimiento</span>
+                    </label>
+                  </div>
+
+                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                      <input type="checkbox" checked={certificadoEstudios} onChange={(e) => setCertificadoEstudios(e.target.checked)} className="rounded text-[#006384]" />
+                      <span>Certificado Últimos Estudios</span>
+                    </label>
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-600 mb-1">Tipo de Certificado</label>
+                      <input type="text" value={tipoCertificado} onChange={(e) => setTipoCertificado(e.target.value)} placeholder="Ej. Constancia Titulo en Trámite" className="field-soft text-xs py-1.5 bg-white" />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
-                  <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Apellido del alumno" className="field-soft text-xs font-bold" required />
+
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold text-gray-800">Materias Adeudadas Previas</label>
+                    <span className="text-[10px] text-gray-400 font-mono">Visible para todo el staff</span>
+                  </div>
+                  <textarea
+                    value={materiasAdeudadas}
+                    onChange={(e) => setMateriasAdeudadas(e.target.value)}
+                    placeholder="Listar materias y año en caso de adeudación (Ej: Geografía 2do, Matemática 1ro)."
+                    className="field-soft text-xs h-20 bg-white"
+                  />
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={() => setShowInscribirModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
-                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md">Completar Inscripción</button>
+                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Completar Inscripción</button>
               </div>
             </form>
           </div>
