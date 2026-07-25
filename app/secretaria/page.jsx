@@ -18,6 +18,32 @@ export default function SecretariaPanelPage() {
   const [materias, setMaterias] = useState([]);
   const [bajasPases, setBajasPases] = useState([]);
   const [ddjjDocentes, setDdjjDocentes] = useState([]);
+  // State Carga Histórica (Pasos 1, 2 y 3)
+  const [historicaSubTab, setHistoricaSubTab] = useState("nuevo"); // "nuevo" | "registros"
+  const [historicaStep, setHistoricaStep] = useState(1);
+  const [historicaAnio, setHistoricaAnio] = useState("2025");
+  const [historicaCursoId, setHistoricaCursoId] = useState("");
+  const [historicaMaterias, setHistoricaMaterias] = useState([]);
+
+  // Paso 2 state
+  const [historicaTipoEstudiante, setHistoricaTipoEstudiante] = useState("existente"); // "existente" | "nuevo"
+  const [historicaSelectedEstId, setHistoricaSelectedEstId] = useState("");
+  const [historicaNuevoNombre, setHistoricaNuevoNombre] = useState("");
+  const [historicaNuevoApellido, setHistoricaNuevoApellido] = useState("");
+  const [historicaNuevoDni, setHistoricaNuevoDni] = useState("");
+  const [historicaNuevoCuil, setHistoricaNuevoCuil] = useState("");
+  const [historicaNuevoEmail, setHistoricaNuevoEmail] = useState("");
+  const [historicaNuevoTelefono, setHistoricaNuevoTelefono] = useState("");
+  const [historicaNuevoEstado, setHistoricaNuevoEstado] = useState("Egresado");
+
+  // Paso 3 state
+  const [historicaNotas, setHistoricaNotas] = useState({});
+  const [historicaSaving, setHistoricaSaving] = useState(false);
+
+  // Ver Registros state
+  const [historicaFiltroAnio, setHistoricaFiltroAnio] = useState("todos");
+  const [historicaSearch, setHistoricaSearch] = useState("");
+  const [registrosHistoricosList, setRegistrosHistoricosList] = useState([]);
   // State Salidas Educativas (Anexos 4 y 5)
   const [salidaProyecto, setSalidaProyecto] = useState("Visita Pedagógica Tecnológica y Cultural 2026");
   const [salidaLugar, setSalidaLugar] = useState("Museo de Ciencias Naturales de La Plata");
@@ -281,6 +307,135 @@ export default function SecretariaPanelPage() {
       });
     } catch (err) {
       Swal.fire('Error', 'No se pudo generar el Anexo 5: ' + err.message, 'error');
+    }
+  };
+
+    const handleHistoricaCursoSelect = async (cId) => {
+    setHistoricaCursoId(cId);
+    if (!cId) {
+      setHistoricaMaterias([]);
+      setHistoricaNotas({});
+      return;
+    }
+    const { data: matData } = await supabase
+      .from("materias")
+      .select("*")
+      .eq("curso_id", cId);
+    const mats = matData || [];
+    setHistoricaMaterias(mats);
+
+    const initialNotas = {};
+    mats.forEach(m => {
+      initialNotas[m.id] = { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
+    });
+    setHistoricaNotas(initialNotas);
+  };
+
+  const handleHistoricaNotaChange = (materiaId, field, val) => {
+    setHistoricaNotas(prev => {
+      const current = prev[materiaId] || { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
+      const updated = { ...current, [field]: val };
+      if ((field === "nota_q1" || field === "nota_q2") && updated.nota_q1 && updated.nota_q2) {
+        const q1 = parseFloat(updated.nota_q1);
+        const q2 = parseFloat(updated.nota_q2);
+        if (!isNaN(q1) && !isNaN(q2)) {
+          updated.nota_final = Math.round((q1 + q2) / 2).toString();
+        }
+      }
+      return { ...prev, [materiaId]: updated };
+    });
+  };
+
+  const handleGuardarCargaHistorica = async () => {
+    try {
+      setHistoricaSaving(true);
+      let targetEstId = historicaSelectedEstId;
+
+      if (historicaTipoEstudiante === "nuevo") {
+        if (!historicaNuevoNombre.trim() || !historicaNuevoApellido.trim() || !historicaNuevoDni.trim()) {
+          Swal.fire("Atenci?n", "Completa Apellido, Nombre y DNI del estudiante histórico.", "warning");
+          setHistoricaSaving(false);
+          return;
+        }
+
+        const { data: newEst, error: estErr } = await supabase
+          .from("estudiantes")
+          .insert({
+            nombre: historicaNuevoNombre.trim(),
+            apellido: historicaNuevoApellido.trim(),
+            dni: historicaNuevoDni.trim(),
+            cuil: historicaNuevoCuil.trim() || null,
+            email: historicaNuevoEmail.trim() || null,
+            telefono: historicaNuevoTelefono.trim() || null,
+            estado: historicaNuevoEstado,
+            curso_id: historicaCursoId || null
+          })
+          .select()
+          .single();
+
+        if (estErr) throw estErr;
+        targetEstId = newEst.id;
+      }
+
+      if (!targetEstId) {
+        Swal.fire("Atenci?n", "Debes seleccionar o crear un estudiante.", "warning");
+        setHistoricaSaving(false);
+        return;
+      }
+
+      const records = historicaMaterias.map(m => {
+        const n = historicaNotas[m.id] || {};
+        return {
+          estudiante_id: targetEstId,
+          materia_id: m.id,
+          ciclo_lectivo: historicaAnio,
+          nota_q1: n.nota_q1 ? parseFloat(n.nota_q1) : null,
+          nota_q2: n.nota_q2 ? parseFloat(n.nota_q2) : null,
+          nota_final: n.nota_final ? parseFloat(n.nota_final) : null,
+          valoracion: n.valoracion || "TEA"
+        };
+      });
+
+      if (records.length > 0) {
+        const { error: calErr } = await supabase.from("calificaciones").upsert(records, {
+          onConflict: "estudiante_id,materia_id"
+        });
+        if (calErr) throw calErr;
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Carga Histórica Exitosa",
+        text: "Se registraron las calificaciones del ciclo " + historicaAnio + " correctamente.",
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      await loadData();
+      setHistoricaStep(1);
+      setHistoricaCursoId("");
+      setHistoricaMaterias([]);
+      setHistoricaNotas({});
+      setHistoricaSelectedEstId("");
+      setHistoricaNuevoNombre("");
+      setHistoricaNuevoApellido("");
+      setHistoricaNuevoDni("");
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    } finally {
+      setHistoricaSaving(false);
+    }
+  };
+
+  const loadRegistrosHistoricosList = async () => {
+    try {
+      const { data } = await supabase
+        .from("calificaciones")
+        .select("*, estudiantes(nombre, apellido, dni), materias(nombre)")
+        .order("created_at", { ascending: false });
+      setRegistrosHistoricosList(data || []);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -898,6 +1053,436 @@ export default function SecretariaPanelPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === "historica" && (
+        <div className="space-y-6">
+          {/* Sub-Navegación Carga Histórica */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHistoricaSubTab("nuevo")}
+              className={"px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all " + (historicaSubTab === "nuevo" ? "bg-indigo-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200")}
+            >
+              <Plus className="w-4 h-4" /> Cargar Nuevo
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setHistoricaSubTab("registros");
+                loadRegistrosHistoricosList();
+              }}
+              className={"px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all " + (historicaSubTab === "registros" ? "bg-indigo-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200")}
+            >
+              <FileText className="w-4 h-4" /> Ver Registros Hist?ricos
+            </button>
+          </div>
+
+          {historicaSubTab === "nuevo" && (
+            <div className="space-y-6">
+              {/* Stepper Visual (1 -> 2 -> 3) */}
+              <div className="card p-6 bg-white rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between max-w-3xl mx-auto">
+                <div className="flex items-center gap-3">
+                  <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-md " + (historicaStep >= 1 ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400")}>
+                    1
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 hidden sm:inline">Configuración del Ciclo</span>
+                </div>
+                <div className={"h-1 flex-1 mx-4 rounded-full " + (historicaStep >= 2 ? "bg-indigo-600" : "bg-gray-200")} />
+                <div className="flex items-center gap-3">
+                  <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-md " + (historicaStep >= 2 ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400")}>
+                    2
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 hidden sm:inline">Estudiante</span>
+                </div>
+                <div className={"h-1 flex-1 mx-4 rounded-full " + (historicaStep >= 3 ? "bg-indigo-600" : "bg-gray-200")} />
+                <div className="flex items-center gap-3">
+                  <div className={"w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-md " + (historicaStep >= 3 ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-400")}>
+                    3
+                  </div>
+                  <span className="text-xs font-bold text-gray-700 hidden sm:inline">Calificaciones</span>
+                </div>
+              </div>
+
+              {/* PASO 1: Configuración del Ciclo Hist?rico */}
+              {historicaStep === 1 && (
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  <div className="bg-indigo-50 border border-indigo-200 p-5 rounded-2xl flex items-start gap-4 text-indigo-950">
+                    <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shrink-0 mt-0.5">
+                      !
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold font-heading">Configuración del Ciclo Hist?rico</h3>
+                      <p className="text-xs text-indigo-800 mt-0.5">
+                        Selecciona el a?o lectivo y curso al que pertenecieron los registros que vas a digitalizar.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Botones Selecci?n de A?o Lectivo */}
+                    <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                      <label className="block text-xs font-extrabold tracking-wider text-gray-600 uppercase flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-indigo-600" /> A?O LECTIVO HIST?RICO
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {["2025", "2024", "2023", "2022", "2021", "2020"].map((yr) => (
+                          <button
+                            key={yr}
+                            type="button"
+                            onClick={() => setHistoricaAnio(yr)}
+                            className={"py-3 px-4 rounded-xl font-extrabold text-sm border-2 transition-all shadow-xs " + (historicaAnio === yr ? "bg-indigo-50 text-indigo-700 border-indigo-600 scale-105" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50")}
+                          >
+                            {yr}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Selector de Curso Base */}
+                    <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                      <label className="block text-xs font-extrabold tracking-wider text-gray-600 uppercase flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-indigo-600" /> CURSO / DIVISI?N (PLANTILLA BASE)
+                      </label>
+                      <select
+                        value={historicaCursoId}
+                        onChange={(e) => handleHistoricaCursoSelect(e.target.value)}
+                        className="field-soft text-xs font-bold border-2 border-indigo-500 py-3"
+                      >
+                        <option value="">Seleccionar curso base...</option>
+                        {cursos.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.anio}? "{c.division}" - {c.orientacion} ({c.turno})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-gray-400 italic leading-relaxed">
+                        Se usar? como plantilla de materias. El alumno quedar? registrado en un curso del ciclo seleccionado.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      disabled={!historicaCursoId}
+                      onClick={() => setHistoricaStep(2)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-8 rounded-xl shadow-md disabled:opacity-50 flex items-center gap-2"
+                    >
+                      Siguiente: Seleccionar Estudiante ?
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PASO 2: Selecci?n o Alta de Estudiante */}
+              {historicaStep === 2 && (
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  <div className="card p-6 bg-white space-y-6 rounded-2xl border border-gray-200 shadow-xs">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                        <Users className="w-5 h-5 text-indigo-600" />
+                        Paso 2: Datos del Estudiante (Ciclo {historicaAnio})
+                      </h3>
+                      <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+                        A?o Lectivo {historicaAnio}
+                      </span>
+                    </div>
+
+                    {/* Switcher: Existente vs Nuevo Egresado */}
+                    <div className="grid grid-cols-2 gap-4 bg-gray-100 p-1.5 rounded-xl text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setHistoricaTipoEstudiante("existente")}
+                        className={"py-2.5 rounded-lg transition-all " + (historicaTipoEstudiante === "existente" ? "bg-white text-indigo-700 shadow-xs" : "text-gray-600")}
+                      >
+                        Estudiante Existente en Sistema
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHistoricaTipoEstudiante("nuevo")}
+                        className={"py-2.5 rounded-lg transition-all " + (historicaTipoEstudiante === "nuevo" ? "bg-white text-indigo-700 shadow-xs" : "text-gray-600")}
+                      >
+                        + Crear Nuevo Estudiante / Ex-Alumno
+                      </button>
+                    </div>
+
+                    {historicaTipoEstudiante === "existente" ? (
+                      <div className="space-y-3">
+                        <label className="block text-xs font-bold text-gray-700">Seleccionar Estudiante Registrado:</label>
+                        <select
+                          value={historicaSelectedEstId}
+                          onChange={(e) => setHistoricaSelectedEstId(e.target.value)}
+                          className="field-soft text-xs font-bold border-2 border-indigo-400 py-2.5"
+                        >
+                          <option value="">-- Buscar por Apellido, Nombre o DNI --</option>
+                          {estudiantes.map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.apellido}, {e.nombre} (DNI: {e.dni}) - {e.estado || "Regular"}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
+                        <h4 className="text-xs font-extrabold text-indigo-900 uppercase">Formulario R?pido de Alta de Ex-Alumno</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                            <input
+                              type="text"
+                              value={historicaNuevoApellido}
+                              onChange={(e) => setHistoricaNuevoApellido(e.target.value)}
+                              placeholder="Ej: P?rez"
+                              className="field-soft text-xs font-bold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                            <input
+                              type="text"
+                              value={historicaNuevoNombre}
+                              onChange={(e) => setHistoricaNuevoNombre(e.target.value)}
+                              placeholder="Ej: Juan Carlos"
+                              className="field-soft text-xs font-bold"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
+                            <input
+                              type="text"
+                              value={historicaNuevoDni}
+                              onChange={(e) => setHistoricaNuevoDni(e.target.value)}
+                              placeholder="12345678"
+                              className="field-soft text-xs font-bold"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">CUIL</label>
+                            <input
+                              type="text"
+                              value={historicaNuevoCuil}
+                              onChange={(e) => setHistoricaNuevoCuil(e.target.value)}
+                              placeholder="20-12345678-9"
+                              className="field-soft text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Estado Institucional</label>
+                            <select
+                              value={historicaNuevoEstado}
+                              onChange={(e) => setHistoricaNuevoEstado(e.target.value)}
+                              className="field-soft text-xs font-bold"
+                            >
+                              <option value="Egresado">Egresado</option>
+                              <option value="Inactivo">Inactivo</option>
+                              <option value="Pase">Pase</option>
+                              <option value="Regular">Regular</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={() => setHistoricaStep(1)}
+                      className="btn-secondary text-xs py-2.5 px-6"
+                    >
+                      ? Volver
+                    </button>
+                    <button
+                      type="button"
+                      disabled={historicaTipoEstudiante === "existente" ? !historicaSelectedEstId : (!historicaNuevoApellido || !historicaNuevoNombre || !historicaNuevoDni)}
+                      onClick={() => setHistoricaStep(3)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 px-8 rounded-xl shadow-md disabled:opacity-50 flex items-center gap-2"
+                    >
+                      Siguiente: Cargar Calificaciones ?
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* PASO 3: Carga de Calificaciones */}
+              {historicaStep === 3 && (
+                <div className="space-y-6 max-w-4xl mx-auto">
+                  <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <div>
+                        <h3 className="text-base font-bold font-heading text-[#0D2A3E]">
+                          Paso 3: Matriz de Calificaciones Históricas ({historicaAnio})
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Digitalizaci?n de notas para las materias del curso seleccionado.
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
+                        {historicaMaterias.length} Materias
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
+                          <tr>
+                            <th className="py-3.5 px-4">Asignatura / Materia</th>
+                            <th className="py-3.5 px-4 text-center w-28">1? Cuat.</th>
+                            <th className="py-3.5 px-4 text-center w-28">2? Cuat.</th>
+                            <th className="py-3.5 px-4 text-center w-28">Nota Final</th>
+                            <th className="py-3.5 px-4 text-center w-32">Valoraci?n</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white">
+                          {historicaMaterias.map((m) => {
+                            const n = historicaNotas[m.id] || { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
+                            return (
+                              <tr key={m.id} className="hover:bg-gray-50">
+                                <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{m.nombre}</td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.nota_q1}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_q1", e.target.value)}
+                                    placeholder="1-10"
+                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.nota_q2}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_q2", e.target.value)}
+                                    placeholder="1-10"
+                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.nota_final}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_final", e.target.value)}
+                                    placeholder="Final"
+                                    className="field-soft text-xs py-1 px-2 text-center font-extrabold text-[#006384]"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <select
+                                    value={n.valoracion}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "valoracion", e.target.value)}
+                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
+                                  >
+                                    <option value="TEA">TEA</option>
+                                    <option value="TEP">TEP</option>
+                                    <option value="TED">TED</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={() => setHistoricaStep(2)}
+                      className="btn-secondary text-xs py-2.5 px-6"
+                    >
+                      ? Volver
+                    </button>
+                    <button
+                      type="button"
+                      disabled={historicaSaving}
+                      onClick={handleGuardarCargaHistorica}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-8 rounded-xl shadow-md flex items-center gap-2"
+                    >
+                      ?? Guardar Carga Histórica en Supabase
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VISTA 2: VER REGISTROS HIST?RICOS */}
+          {historicaSubTab === "registros" && (
+            <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-4">
+                <div>
+                  <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                    <History className="w-5 h-5 text-indigo-600" />
+                    Historial Completo de Calificaciones Digitalizadas
+                  </h3>
+                  <p className="text-xs text-gray-500">Registros de notas cargados para ciclos lectivos anteriores.</p>
+                </div>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={historicaSearch}
+                    onChange={(e) => setHistoricaSearch(e.target.value)}
+                    placeholder="Buscar alumno o materia..."
+                    className="field-soft pl-9 text-xs py-1.5 w-64"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
+                    <tr>
+                      <th className="py-3 px-4">Estudiante</th>
+                      <th className="py-3 px-4">DNI</th>
+                      <th className="py-3 px-4">Ciclo Lectivo</th>
+                      <th className="py-3 px-4">Materia / Asignatura</th>
+                      <th className="py-3 px-4 text-center">1? Cuat.</th>
+                      <th className="py-3 px-4 text-center">2? Cuat.</th>
+                      <th className="py-3 px-4 text-center">Nota Final</th>
+                      <th className="py-3 px-4 text-center">Valoraci?n</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {registrosHistoricosList.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="py-8 text-center text-gray-400 font-bold">
+                          No hay registros históricos cargados en el sistema.
+                        </td>
+                      </tr>
+                    ) : (
+                      registrosHistoricosList
+                        .filter((r) => {
+                          const name = r.estudiantes ? r.estudiantes.apellido + " " + r.estudiantes.nombre : "";
+                          const matName = r.materias ? r.materias.nombre : "";
+                          return name.toLowerCase().includes(historicaSearch.toLowerCase()) || matName.toLowerCase().includes(historicaSearch.toLowerCase());
+                        })
+                        .map((r) => (
+                          <tr key={r.id} className="hover:bg-gray-50">
+                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">
+                              {r.estudiantes ? r.estudiantes.apellido + ", " + r.estudiantes.nombre : "Estudiante Registrado"}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono">{r.estudiantes ? r.estudiantes.dni : "-"}</td>
+                            <td className="py-3.5 px-4 font-bold text-indigo-700">{r.ciclo_lectivo || "2025"}</td>
+                            <td className="py-3.5 px-4 font-semibold text-gray-700">{r.materias ? r.materias.nombre : "Materia"}</td>
+                            <td className="py-3.5 px-4 text-center">{r.nota_q1 || "-"}</td>
+                            <td className="py-3.5 px-4 text-center">{r.nota_q2 || "-"}</td>
+                            <td className="py-3.5 px-4 text-center font-extrabold text-[#006384]">{r.nota_final || "-"}</td>
+                            <td className="py-3.5 px-4 text-center font-bold">{r.valoracion || "TEA"}</td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
