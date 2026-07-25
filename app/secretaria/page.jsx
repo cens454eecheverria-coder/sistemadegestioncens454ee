@@ -208,3 +208,407 @@ export default function SecretariaPanelPage() {
       </div>
     );
   }
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
+        <div>
+          <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2"><Users className="w-6 h-6 text-[#006384]" /> Módulo de Secretaría & Gestión Administrativa</h1>
+          <p className="text-xs text-gray-500 mt-1">CENS Nº 454 - Esteban Echeverría (Región 5)</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setShowAddModal(true)} className="btn-gold font-bold text-xs py-2.5 px-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> Crear Legajo Estudiante</button>
+          <button onClick={() => setShowDocenteModal(true)} className="btn-primary font-bold text-xs py-2.5 px-4 flex items-center gap-2 bg-[#006384]"><UserPlus className="w-4 h-4" /> + Registrar Docente</button>
+        </div>
+      </div>
+
+      <div className="flex border-b border-gray-200 bg-white rounded-t-2xl px-4 pt-2 gap-1 overflow-x-auto text-xs font-bold shadow-xs">
+        <button onClick={() => setActiveTab("estudiantes")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "estudiantes" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Users className="w-4 h-4" /> 1. Estudiantes</button>
+        <button onClick={() => setActiveTab("titulos")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "titulos" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Award className="w-4 h-4" /> 2. Títulos y Egresados</button>
+        <button onClick={() => setActiveTab("salidas")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "salidas" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Compass className="w-4 h-4" /> 3. Salidas Educativas</button>
+        <button onClick={() => setActiveTab("historica")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "historica" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><History className="w-4 h-4" /> 4. Carga Histórica</button>
+        <button onClick={() => setActiveTab("bajas")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "bajas" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><UserX className="w-4 h-4" /> 5. Bajas y Pases</button>
+        <button onClick={() => setActiveTab("docentes_ddjj")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "docentes_ddjj" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Briefcase className="w-4 h-4" /> 💼 Docentes y DDJJ</button>
+      </div>
+
+      {activeTab === "estudiantes" && (
+        <div className="space-y-4">
+          <div className="card p-4 bg-white">
+            <div className="relative max-w-md">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Búsqueda por DNI o Nombre..." className="field-soft pl-9 text-xs" />
+            </div>
+          </div>
+          <div className="card overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                <tr>
+                  <th className="py-3 px-4">Estudiante</th>
+                  <th className="py-3 px-4">DNI</th>
+                  <th className="py-3 px-4 text-center">Estado</th>
+                  <th className="py-3 px-4 text-center">Calificador Inline</th>
+                  <th className="py-3 px-4 text-center">Emisión de Constancias</th>
+                  <th className="py-3 px-4 text-center">Acciones Baja / Pase</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredEstudiantes.map((est) => {
+                  const isInactive = est.estado === "inactivo" || est.estado === "Pase";
+                  return (
+                    <tr key={est.id} className="hover:bg-[#F4FAFF]">
+                      <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
+                      <td className="py-3.5 px-4 font-mono">{est.dni}</td>
+                      <td className="py-3.5 px-4 text-center font-bold">{isInactive ? <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-100 text-red-800">🔴 Inactivo</span> : <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800">🟢 Regular</span>}</td>
+                      <td className="py-3.5 px-4 text-center"><div className="inline-flex gap-1.5 text-[10px] font-bold"><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">1º: 8.5</span><span className="px-2 py-0.5 rounded bg-[#F5C442]/30 text-amber-900">2º: 6.0</span><span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">3º: 9.0</span></div></td>
+                      <td className="py-3.5 px-4 text-center space-x-1">
+                        <button onClick={() => handleEmitirCertificado(est, "Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
+                        <button onClick={() => handleEmitirCertificado(est, "Constancia Vacante")} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Vacante</button>
+                        <button onClick={() => handleEmitirCertificado(est, "Analítico Parcial")} className="btn-gold text-[10px] py-1 px-2">Analítico Parcial</button>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {isInactive ? (
+                          <button onClick={() => handleReactivarEstudiante(est)} className="bg-emerald-600 text-white font-bold text-[11px] py-1 px-3 rounded-lg flex items-center gap-1 mx-auto"><RefreshCw className="w-3.5 h-3.5" /> Reactivar</button>
+                        ) : (
+                          <button onClick={() => handleOpenBajaModal(est)} className="bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] py-1 px-3 rounded-lg border border-red-200 flex items-center gap-1 mx-auto"><UserX className="w-3.5 h-3.5" /> Dar de Baja / Pase</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------- TAB 2: TÍTULOS Y EGRESADOS ------------------- */}
+      {activeTab === "titulos" && (
+        <div className="space-y-6">
+          <div className="card p-6 bg-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-600" /> Registro Oficial de Títulos y Egresados CENS 454
+                </h3>
+                <p className="text-xs text-gray-500">Estudiantes enviados a titularización desde Preceptoría / Calificador.</p>
+              </div>
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTitulo}
+                  onChange={(e) => setSearchTitulo(e.target.value)}
+                  placeholder="Buscar egresado..."
+                  className="field-soft pl-9 text-xs py-1.5 w-64"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                  <tr>
+                    <th className="py-3 px-4">Estudiante Egresado</th>
+                    <th className="py-3 px-4">DNI</th>
+                    <th className="py-3 px-4">Libro / Folio</th>
+                    <th className="py-3 px-4 text-center">Estado del Título</th>
+                    <th className="py-3 px-4 text-center">Acciones de Secretaría</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {estudiantesTitulos.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-gray-400">
+                        <GraduationCap className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                        <p className="font-bold">No hay estudiantes en condición de titularización actualmente.</p>
+                        <p className="text-[11px] text-gray-400">Desde Preceptoría / Calificador podés presionar <strong>"Mandar a Titular"</strong> para enviar un estudiante a esta lista.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    estudiantesTitulos
+                      .filter((e) => e.apellido.toLowerCase().includes(searchTitulo.toLowerCase()) || e.nombre.toLowerCase().includes(searchTitulo.toLowerCase()) || (e.dni && e.dni.includes(searchTitulo)))
+                      .map((est) => (
+                        <tr key={est.id} className="hover:bg-amber-50/40">
+                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
+                          <td className="py-3.5 px-4 font-mono">{est.dni}</td>
+                          <td className="py-3.5 px-4 font-mono text-gray-600">Libro: {est.numero_libro || "9"} / Folio: {est.numero_folio || "13"}</td>
+                          <td className="py-3.5 px-4 text-center font-bold">
+                            {est.estado_titulo === "Entregado" ? (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1 w-28 mx-auto">
+                                <Check className="w-3 h-3" /> Entregado
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] bg-amber-100 text-amber-900 flex items-center justify-center gap-1 w-28 mx-auto">
+                                ⏳ En Trámite
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-center space-x-2">
+                            <button
+                              onClick={() => handleEmitirCertificado(est, "Analítico Parcial")}
+                              className="btn-gold text-[10px] py-1 px-3"
+                            >
+                              📜 Ver Analítico Final
+                            </button>
+                            <button
+                              onClick={() => handleMarcarTituloEntregado(est)}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] py-1 px-3 rounded-lg"
+                            >
+                              ✅ Marcar Entregado
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeTab === "bajas" && (
+        <div className="space-y-6">
+          <div className="card p-6 bg-white space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div><h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2"><UserX className="w-5 h-5 text-red-600" /> Registro de Bajas, Pases y Salidas de Alumnos</h3><p className="text-xs text-gray-500">Historial completo de estudiantes inactivos o pase.</p></div>
+              <div className="relative"><Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" /><input type="text" value={searchBaja} onChange={(e) => setSearchBaja(e.target.value)} placeholder="Buscar por DNI o Nombre..." className="field-soft pl-9 text-xs py-1.5 w-64" /></div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                  <tr><th className="py-3 px-4">Estudiante</th><th className="py-3 px-4">DNI</th><th className="py-3 px-4">Motivo / Tipo</th><th className="py-3 px-4">Escuela Destino (Pase)</th><th className="py-3 px-4">Fecha Solicitud</th><th className="py-3 px-4 text-center">Acciones</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filteredBajasPases.length === 0 ? (
+                    <tr><td colSpan="6" className="py-8 text-center text-gray-400">No hay registros de bajas o pases actualmente.</td></tr>
+                  ) : (
+                    filteredBajasPases.map((bp) => {
+                      const estName = bp.estudiantes ? bp.estudiantes.apellido + ", " + bp.estudiantes.nombre : "Estudiante registrado";
+                      const estDni = bp.estudiantes ? bp.estudiantes.dni : "-";
+                      return (
+                        <tr key={bp.id} className="hover:bg-gray-50">
+                          <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{estName}</td>
+                          <td className="py-3.5 px-4 font-mono">{estDni}</td>
+                          <td className="py-3.5 px-4 font-semibold text-red-700"><span className="px-2 py-0.5 rounded bg-red-50 border border-red-200">{bp.estado || "Abandono"}</span></td>
+                          <td className="py-3.5 px-4 text-gray-700 font-medium">{bp.escuela_destino || "N/A (CENS 454)"}</td>
+                          <td className="py-3.5 px-4 font-mono text-[11px]">{bp.fecha_solicitud || bp.created_at?.split("T")[0]}</td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => handleReactivarEstudiante(bp)} className="bg-emerald-50 text-emerald-700 font-bold text-xs py-1 px-3 rounded-lg border border-emerald-200 flex items-center gap-1"><RefreshCw className="w-3.5 h-3.5" /> Reactivar</button>
+                              <button onClick={() => handleEliminarBajaDefinitiva(bp)} className="bg-red-600 text-white font-bold text-xs py-1 px-3 rounded-lg flex items-center gap-1 shadow-xs"><Trash2 className="w-3.5 h-3.5" /> Eliminar Definitivamente</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "docentes_ddjj" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDocenteSubTab("lista")} className={"py-2 px-5 rounded-full text-xs font-bold transition-all " + (docenteSubTab === "lista" ? "bg-[#006384] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>📋 Lista de Docentes</button>
+              <button onClick={() => setDocenteSubTab("ddjj")} className={"py-2 px-5 rounded-full text-xs font-bold transition-all " + (docenteSubTab === "ddjj" ? "bg-[#006384] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>💼 Declaraciones Juradas (DDJJ)</button>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                <input type="text" value={searchDocente} onChange={(e) => setSearchDocente(e.target.value)} placeholder="Buscar docente por apellido, nombre o DNI..." className="field-soft pl-9 text-xs py-1.5 w-64" />
+              </div>
+              <button onClick={() => setShowDocenteModal(true)} className="btn-gold font-bold text-xs py-2 px-4 flex items-center gap-1.5 shadow-xs">+ Registrar Docente</button>
+            </div>
+          </div>
+
+          <form onSubmit={handleVincularMateriaEnSecretaria} className="card p-6 bg-white space-y-4">
+            <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Vincular Docente a Materia Existente</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">1. Curso:</label>
+                <select value={selectedCursoVinculo} onChange={(e) => setSelectedCursoVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Curso --</option>
+                  {cursos.map((c) => (<option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion} ({c.turno})</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">2. Asignatura del Curso:</label>
+                <select value={selectedMateriaVinculo} onChange={(e) => setSelectedMateriaVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Materia --</option>
+                  {materias.filter((m) => !selectedCursoVinculo || m.curso_id === selectedCursoVinculo).map((m) => (<option key={m.id} value={m.id}>{m.nombre}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">3. Docente a Asignar:</label>
+                <select value={selectedDocenteVinculo} onChange={(e) => setSelectedDocenteVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Docente --</option>
+                  {docentes.map((d) => (<option key={d.id} value={d.id}>Prof. {d.apellido}, {d.nombre}</option>))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2"><button type="submit" className="btn-gold text-xs py-2 px-6 font-bold">Confirmar Vinculación Docente-Materia</button></div>
+          </form>
+
+          {docenteSubTab === "lista" && (
+            <div className="card overflow-hidden bg-white">
+              <div className="p-4 bg-[#F8FAFC] border-b font-bold text-xs text-[#0D2A3E]">Nómina Oficial de Docentes Legajados ({filteredDocentes.length})</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                    <tr><th className="py-3 px-4">Docente</th><th className="py-3 px-4">DNI / CUIL</th><th className="py-3 px-4">Título Principal</th><th className="py-3 px-4">Contacto</th><th className="py-3 px-4 text-center">Estado</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {filteredDocentes.length === 0 ? (
+                      <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay docentes registrados. Haz clic en "+ Registrar Docente".</td></tr>
+                    ) : (
+                      filteredDocentes.map((d) => (
+                        <tr key={d.id} className="hover:bg-[#F4FAFF]">
+                          <td className="py-3 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
+                          <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-[#006384]">({d.cuil || "-"})</span></td>
+                          <td className="py-3 px-4">{d.titulo || "Profesor/a Secundario"}</td>
+                          <td className="py-3 px-4 text-gray-600">{d.email || d.telefono || "Sin datos"}</td>
+                          <td className="py-3 px-4 text-center font-bold text-emerald-700">🟢 Activo</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {docenteSubTab === "ddjj" && (
+            <div className="card p-6 bg-white space-y-4">
+              <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3"><Briefcase className="w-5 h-5 text-[#006384]" /> Declaración Jurada de Cargos (DDJJ) e Incompatibilidad</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" value={extEstablecimiento} onChange={(e) => setExtEstablecimiento(e.target.value)} placeholder="Establecimiento Externo Declarado" className="field-soft text-xs" />
+                <input type="text" value={extHorario} onChange={(e) => setExtHorario(e.target.value)} placeholder="Horario Externo (Ej: 18:30 a 21:00 hs)" className="field-soft text-xs" />
+              </div>
+              <div className="pt-2"><button onClick={handleVerificarConflictoDDJJ} className="btn-gold text-xs py-2 px-5 font-bold">Verificar Incompatibilidad Horaria</button></div>
+              {conflictAlert && <div className="p-3 rounded-xl bg-amber-50 border text-xs font-bold text-amber-900">{conflictAlert}</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL IMPRESIÓN DOCUMENTOS Y CONSTANCIAS OFICIALES */}
+      {showDocModal && docEstudiante && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-4"><h3 className="text-lg font-bold text-[#0D2A3E]">Vista Previa e Impresión de Documento Oficial</h3><button onClick={() => setShowDocModal(false)} className="text-gray-400 font-bold text-lg">✕</button></div>
+            <div className="border p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
+              <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-black text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2>
+                  <p className="text-xs text-gray-600 font-bold">Dirección General de Cultura y Educación • Provincia de Buenos Aires</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Distrito: Esteban Echeverría • Región 5</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold px-3 py-1 bg-gray-100 rounded border border-gray-400">DOCUMENTO OFICIAL</span>
+                  <p className="text-[11px] text-gray-500 mt-2 font-mono">Fecha: {new Date().toLocaleDateString("es-AR")}</p>
+                </div>
+              </div>
+
+              <div className="text-center py-4 space-y-1">
+                <h3 className="text-lg font-black tracking-wider uppercase border-b-2 border-gray-900 inline-block pb-1">
+                  {docTipo === "Alumno Regular" && "CERTIFICADO DE ALUMNO REGULAR"}
+                  {docTipo === "Constancia Vacante" && "CONSTANCIA DE VACANTE INSTITUCIONAL"}
+                  {docTipo === "Analítico Parcial" && "CERTIFICADO ANALÍTICO PARCIAL DE ESTUDIOS"}
+                </h3>
+              </div>
+
+              <div className="text-xs leading-relaxed space-y-4 text-justify px-2">
+                {docTipo === "Alumno Regular" && (
+                  <p>Se hace constar por la presente que el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, titular del DNI Nº <strong>{docEstudiante.dni}</strong>, es alumno/a <strong>REGULAR</strong> del Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría, cursando los estudios secundarios en el Ciclo Lectivo 2026.</p>
+                )}
+                {docTipo === "Constancia Vacante" && (
+                  <p>Se hace constar por la presente que en el Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría existe <strong>VACANTE OTORGADA Y RESERVADA</strong> para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, a efectos de formalizar su inscripción en el ciclo lectivo en curso.</p>
+                )}
+                {docTipo === "Analítico Parcial" && (
+                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS Nº 454.</p>
+                )}
+                <p>A pedido del/de la interesado/a y a los efectos de ser presentado ante las autoridades que lo requieran, se expide la presente constancia en Esteban Echeverría a los {new Date().getDate()} días del mes de {new Date().toLocaleDateString("es-AR", { month: "long" })} de {new Date().getFullYear()}.</p>
+              </div>
+
+              <div className="pt-16 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
+                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS Nº 454 ESTEBAN ECHEVERRÍA</p></div>
+                <div className="border-t border-gray-900 pt-2"><p>FIRMA Y SELLO DE DIRECCIÓN</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">Autoridad Escolar Responsable</p></div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t pt-4">
+              <button onClick={() => setShowDocModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cerrar</button>
+              <button onClick={() => window.print()} className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-md"><Printer className="w-4 h-4" /> Imprimir / Descargar PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CREAR LEGAJO ESTUDIANTE */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Nuevo Legajo Estudiante</h3><button onClick={() => setShowAddModal(false)} className="text-gray-400 font-bold">✕</button></div>
+            <form onSubmit={handleCrearEstudiante} className="space-y-3">
+              <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={newDni} onChange={(e) => setNewDni(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              <div><label className="block text-xs font-semibold mb-1">CUIL</label><input type="text" value={newCuil} onChange={(e) => setNewCuil(e.target.value)} className="field-soft text-xs" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={newApellido} onChange={(e) => setNewApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={newNombre} onChange={(e) => setNewNombre(e.target.value)} className="field-soft text-xs" required /></div>
+              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guardar Legajo</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BAJA / PASE */}
+      {showBajaModal && selectedEstudianteBaja && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Registrar Baja / Pase: {selectedEstudianteBaja.apellido}, {selectedEstudianteBaja.nombre}</h3><button onClick={() => setShowBajaModal(false)} className="text-gray-400 font-bold">✕</button></div>
+            <form onSubmit={handleConfirmarBajaOPase} className="space-y-4">
+              <div><label className="block text-xs font-bold mb-1">Motivo de Baja:</label><select value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} className="field-soft text-xs font-bold border-2 border-red-300"><option value="Abandono">Abandono de Estudios</option><option value="Pase">Pase a Otra Institución Educativa</option><option value="Error de Carga">Error de Carga (Duplicado o incorrecto)</option></select></div>
+              {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
+              <div><label className="block text-xs font-semibold mb-1">Observaciones / Detalle</label><textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Detalle de la baja..." className="field-soft text-xs h-20" /></div>
+              <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={() => setShowBajaModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="bg-red-600 text-white font-bold text-xs py-2.5 px-6 rounded-xl">Confirmar Baja / Pase</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REGISTRAR NUEVO DOCENTE */}
+      {showDocenteModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-5 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-lg font-bold text-[#0D2A3E]">Registrar Nuevo Docente (Legajo Institucional)</h3><button onClick={() => setShowDocenteModal(false)} className="text-gray-400 font-bold">✕</button></div>
+            <form onSubmit={handleCrearDocenteModalCompleto} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">CUIL *</label><input type="text" value={docCuil} onChange={(e) => setDocCuil(e.target.value)} placeholder="20-12345678-9" className="field-soft text-xs font-bold" required /></div>
+                <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={docDni} onChange={(e) => setDocDni(e.target.value)} placeholder="12345678" className="field-soft text-xs font-bold" required /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={docNombre} onChange={(e) => setDocNombre(e.target.value)} className="field-soft text-xs" required /></div>
+                <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={docApellido} onChange={(e) => setDocApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Género</label><select value={docGenero} onChange={(e) => setDocGenero(e.target.value)} className="field-soft text-xs"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
+                <div><label className="block text-xs font-semibold mb-1">Email</label><input type="email" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} className="field-soft text-xs" /></div>
+                <div><label className="block text-xs font-semibold mb-1">Teléfono</label><input type="text" value={docTelefono} onChange={(e) => setDocTelefono(e.target.value)} className="field-soft text-xs" /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Título Principal</label><input type="text" value={docTitulo} onChange={(e) => setDocTitulo(e.target.value)} placeholder="Profesor/a Secundario" className="field-soft text-xs" /></div>
+                <div><label className="block text-xs font-semibold mb-1">Situación de Revista</label><select value={docSituacionRevista} onChange={(e) => setDocSituacionRevista(e.target.value)} className="field-soft text-xs font-bold"><option value="Titular">Titular</option><option value="Provisional">Provisional</option><option value="Suplente">Suplente</option></select></div>
+              </div>
+              <div className="flex justify-end gap-3 border-t pt-4">
+                <button type="button" onClick={() => setShowDocenteModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
+                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guardar y Registrar Docente</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
