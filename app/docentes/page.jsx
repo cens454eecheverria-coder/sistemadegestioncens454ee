@@ -257,15 +257,15 @@ export default function TeacherPortalPage() {
                       <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay estudiantes inscriptos en este curso/materia.</td></tr>
                     ) : (
                       alumnos.map((a) => {
-                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: new Date().toISOString().split("T")[0] };
+                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
                         return (
                           <tr key={a.id} className="hover:bg-gray-50/80">
                             <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
                           </tr>
                         );
                       })
@@ -441,15 +441,15 @@ export default function TeacherPortalPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {alumnos.map((a) => {
-                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", fecha: new Date().toISOString().split("T")[0] };
+                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
                         return (
                           <tr key={a.id} className="hover:bg-gray-50/80">
                             <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
+                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
                           </tr>
                         );
                       })}
