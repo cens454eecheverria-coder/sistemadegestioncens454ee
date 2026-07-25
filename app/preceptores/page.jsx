@@ -891,119 +891,30 @@ export default function PreceptorPage() {
           )}
         </div>
       )}
+
+
       {/* MODAL EDITAR LEGAJO ESTUDIANTE */}
       {showLegajoModal && selectedLegajoStudent && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 space-y-6 relative border border-gray-200">
-            <div className="flex justify-between items-center border-b pb-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
+            <div className="p-5 border-b flex justify-between items-center bg-white shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-[#0D2A3E]">Modificar Legajo de Estudiante</h3>
                 <p className="text-xs text-gray-500 font-medium">{selectedLegajoStudent.apellido}, {selectedLegajoStudent.nombre}</p>
               </div>
-              <button onClick={() => setShowLegajoModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg">✕</button>
+              <button onClick={() => setShowLegajoModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg p-1">✕</button>
             </div>
 
-            <form onSubmit={handleUpdateLegajoSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
-                  <input type="text" value={selectedLegajoStudent.dni || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, dni: e.target.value })} className="field-soft text-xs font-bold" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
-                  <select value={selectedLegajoStudent.genero || "Masculino"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, genero: e.target.value })} className="field-soft text-xs">
-                    <option value="Masculino">Masculino</option>
-                    <option value="Femenino">Femenino</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
-                  <input type="text" value={selectedLegajoStudent.nombre || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, nombre: e.target.value })} className="field-soft text-xs" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
-                  <input type="text" value={selectedLegajoStudent.apellido || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, apellido: e.target.value })} className="field-soft text-xs font-bold" required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Libro Nº</label>
-                  <input type="text" value={selectedLegajoStudent.numero_libro || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_libro: e.target.value })} placeholder="Ej: 9" className="field-soft text-xs font-mono font-bold" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Folio Nº</label>
-                  <input type="text" value={selectedLegajoStudent.numero_folio || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_folio: e.target.value })} placeholder="Ej: 13" className="field-soft text-xs font-mono font-bold" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs font-semibold">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={selectedLegajoStudent.fotocopia_dni || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, fotocopia_dni: e.target.checked })} className="rounded text-[#006384]" />
-                  <span>Fotocopia DNI</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={selectedLegajoStudent.partida_nacimiento || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, partida_nacimiento: e.target.checked })} className="rounded text-[#006384]" />
-                  <span>Partida Nacimiento</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={selectedLegajoStudent.certificado_estudios || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, certificado_estudios: e.target.checked })} className="rounded text-[#006384]" />
-                  <span>Certificado Estudios</span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 border-t pt-4">
-                <button type="button" onClick={() => setShowLegajoModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
-                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md">Guardar Modificaciones</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE COMPLETO CON TODAS LAS SECCIONES DE LAS CAPTURAS */}
-      {showInscribirModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200 my-8">
-            <div className="flex justify-between items-center border-b pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-[#0D2A3E]">Inscribir Nuevo Estudiante</h3>
-                <p className="text-xs text-gray-500 font-medium">Registro de alumno en legajo oficial de CENS 454</p>
-              </div>
-              <button onClick={() => setShowInscribirModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg">✕</button>
-            </div>
-
-            <form onSubmit={handleInscribirEstudiante} className="space-y-6">
-              {/* SECCIÓN 1: DATOS PERSONALES */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
-                  <User className="w-4 h-4 text-[#006384]" /> Datos Personales
-                </h4>
-
+            <form onSubmit={handleUpdateLegajoSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-4 flex-1">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
-                    <input type="text" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 38492011" className="field-soft text-xs font-bold" required />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
-                    <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del estudiante" className="field-soft text-xs" required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
-                    <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Apellido del estudiante" className="field-soft text-xs font-bold" required />
+                    <input type="text" value={selectedLegajoStudent.dni || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, dni: e.target.value })} className="field-soft text-xs font-bold" required />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
-                    <select value={genero} onChange={(e) => setGenero(e.target.value)} className="field-soft text-xs">
-                      <option value="">Seleccionar...</option>
+                    <select value={selectedLegajoStudent.genero || "Masculino"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, genero: e.target.value })} className="field-soft text-xs">
                       <option value="Masculino">Masculino</option>
                       <option value="Femenino">Femenino</option>
                       <option value="Otro">Otro</option>
@@ -1013,93 +924,191 @@ export default function PreceptorPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
-                    <input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} className="field-soft text-xs" />
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                    <input type="text" value={selectedLegajoStudent.nombre || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, nombre: e.target.value })} className="field-soft text-xs" required />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">E-mail</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className="field-soft text-xs" />
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                    <input type="text" value={selectedLegajoStudent.apellido || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, apellido: e.target.value })} className="field-soft text-xs font-bold" required />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
-                    <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Libro Nº</label>
+                    <input type="text" value={selectedLegajoStudent.numero_libro || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_libro: e.target.value })} placeholder="Ej: 9" className="field-soft text-xs font-mono font-bold" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
-                    <input type="text" value={ciudadNacimiento} onChange={(e) => setCiudadNacimiento(e.target.value)} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Folio Nº</label>
+                    <input type="text" value={selectedLegajoStudent.numero_folio || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, numero_folio: e.target.value })} placeholder="Ej: 13" className="field-soft text-xs font-mono font-bold" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
-                    <select value={orientacion} onChange={(e) => setOrientacion(e.target.value)} className="field-soft text-xs">
-                      <option value="">Seleccionar...</option>
-                      <option value="Ciencias Sociales">Ciencias Sociales</option>
-                      <option value="Ciencias Naturales">Ciencias Naturales</option>
-                      <option value="Economía y Administración">Economía y Administración</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Curso Asignado *</label>
-                    <select value={cursoAsignadoId} onChange={(e) => setCursoAsignadoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-400" required>
-                      <option value="">Seleccione un curso...</option>
-                      {cursos.map((c) => (
-                        <option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs font-semibold">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={selectedLegajoStudent.fotocopia_dni || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, fotocopia_dni: e.target.checked })} className="rounded text-[#006384]" />
+                    <span>Fotocopia DNI</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={selectedLegajoStudent.partida_nacimiento || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, partida_nacimiento: e.target.checked })} className="rounded text-[#006384]" />
+                    <span>Partida Nacimiento</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={selectedLegajoStudent.certificado_estudios || false} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, certificado_estudios: e.target.checked })} className="rounded text-[#006384]" />
+                    <span>Certificado Estudios</span>
+                  </label>
                 </div>
               </div>
 
-              {/* SECCIÓN 2: DOCUMENTACIÓN ENTREGADA */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
-                  <FileCheck2 className="w-4 h-4 text-emerald-600" /> Documentación Entregada
-                </h4>
+              <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
+                <button type="button" onClick={() => setShowLegajoModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
+                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md">Guardar Modificaciones</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
-                      <input type="checkbox" checked={fotocopiaDni} onChange={(e) => setFotocopiaDni(e.target.checked)} className="rounded text-[#006384]" />
-                      <span>Fotocopia DNI</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
-                      <input type="checkbox" checked={partidaNacimiento} onChange={(e) => setPartidaNacimiento(e.target.checked)} className="rounded text-[#006384]" />
-                      <span>Partida de Nacimiento</span>
-                    </label>
+      {/* MODAL INSCRIBIR NUEVO ESTUDIANTE RESPONSIVE & MAX-HEIGHT 90VH */}
+      {showInscribirModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
+            {/* Header Fijo */}
+            <div className="p-5 border-b flex justify-between items-center bg-white shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-[#0D2A3E]">Inscribir Nuevo Estudiante</h3>
+                <p className="text-xs text-gray-500 font-medium">Registro de alumno en legajo oficial de CENS 454</p>
+              </div>
+              <button onClick={() => setShowInscribirModal(false)} className="text-gray-400 hover:text-gray-700 font-bold text-lg p-1">✕</button>
+            </div>
+
+            {/* Formulario con Scroll Interno */}
+            <form onSubmit={handleInscribirEstudiante} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                {/* SECCIÓN 1: DATOS PERSONALES */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
+                    <User className="w-4 h-4 text-[#006384]" /> Datos Personales
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
+                      <input type="text" value={dni} onChange={(e) => setDni(e.target.value)} placeholder="Ej: 38492011" className="field-soft text-xs font-bold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                      <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del estudiante" className="field-soft text-xs" required />
+                    </div>
                   </div>
 
-                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
-                    <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
-                      <input type="checkbox" checked={certificadoEstudios} onChange={(e) => setCertificadoEstudios(e.target.checked)} className="rounded text-[#006384]" />
-                      <span>Certificado Últimos Estudios</span>
-                    </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[11px] font-medium text-gray-600 mb-1">Tipo de Certificado</label>
-                      <input type="text" value={tipoCertificado} onChange={(e) => setTipoCertificado(e.target.value)} placeholder="Ej. Constancia Titulo en Trámite" className="field-soft text-xs py-1.5 bg-white" />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                      <input type="text" value={apellido} onChange={(e) => setApellido(e.target.value)} placeholder="Apellido del estudiante" className="field-soft text-xs font-bold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
+                      <select value={genero} onChange={(e) => setGenero(e.target.value)} className="field-soft text-xs">
+                        <option value="">Seleccionar...</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
+                      <input type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">E-mail</label>
+                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
+                      <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
+                      <input type="text" value={ciudadNacimiento} onChange={(e) => setCiudadNacimiento(e.target.value)} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
+                      <select value={orientacion} onChange={(e) => setOrientacion(e.target.value)} className="field-soft text-xs">
+                        <option value="">Seleccionar...</option>
+                        <option value="Ciencias Sociales">Ciencias Sociales</option>
+                        <option value="Ciencias Naturales">Ciencias Naturales</option>
+                        <option value="Economía y Administración">Economía y Administración</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Curso Asignado *</label>
+                      <select value={cursoAsignadoId} onChange={(e) => setCursoAsignadoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-400" required>
+                        <option value="">Seleccione un curso...</option>
+                        {cursos.map((c) => (
+                          <option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-xs font-bold text-gray-800">Materias Adeudadas Previas</label>
-                    <span className="text-[10px] text-gray-400 font-mono">Visible para todo el staff</span>
+                {/* SECCIÓN 2: DOCUMENTACIÓN ENTREGADA */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
+                    <FileCheck2 className="w-4 h-4 text-emerald-600" /> Documentación Entregada
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={fotocopiaDni} onChange={(e) => setFotocopiaDni(e.target.checked)} className="rounded text-[#006384]" />
+                        <span>Fotocopia DNI</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={partidaNacimiento} onChange={(e) => setPartidaNacimiento(e.target.checked)} className="rounded text-[#006384]" />
+                        <span>Partida de Nacimiento</span>
+                      </label>
+                    </div>
+
+                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                      <label className="flex items-center gap-2 text-xs font-bold text-gray-800 cursor-pointer">
+                        <input type="checkbox" checked={certificadoEstudios} onChange={(e) => setCertificadoEstudios(e.target.checked)} className="rounded text-[#006384]" />
+                        <span>Certificado Últimos Estudios</span>
+                      </label>
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-600 mb-1">Tipo de Certificado</label>
+                        <input type="text" value={tipoCertificado} onChange={(e) => setTipoCertificado(e.target.value)} placeholder="Ej. Constancia Titulo en Trámite" className="field-soft text-xs py-1.5 bg-white" />
+                      </div>
+                    </div>
                   </div>
-                  <textarea
-                    value={materiasAdeudadas}
-                    onChange={(e) => setMateriasAdeudadas(e.target.value)}
-                    placeholder="Listar materias y año en caso de adeudación (Ej: Geografía 2do, Matemática 1ro)."
-                    className="field-soft text-xs h-20 bg-white"
-                  />
+
+                  <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="block text-xs font-bold text-gray-800">Materias Adeudadas Previas</label>
+                      <span className="text-[10px] text-gray-400 font-mono">Visible para todo el staff</span>
+                    </div>
+                    <textarea
+                      value={materiasAdeudadas}
+                      onChange={(e) => setMateriasAdeudadas(e.target.value)}
+                      placeholder="Listar materias y año en caso de adeudación (Ej: Geografía 2do, Matemática 1ro)."
+                      className="field-soft text-xs h-20 bg-white"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 border-t pt-4">
+              {/* Footer Fijo */}
+              <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
                 <button type="button" onClick={() => setShowInscribirModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
                 <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Completar Inscripción</button>
               </div>
