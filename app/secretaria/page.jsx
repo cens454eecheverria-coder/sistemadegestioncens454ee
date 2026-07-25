@@ -156,11 +156,77 @@ export default function SecretariaPanelPage() {
       await loadData();
     } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
+    const handleToggleEstadoDocente = async (docente) => {
+    try {
+      const isCurrentlyInactive = docente.estado === "inactivo" || docente.activo === false;
+      const nuevoEstado = isCurrentlyInactive ? "activo" : "inactivo";
+      const nuevoActivoBool = nuevoEstado === "activo";
+      const accionText = isCurrentlyInactive ? "reactivar" : "dar de baja / inactivar";
+      
+      const confirm = await Swal.fire({
+        title: (isCurrentlyInactive ? "Reactivar" : "Dar de Baja") + " Docente",
+        text: "¿Deseas " + accionText + " a Prof. " + docente.apellido + ", " + docente.nombre + "?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, " + (isCurrentlyInactive ? "Reactivar" : "Dar de Baja"),
+        cancelButtonText: "Cancelar"
+      });
+
+      if (confirm.isConfirmed) {
+        const { error } = await supabase
+          .from("docentes")
+          .update({ estado: nuevoEstado, activo: nuevoActivoBool })
+          .eq("id", docente.id);
+        
+        if (error) throw error;
+
+        Swal.fire({
+          icon: "success",
+          title: "Estado Actualizado",
+          text: "El docente " + docente.apellido + " ahora está " + nuevoEstado + ".",
+          timer: 1500,
+          showConfirmButton: false
+        });
+        await loadData();
+      }
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
+  };
+
+  const handleEliminarDocenteModal = async (docente) => {
+    try {
+      const confirm = await Swal.fire({
+        title: "Eliminar Legajo Docente",
+        text: "¿Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        confirmButtonText: "Sí, Eliminar Definitivamente",
+        cancelButtonText: "Cancelar"
+      });
+
+      if (confirm.isConfirmed) {
+        const { error } = await supabase
+          .from("docentes")
+          .delete()
+          .eq("id", docente.id);
+
+        if (error) throw error;
+
+        Swal.fire("Eliminado", "Se eliminó el legajo docente con éxito.", "success");
+        await loadData();
+      }
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
+  };
+
   const handleCrearDocenteModalCompleto = async (e) => {
     e.preventDefault();
     if (!docDni || !docNombre || !docApellido) { Swal.fire("Error", "Ingrese DNI, Nombre y Apellido.", "error"); return; }
     try {
-      const record = { cuil: docCuil.trim(), dni: docDni.trim(), nombre: docNombre.trim(), apellido: docApellido.trim(), genero: docGenero, fecha_nacimiento: docFechaNac || null, email: docEmail.trim(), telefono: docTelefono.trim(), titulo: docTitulo.trim() || "Profesor/a Secundario", domicilio: docDomicilio.trim(), localidad: docLocalidad.trim(), numero_legajo: docNumLegajo.trim(), situacion_revista: docSituacionRevista, fecha_ingreso: docFechaIngreso || null, activo: true };
+      const record = { cuil: docCuil.trim(), dni: docDni.trim(), nombre: docNombre.trim(), apellido: docApellido.trim(), genero: docGenero, fecha_nacimiento: docFechaNac || null, email: docEmail.trim(), telefono: docTelefono.trim(), titulo: docTitulo.trim() || "Profesor/a Secundario", domicilio: docDomicilio.trim(), localidad: docLocalidad.trim(), numero_legajo: docNumLegajo.trim(), situacion_revista: docSituacionRevista, fecha_ingreso: docFechaIngreso || null, estado: "activo", activo: true };
       const { error } = await supabase.from("docentes").insert(record);
       if (error) throw error;
       Swal.fire({ icon: "success", title: "Docente Registrado", text: "Prof. " + docApellido + ", " + docNombre + " incorporado." });
