@@ -59,13 +59,19 @@ export function AuthProvider({ children }) {
           (d.dni && d.dni.replace(/[^0-9]/g, "") === cleanCuil)
         );
       }
+
+      if (!realDocente) {
+        setLoading(false);
+        throw new Error("El CUIL o DNI ingresado (" + cuilVal + ") no se encuentra registrado en el cuerpo docente de la institución.");
+      }
+
       userData = {
-        id: realDocente?.id || ("doc_" + cleanCuil),
-        nombre: realDocente ? `Prof. ${realDocente.apellido}, ${realDocente.nombre}` : `Prof. CUIL/DNI ${cuilVal}`,
+        id: realDocente.id,
+        nombre: Prof. , ,
         role: "profesor",
-        cuil: realDocente?.cuil || cuilVal,
-        dni: realDocente?.dni || cleanCuil,
-        email: realDocente?.email || "",
+        cuil: realDocente.cuil || cuilVal,
+        dni: realDocente.dni || cleanCuil,
+        email: realDocente.email || "",
       };
     } else if (roleType === "estudiante") {
       const dniVal = typeof credentials === "object" ? credentials.dni : credentials;
@@ -74,16 +80,25 @@ export function AuthProvider({ children }) {
         throw new Error("Debe ingresar un número de DNI de estudiante.");
       }
       const cleanDni = dniVal.replace(/[^0-9]/g, "");
-      let realEstudiante = null;
+
       const { data: eList } = await supabase.from("estudiantes").select("*");
+      let realEstudiante = null;
       if (eList && eList.length > 0) {
         realEstudiante = eList.find((e) => e.dni && e.dni.replace(/[^0-9]/g, "") === cleanDni);
       }
+
+      if (!realEstudiante) {
+        setLoading(false);
+        throw new Error("El DNI ingresado (" + dniVal + ") no corresponde a ningún estudiante inscripto en el CENS 454.");
+      }
+
       userData = {
-        id: realEstudiante?.id || ("est_" + cleanDni),
-        nombre: realEstudiante ? `${realEstudiante.apellido}, ${realEstudiante.nombre}` : `Estudiante (DNI ${dniVal})`,
+        id: realEstudiante.id,
+        nombre: ${realEstudiante.apellido}, ,
         role: "estudiante",
-        dni: realEstudiante?.dni || cleanDni,
+        dni: realEstudiante.dni,
+        curso_id: realEstudiante.curso_id || null,
+        email: realEstudiante.email || "",
       };
     }
 
