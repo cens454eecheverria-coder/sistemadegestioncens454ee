@@ -67,7 +67,7 @@ export default function PreinscripcionPublicaPage() {
             className="w-20 h-20 mx-auto object-contain bg-white/10 p-2 rounded-2xl border border-[#F5C442]/60 shadow-lg"
           />
           <h1 className="text-2xl md:text-3xl font-extrabold font-heading">
-            Preinscripción Ingreso CENS N° 454
+            Preinscripción Ingreso CENS N?° 454
           </h1>
           <p className="text-xs text-[#F5C442] font-semibold tracking-wide uppercase">
             Educación Secundaria de Adultos - Esteban Echeverría (Región 5)

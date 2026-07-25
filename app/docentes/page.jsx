@@ -145,7 +145,7 @@ export default function TeacherPortalPage() {
     }));
   };
 
-  const handleGuardarCalificaciones = async () => {
+  const handleGuard?arCalificaciones = async () => {
     if (!selectedMateriaId) return;
     setSaving(true);
     try {
@@ -163,7 +163,7 @@ export default function TeacherPortalPage() {
         await supabase.from("calificaciones").upsert(records, { onConflict: "estudiante_id,materia_id" });
       }
 
-      Swal.fire({ icon: "success", title: "Calificaciones Guardadas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
+      Swal.fire({ icon: "success", title: "Calificaciones Guard?adas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
     } catch (err) {
       Swal.fire("Error", err.message, "error");
     } finally {
@@ -171,7 +171,7 @@ export default function TeacherPortalPage() {
     }
   };
 
-  const handleGuardarFichaDocente = async (e) => {
+  const handleGuard?arFichaDocente = async (e) => {
     e.preventDefault();
     try {
       if (docenteData.id) {
@@ -250,7 +250,7 @@ export default function TeacherPortalPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
-                    <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACIÓN (1° CUATR.)</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACIÓN</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
+                    <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACIÓN? (1° CUATR.)</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACIÓN</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {alumnos.length === 0 ? (
@@ -273,7 +273,7 @@ export default function TeacherPortalPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
+              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuard?arCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guard?ar Calificaciones"}</button></div>
             </div>
           </div>
         ) : (
@@ -286,7 +286,7 @@ export default function TeacherPortalPage() {
               <div className="flex justify-between items-center border-b pb-4"><h3 className="text-lg font-bold text-[#0D2A3E]">Vista Previa de Impresión Oficial - Calificaciones</h3><button onClick={() => setPrintingModal(false)} className="text-gray-400 font-bold">✕</button></div>
               <div className="border p-8 rounded-xl bg-white space-y-6">
                 <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
-                  <div><h2 className="text-lg font-extrabold text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2><p className="text-[11px] text-gray-600 font-medium">Dirección General de Cultura y Educación - Provincia de Buenos Aires</p></div>
+                  <div><h2 className="text-lg font-extrabold text-gray-900">CENS N?º 454 - ESTEBAN? ECHEVERRÍA</h2><p className="text-[11px] text-gray-600 font-medium">Dirección General de Cultura y Educación - Provincia de Buenos Aires</p></div>
                   <div className="text-right"><h3 className="text-xs font-bold text-gray-800 uppercase">PLANILLA DE CALIFICACIONES</h3><p className="text-[10px] text-gray-500 mt-1">Fecha: {new Date().toLocaleDateString("es-AR")}</p></div>
                 </div>
                 <div className="flex justify-between items-end border-b pb-3">
@@ -315,7 +315,7 @@ export default function TeacherPortalPage() {
                 </table>
                 <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-800">
                   <div className="border-t border-gray-900 pt-2"><p>FIRMA DEL PROFESOR</p></div>
-                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DE DIRECCIÓN INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS 454 ESTEBAN ECHEVERRÍA</p></div>
+                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DE DIRECCIÓN? INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS 454 ESTEBAN? ECHEVERRÍA</p></div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 border-t pt-4">
@@ -354,7 +354,7 @@ export default function TeacherPortalPage() {
 
       {activeTab === "ficha" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <form onSubmit={handleGuardarFichaDocente} className="lg:col-span-2 card p-6 bg-white space-y-5">
+          <form onSubmit={handleGuard?arFichaDocente} className="lg:col-span-2 card p-6 bg-white space-y-5">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><User className="w-5 h-5 text-[#006384]" /> Actualizar Datos de Contacto</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">NOMBRE</label><input type="text" value={docenteData.nombre} onChange={(e) => setDocenteData({ ...docenteData, nombre: e.target.value })} className="field-soft text-xs font-medium" /></div>
@@ -366,7 +366,7 @@ export default function TeacherPortalPage() {
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">FECHA DE NACIMIENTO</label><input type="date" value={docenteData.fechaNac} onChange={(e) => setDocenteData({ ...docenteData, fechaNac: e.target.value })} className="field-soft text-xs font-medium" /></div>
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">TÍTULO</label><input type="text" value={docenteData.titulo} onChange={(e) => setDocenteData({ ...docenteData, titulo: e.target.value })} placeholder="Ej: Profesor de Geografía" className="field-soft text-xs font-medium" /></div>
             </div>
-            <div className="pt-3 border-t border-gray-100 flex justify-end"><button type="submit" className="btn-primary font-bold text-xs py-2.5 px-6 bg-[#006384]">Guardar Cambios</button></div>
+            <div className="pt-3 border-t border-gray-100 flex justify-end"><button type="submit" className="btn-primary font-bold text-xs py-2.5 px-6 bg-[#006384]">Guard?ar Cambios</button></div>
           </form>
           <div className="card p-6 bg-white space-y-4">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Materias Asignadas en CENS 454</h3>
@@ -456,7 +456,7 @@ export default function TeacherPortalPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
+                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuard?arCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guard?ar Calificaciones"}</button></div>
               </div>
             </div>
           ) : (

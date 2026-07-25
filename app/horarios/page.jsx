@@ -123,7 +123,7 @@ export default function HorariosPage() {
     }));
   };
 
-  const handleGuardarHorarios = async () => {
+  const handleGuard?arHorarios = async () => {
     if (!selectedCursoId) return;
 
     try {
@@ -152,7 +152,7 @@ export default function HorariosPage() {
 
       Swal.fire({
         icon: 'success',
-        title: 'Horarios Guardados',
+        title: 'Horarios Guard?ados',
         text: 'Se actualizó la matriz horaria en Supabase.',
         timer: 1500,
         showConfirmButton: false,
@@ -214,10 +214,10 @@ export default function HorariosPage() {
           </button>
           {canEdit && (
             <button
-              onClick={handleGuardarHorarios}
+              onClick={handleGuard?arHorarios}
               className="btn-gold text-xs py-2.5 px-5 font-bold"
             >
-              Guardar Matriz Horaria
+              Guard?ar Matriz Horaria
             </button>
           )}
         </div>

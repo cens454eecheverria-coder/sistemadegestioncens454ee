@@ -92,10 +92,10 @@ export default function AlertasPage() {
     window.print();
   };
 
-  const handleGuardarBitacora = () => {
+  const handleGuard?arBitacora = () => {
     Swal.fire({
       icon: 'success',
-      title: 'Acta Guardada en Bitácora',
+      title: 'Acta Guard?ada en Bitácora',
       text: 'Se registró la intervención pedagógica en el legajo del estudiante.',
       timer: 1500,
       showConfirmButton: false,
@@ -240,10 +240,10 @@ export default function AlertasPage() {
           <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl border border-gray-200">
             <div className="border-b border-gray-200 pb-4 text-center">
               <h3 className="text-xl font-bold font-heading text-[#0D2A3E] uppercase">
-                ACTA DE NOTIFICACIÓN Y COMPROMISO DE ASISTENCIA
+                ACTA DE NOTIFICACIÓN? Y COMPROMISO DE ASISTENCIA
               </h3>
               <p className="text-xs text-gray-500 font-semibold mt-1">
-                CENS Nº 454 - Esteban Echeverría (Región 5)
+                CENS N?º 454 - Esteban Echeverría (Región 5)
               </p>
             </div>
 
@@ -291,10 +291,10 @@ export default function AlertasPage() {
                 Imprimir Acta
               </button>
               <button
-                onClick={handleGuardarBitacora}
+                onClick={handleGuard?arBitacora}
                 className="btn-gold text-xs py-2 px-4"
               >
-                Guardar en Bitácora
+                Guard?ar en Bitácora
               </button>
             </div>
           </div>

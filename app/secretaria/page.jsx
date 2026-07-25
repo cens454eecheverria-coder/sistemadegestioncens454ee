@@ -24,10 +24,10 @@ export default function SecretariaPanelPage() {
   const [salidaCursoId, setSalidaCursoId] = useState("");
   const [salidaFechaSalida, setSalidaFechaSalida] = useState("");
   const [salidaHoraSalida, setSalidaHoraSalida] = useState("08:00 hs");
-  const [salidaLugarSalida, setSalidaLugarSalida] = useState("Sede CENS N? 454 - Av. Pedro Dreyer 1234");
+  const [salidaLugarSalida, setSalidaLugarSalida] = useState("Sede CENS N?? 454 - Av. Pedro Dreyer 1234");
   const [salidaFechaRegreso, setSalidaFechaRegreso] = useState("");
   const [salidaHoraRegreso, setSalidaHoraRegreso] = useState("18:00 hs");
-  const [salidaLugarRegreso, setSalidaLugarRegreso] = useState("Sede CENS N? 454");
+  const [salidaLugarRegreso, setSalidaLugarRegreso] = useState("Sede CENS N?? 454");
   const [salidaObsFechas, setSalidaObsFechas] = useState("Sujeto a condiciones clim?ticas favorables");
   const [salidaItinerario, setSalidaItinerario] = useState("08:00 Salida desde sede CENS. 10:00 Recorrido guiado. 13:00 Almuerzo. 15:00 Taller interactivo. 16:30 Retorno.");
   const [salidaActividades, setSalidaActividades] = useState("An?lisis de patrimonio hist?rico, observaciones de campo y producci?n de informe s?ntesis.");
@@ -265,7 +265,7 @@ export default function SecretariaPanelPage() {
         return;
       }
       await generateAnexo5SalidaDocx({
-        institucion: 'CENS N? 454',
+        institucion: 'CENS N?? 454',
         distrito: 'Esteban Echeverr?a',
         lugar: salidaLugar,
         fechaSalida: salidaFechaSalida || new Date().toLocaleDateString('es-AR'),
@@ -414,7 +414,7 @@ export default function SecretariaPanelPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2"><Users className="w-6 h-6 text-[#006384]" /> Módulo de Secretaría & Gestión Administrativa</h1>
-          <p className="text-xs text-gray-500 mt-1">CENS Nº 454 - Esteban Echeverría (Región 5)</p>
+          <p className="text-xs text-gray-500 mt-1">CENS N?º 454 - Esteban Echeverría (Región 5)</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setShowAddModal(true)} className="btn-gold font-bold text-xs py-2.5 px-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> Crear Legajo Estudiante</button>
@@ -1065,7 +1065,7 @@ export default function SecretariaPanelPage() {
                 </h3>
                 
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-xs text-blue-900 leading-relaxed">
-                  En este panel se visualizan en tiempo real todos los cargos y franjas horarias externas declaradas formalmente por el cuerpo docente activo del CENS N? 454.
+                  En este panel se visualizan en tiempo real todos los cargos y franjas horarias externas declaradas formalmente por el cuerpo docente activo del CENS N?? 454.
                 </div>
               </div>
 
@@ -1131,7 +1131,7 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
-      {/* MODAL IMPRESIÓN DOCUMENTOS Y CONSTANCIAS OFICIALES */}
+      {/* MODAL IMPRESI?NÓN? DOCUMENTOS Y CONSTANCIAS OFICIALES */}
       {showDocModal && docEstudiante && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 space-y-6 relative border border-gray-200">
@@ -1139,7 +1139,7 @@ export default function SecretariaPanelPage() {
             <div className="border p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
               <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
                 <div>
-                  <h2 className="text-xl font-black text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2>
+                  <h2 className="text-xl font-black text-gray-900">CENS N?º 454 - ESTEBAN? ECHEVERRÍA</h2>
                   <p className="text-xs text-gray-600 font-bold">Dirección General de Cultura y Educación • Provincia de Buenos Aires</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">Distrito: Esteban Echeverría • Región 5</p>
                 </div>
@@ -1165,13 +1165,13 @@ export default function SecretariaPanelPage() {
                   <p>Se hace constar por la presente que en el Centro de Educación Nivel Secundario Nº 454 de Esteban Echeverría existe <strong>VACANTE OTORGADA Y RESERVADA</strong> para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, a efectos de formalizar su inscripción en el ciclo lectivo en curso.</p>
                 )}
                 {docTipo === "Analítico Parcial" && (
-                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS Nº 454.</p>
+                  <p>Certificado oficial de materias aprobadas y avance curricular parcial expedido para el/la estudiante <strong>{docEstudiante.apellido.toUpperCase()}, {docEstudiante.nombre}</strong>, DNI Nº <strong>{docEstudiante.dni}</strong>, registrado en los libros de calificaciones del CENS N?º 454.</p>
                 )}
                 <p>A pedido del/de la interesado/a y a los efectos de ser presentado ante las autoridades que lo requieran, se expide la presente constancia en Esteban Echeverría a los {new Date().getDate()} días del mes de {new Date().toLocaleDateString("es-AR", { month: "long" })} de {new Date().getFullYear()}.</p>
               </div>
 
               <div className="pt-16 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
-                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS Nº 454 ESTEBAN ECHEVERRÍA</p></div>
+                <div className="border-t border-gray-900 pt-2"><p>SELLO INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS N?º 454 ESTEBAN? ECHEVERRÍA</p></div>
                 <div className="border-t border-gray-900 pt-2"><p>FIRMA Y SELLO DE DIRECCIÓN</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">Autoridad Escolar Responsable</p></div>
               </div>
             </div>
@@ -1194,7 +1194,7 @@ export default function SecretariaPanelPage() {
               <div><label className="block text-xs font-semibold mb-1">CUIL</label><input type="text" value={newCuil} onChange={(e) => setNewCuil(e.target.value)} className="field-soft text-xs" /></div>
               <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={newApellido} onChange={(e) => setNewApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
               <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={newNombre} onChange={(e) => setNewNombre(e.target.value)} className="field-soft text-xs" required /></div>
-              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guardar Legajo</button></div>
+              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guard?ar Legajo</button></div>
             </form>
           </div>
         </div>
@@ -1207,7 +1207,7 @@ export default function SecretariaPanelPage() {
             <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Registrar Baja / Pase: {selectedEstudianteBaja.apellido}, {selectedEstudianteBaja.nombre}</h3><button onClick={() => setShowBajaModal(false)} className="text-gray-400 font-bold">✕</button></div>
             <form onSubmit={handleConfirmarBajaOPase} className="space-y-4">
               <div><label className="block text-xs font-bold mb-1">Motivo de Baja:</label><select value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} className="field-soft text-xs font-bold border-2 border-red-300"><option value="Abandono">Abandono de Estudios</option><option value="Pase">Pase a Otra Institución Educativa</option><option value="Error de Carga">Error de Carga (Duplicado o incorrecto)</option></select></div>
-              {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
+              {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N?° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
               <div><label className="block text-xs font-semibold mb-1">Observaciones / Detalle</label><textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Detalle de la baja..." className="field-soft text-xs h-20" /></div>
               <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={() => setShowBajaModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="bg-red-600 text-white font-bold text-xs py-2.5 px-6 rounded-xl">Confirmar Baja / Pase</button></div>
             </form>
@@ -1240,7 +1240,7 @@ export default function SecretariaPanelPage() {
               </div>
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={() => setShowDocenteModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
-                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guardar y Registrar Docente</button>
+                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guard?ar y Registrar Docente</button>
               </div>
             </form>
           </div>

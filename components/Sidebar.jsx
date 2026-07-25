@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               />
               <div>
                 <h2 className="font-heading text-base font-bold text-white tracking-tight leading-tight">
-                  CENS Nº 454
+                  CENS N?º 454
                 </h2>
                 <p className="text-[10px] text-[#F5C442] font-semibold tracking-wide uppercase">
                   Esteban Echeverría

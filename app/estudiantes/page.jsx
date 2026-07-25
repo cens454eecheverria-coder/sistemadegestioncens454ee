@@ -236,7 +236,7 @@ export default function StudentPortalPage() {
               {estudianteInfo?.apellido ? estudianteInfo.apellido + ", " + estudianteInfo.nombre : (estudianteInfo?.nombre || 'Seleccione un estudiante')}
             </h1>
             <p className="text-xs text-[#F5C442] font-semibold">
-              DNI: {estudianteInfo?.dni || '-'} | CENS N? 454 Esteban Echeverr?a
+              DNI: {estudianteInfo?.dni || '-'} | CENS N?? 454 Esteban Echeverr?a
             </p>
           </div>
         </div>

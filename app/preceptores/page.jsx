@@ -329,7 +329,7 @@ export default function PreceptorPage() {
     setAsistencias((prev) => ({ ...prev, [estudianteId]: estado }));
   };
 
-  const handleGuardarAsistencias = async () => {
+  const handleGuard?arAsistencias = async () => {
     if (!selectedCurso) return;
     setSaving(true);
     try {
@@ -349,7 +349,7 @@ export default function PreceptorPage() {
 
       Swal.fire({
         icon: "success",
-        title: "Asistencia Guardada",
+        title: "Asistencia Guard?ada",
         text: "Se registraron " + records.length + " asistencias para el " + fecha + ".",
         timer: 1500,
         showConfirmButton: false
@@ -585,11 +585,11 @@ export default function PreceptorPage() {
                 Curso: <span className="text-[#F5C442] font-extrabold">{selectedCurso ? selectedCurso.anio + "ro " + selectedCurso.division : "-"}</span> • Total: {estudiantes.length} Estudiantes
               </h3>
               <button
-                onClick={handleGuardarAsistencias}
+                onClick={handleGuard?arAsistencias}
                 disabled={saving}
                 className="btn-gold font-bold text-xs py-2 px-5 rounded-xl shadow-md"
               >
-                {saving ? "Guardando..." : "Guardar Presentismo"}
+                {saving ? "Guard?ando..." : "Guard?ar Presentismo"}
               </button>
             </div>
 
@@ -670,7 +670,7 @@ export default function PreceptorPage() {
           </div>
         </div>
       )}
-      {/* ----------------- TAB 2: CALIFICADOR & TITULARIZACIÓN ----------------- */}
+      {/* ----------------- TAB 2: CALIFICADOR & TITULARIZACIÓN? ----------------- */}
       {activePreceptorTab === "calificador" && (
         <div className="space-y-6">
           <div className="card p-6 bg-white space-y-3">
@@ -812,7 +812,7 @@ export default function PreceptorPage() {
         </div>
       )}
 
-      {/* ----------------- TAB 3: PLANILLAS DE CALIFICACIÓN ----------------- */}
+      {/* ----------------- TAB 3: PLANILLAS DE CALIFICACIÓN? ----------------- */}
       {activePreceptorTab === "planillas" && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -975,7 +975,7 @@ export default function PreceptorPage() {
           )}
         </div>
       )}
-      {/* MODAL MODIFICAR LEGAJO COMPLETO CON TODOS LOS CAMPOS */}
+      {/* MODAL MODIFICAR LEGAJO COMPLETO CON? TODOS LOS CAMPOS */}
       {showLegajoModal && selectedLegajoStudent && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
@@ -989,7 +989,7 @@ export default function PreceptorPage() {
 
             <form onSubmit={handleUpdateLegajoSubmit} className="flex flex-col flex-1 overflow-hidden">
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
-                {/* SECCIÓN DATOS PERSONALES */}
+                {/* SECCIÓN? DATOS PERSONALES */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-[#0D2A3E] uppercase tracking-wider border-b pb-1">Datos Personales</h4>
 
@@ -1057,7 +1057,7 @@ export default function PreceptorPage() {
                   </div>
                 </div>
 
-                {/* SECCIÓN REGISTRO OFICIAL Y DOCUMENTACIÓN */}
+                {/* SECCIÓN? REGISTRO OFICIAL Y DOCUMENTACIÓN? */}
                 <div className="space-y-4 border-t pt-4">
                   <h4 className="text-xs font-bold text-[#0D2A3E] uppercase tracking-wider border-b pb-1">Registro Oficial & Documentación</h4>
 
@@ -1109,7 +1109,7 @@ export default function PreceptorPage() {
 
               <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
                 <button type="button" onClick={() => setShowLegajoModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
-                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Guardar Modificaciones</button>
+                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Guard?ar Modificaciones</button>
               </div>
             </form>
           </div>
@@ -1259,7 +1259,7 @@ export default function PreceptorPage() {
         </div>
       )}
 
-      {/* MODAL BOLETÍN DE CALIFICACIONES Y ASISTENCIA */}
+      {/* MODAL BOLETÍN? DE CALIFICACIONES Y ASISTENCIA */}
       {showBoletinModal && selectedBoletinStudent && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
@@ -1273,7 +1273,7 @@ export default function PreceptorPage() {
                     Boletín Digital: {selectedBoletinStudent.apellido}, {selectedBoletinStudent.nombre}
                   </h3>
                   <p className="text-xs text-[#F5C442] font-semibold">
-                    DNI: {selectedBoletinStudent.dni} • CENS Nº 454 Esteban Echeverría
+                    DNI: {selectedBoletinStudent.dni} • CENS N?º 454 Esteban Echeverría
                   </p>
                 </div>
               </div>

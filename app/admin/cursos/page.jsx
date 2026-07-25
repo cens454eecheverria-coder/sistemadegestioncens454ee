@@ -398,7 +398,7 @@ export default function CourseManagerPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
                   <tr>
-                    <th className="py-3 px-4">CICLO</th><th className="py-3 px-4">AÑO</th><th className="py-3 px-4">DIVISIÓN</th><th className="py-3 px-4">ORIENTACIÓN / TURNO</th><th className="py-3 px-4 text-center">ACCIONES</th>
+                    <th className="py-3 px-4">CICLO</th><th className="py-3 px-4">AÑO</th><th className="py-3 px-4">DIVISIÓN</th><th className="py-3 px-4">ORIENTACIÓN? / TURNO</th><th className="py-3 px-4 text-center">ACCIONES</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
