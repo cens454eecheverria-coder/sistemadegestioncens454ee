@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
 
       userData = {
         id: realDocente.id,
-        nombre: Prof. , ,
+        nombre: "Prof. " + realDocente.apellido + ", " + realDocente.nombre,
         role: "profesor",
         cuil: realDocente.cuil || cuilVal,
         dni: realDocente.dni || cleanCuil,
@@ -94,7 +94,7 @@ export function AuthProvider({ children }) {
 
       userData = {
         id: realEstudiante.id,
-        nombre: ${realEstudiante.apellido}, ,
+        nombre: realEstudiante.apellido + ", " + realEstudiante.nombre,
         role: "estudiante",
         dni: realEstudiante.dni,
         curso_id: realEstudiante.curso_id || null,
