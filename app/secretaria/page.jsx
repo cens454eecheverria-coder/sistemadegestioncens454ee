@@ -566,6 +566,341 @@ export default function SecretariaPanelPage() {
           </div>
         </div>
       )}
+      {activeTab === "salidas" && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="card p-6 bg-gradient-to-r from-[#0D2A3E] to-[#006384] text-white rounded-2xl shadow-md border border-white/10 space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-heading flex items-center gap-2 text-[#F5C442]">
+                  <Compass className="w-6 h-6" />
+                  Salidas Educativas y Representaci?n Institucional (Anexos 4 y 5)
+                </h2>
+                <p className="text-xs text-blue-100 mt-1 max-w-3xl leading-relaxed">
+                  Formulario oficial de confecci?n de proyectos pedag?gicos de salida, itinerarios, franjas horarias y n?mina de asistencia. Generaci?n e impresi?n directa en formato Microsoft Word (.docx) normativos de la Provincia de Buenos Aires.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDescargarAnexo4}
+                  className="btn-gold font-bold text-xs py-2.5 px-4 flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+                >
+                  <FileText className="w-4 h-4" /> Descargar Anexo 4 (.docx)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDescargarAnexo5}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-md hover:scale-105 transition-all"
+                >
+                  <Printer className="w-4 h-4" /> Descargar Anexo 5 (.docx)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Formulario Seccionado */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Columna Izquierda: Datos del Proyecto e Itinerario */}
+            <div className="space-y-6">
+              <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                <h3 className="text-sm font-bold text-[#0D2A3E] border-b pb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#006384]" />
+                  1. Datos del Proyecto y Destino Educativo
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Denominaci?n del Proyecto *</label>
+                  <input
+                    type="text"
+                    value={salidaProyecto}
+                    onChange={(e) => setSalidaProyecto(e.target.value)}
+                    placeholder="Ej: Visita Pedag?gica Tecnol?gica y Cultural 2026"
+                    className="field-soft text-xs font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Lugar / Destino a Visitar *</label>
+                  <input
+                    type="text"
+                    value={salidaLugar}
+                    onChange={(e) => setSalidaLugar(e.target.value)}
+                    placeholder="Ej: Museo de Ciencias Naturales de La Plata"
+                    className="field-soft text-xs font-bold text-[#006384]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Curso Participante *</label>
+                    <select
+                      value={salidaCursoId}
+                      onChange={(e) => handleSalidaCursoChange(e.target.value)}
+                      className="field-soft text-xs font-bold border-2 border-blue-500"
+                    >
+                      <option value="">-- Seleccionar Curso --</option>
+                      {cursos.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.anio}? "{c.division}" - {c.orientacion} ({c.turno})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Docente Responsable Titular *</label>
+                    <input
+                      type="text"
+                      value={salidaDocenteNombre}
+                      onChange={(e) => setSalidaDocenteNombre(e.target.value)}
+                      placeholder="Ej: Prof. G?mez, Ana Paula"
+                      className="field-soft text-xs font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Cargo Responsable</label>
+                    <input
+                      type="text"
+                      value={salidaDocenteCargo}
+                      onChange={(e) => setSalidaDocenteCargo(e.target.value)}
+                      className="field-soft text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Docentes Acompa?antes</label>
+                    <input
+                      type="number"
+                      value={salidaCantDocentes}
+                      onChange={(e) => setSalidaCantDocentes(e.target.value)}
+                      className="field-soft text-xs text-center font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">No Docentes Acomp.</label>
+                    <input
+                      type="number"
+                      value={salidaCantNoDocentes}
+                      onChange={(e) => setSalidaCantNoDocentes(e.target.value)}
+                      className="field-soft text-xs text-center font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Franja Horaria y Lugares */}
+              <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                <h3 className="text-sm font-bold text-[#0D2A3E] border-b pb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#006384]" />
+                  2. Franja Horaria y Lugares de Encuentro
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Fecha Salida *</label>
+                    <input
+                      type="date"
+                      value={salidaFechaSalida}
+                      onChange={(e) => setSalidaFechaSalida(e.target.value)}
+                      className="field-soft text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Hora Salida</label>
+                    <input
+                      type="text"
+                      value={salidaHoraSalida}
+                      onChange={(e) => setSalidaHoraSalida(e.target.value)}
+                      className="field-soft text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Lugar de Salida</label>
+                    <input
+                      type="text"
+                      value={salidaLugarSalida}
+                      onChange={(e) => setSalidaLugarSalida(e.target.value)}
+                      className="field-soft text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Fecha Regreso *</label>
+                    <input
+                      type="date"
+                      value={salidaFechaRegreso}
+                      onChange={(e) => setSalidaFechaRegreso(e.target.value)}
+                      className="field-soft text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Hora Regreso</label>
+                    <input
+                      type="text"
+                      value={salidaHoraRegreso}
+                      onChange={(e) => setSalidaHoraRegreso(e.target.value)}
+                      className="field-soft text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Lugar de Regreso</label>
+                    <input
+                      type="text"
+                      value={salidaLugarRegreso}
+                      onChange={(e) => setSalidaLugarRegreso(e.target.value)}
+                      className="field-soft text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Observaciones respecto a Fechas / Clima</label>
+                  <input
+                    type="text"
+                    value={salidaObsFechas}
+                    onChange={(e) => setSalidaObsFechas(e.target.value)}
+                    className="field-soft text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Columna Derecha: Fundamentaci?n y N?mina Anexo 5 */}
+            <div className="space-y-6">
+              <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                <h3 className="text-sm font-bold text-[#0D2A3E] border-b pb-2 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#006384]" />
+                  3. Fundamentaci?n Pedag?gica e Itinerario (Anexo 4)
+                </h3>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Objetivos de la Salida *</label>
+                  <textarea
+                    rows={2}
+                    value={salidaObjetivos}
+                    onChange={(e) => setSalidaObjetivos(e.target.value)}
+                    className="field-soft text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Itinerario Pormenorizado *</label>
+                  <textarea
+                    rows={2}
+                    value={salidaItinerario}
+                    onChange={(e) => setSalidaItinerario(e.target.value)}
+                    className="field-soft text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Actividades Pedag?gicas a Realizar *</label>
+                  <textarea
+                    rows={2}
+                    value={salidaActividades}
+                    onChange={(e) => setSalidaActividades(e.target.value)}
+                    className="field-soft text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Cronograma Diario *</label>
+                  <textarea
+                    rows={2}
+                    value={salidaCronograma}
+                    onChange={(e) => setSalidaCronograma(e.target.value)}
+                    className="field-soft text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* N?mina de Asistencia Anexo 5 */}
+              <div className="card p-5 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <h3 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2">
+                    <Users className="w-4 h-4 text-emerald-600" />
+                    4. N?mina de Participantes y Asistencia (Anexo 5)
+                  </h3>
+                  <span className="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+                    {salidaAlumnos.filter(a => a.seleccionado).length} Inscriptos
+                  </span>
+                </div>
+
+                {salidaCursoId === "" ? (
+                  <div className="p-6 text-center text-gray-400 font-bold border-2 border-dashed rounded-xl space-y-1">
+                    <AlertCircle className="w-6 h-6 text-amber-500 mx-auto" />
+                    <p className="text-xs">Selecciona un Curso en el paso 1 para cargar la n?mina de estudiantes.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-y-auto max-h-64 border rounded-xl divide-y">
+                    {salidaAlumnos.map((a) => (
+                      <div key={a.id} className="p-2.5 px-4 flex items-center justify-between text-xs hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={a.seleccionado}
+                            onChange={() => toggleAlumnoSeleccionado(a.id)}
+                            className="w-4 h-4 accent-[#006384] rounded"
+                          />
+                          <div>
+                            <p className="font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</p>
+                            <p className="text-[10px] text-gray-500 font-mono">DNI: {a.dni}</p>
+                          </div>
+                        </div>
+
+                        {a.seleccionado && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => changeAlumnoAsistencia(a.id, 'P')}
+                              className={"px-2 py-0.5 rounded text-[10px] font-bold border transition-all " + (a.asistencia === 'P' ? "bg-emerald-600 text-white border-emerald-700" : "bg-gray-100 text-gray-600 border-gray-200")}
+                            >
+                              P (Presente)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => changeAlumnoAsistencia(a.id, 'A')}
+                              className={"px-2 py-0.5 rounded text-[10px] font-bold border transition-all " + (a.asistencia === 'A' ? "bg-red-600 text-white border-red-700" : "bg-gray-100 text-gray-600 border-gray-200")}
+                            >
+                              A (Ausente)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleDescargarAnexo4}
+                    className="btn-gold font-bold text-xs py-2 px-4 flex items-center gap-1.5 shadow-xs"
+                  >
+                    <FileText className="w-4 h-4" /> Generar Anexo 4 (.docx)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDescargarAnexo5}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Printer className="w-4 h-4" /> Generar Anexo 5 (.docx)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === "bajas" && (
         <div className="space-y-6">
           <div className="card p-6 bg-white space-y-4">
