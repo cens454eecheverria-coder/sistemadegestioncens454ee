@@ -139,12 +139,13 @@ export default function PreceptorPage() {
       console.error(e);
     }
   }
+
   const handleMandarATitular = async (student) => {
     if (!student) return;
     try {
       const confirm = await Swal.fire({
         title: "¿Mandar a Titular?",
-        text: Se marcará a ,  en condición de titularización para el Módulo de Secretaría (Títulos y Egresados).,
+        text: "Se marcará a " + student.apellido + ", " + student.nombre + " en condición de titularización para el Módulo de Secretaría (Títulos y Egresados).",
         icon: "question",
         showCancelButton: true,
         confirmButtonColor: "#10b981",
@@ -153,7 +154,6 @@ export default function PreceptorPage() {
       });
 
       if (confirm.isConfirmed) {
-        // Fallback update: try setting en_condicion_titulo or estado_titulo
         try {
           await supabase.from("estudiantes").update({ en_condicion_titulo: true, estado_titulo: "En Trámite" }).eq("id", student.id);
         } catch (errCol) {
@@ -164,7 +164,7 @@ export default function PreceptorPage() {
         Swal.fire({
           icon: "success",
           title: "¡Estudiante Enviado a Titularización!",
-          text: ${student.apellido},  ya figura disponible en el Módulo de Secretaría (Títulos y Egresados).,
+          text: student.apellido + ", " + student.nombre + " ya figura disponible en el Módulo de Secretaría (Títulos y Egresados).",
           timer: 2000,
           showConfirmButton: false
         });
@@ -200,7 +200,7 @@ export default function PreceptorPage() {
       Swal.fire({
         icon: "success",
         title: "Asistencia Guardada",
-        text: Se registraron  asistencias para el .,
+        text: "Se registraron " + records.length + " asistencias para el " + fecha + ".",
         timer: 1500,
         showConfirmButton: false
       });
@@ -256,7 +256,7 @@ export default function PreceptorPage() {
       Swal.fire({
         icon: "success",
         title: "Inscripción Exitosa",
-        text: Estudiante ,  inscripto correctamente.,
+        text: "Estudiante " + apellido + ", " + nombre + " inscripto correctamente.",
         timer: 1500,
         showConfirmButton: false
       });
