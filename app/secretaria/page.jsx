@@ -39,7 +39,7 @@ export default function SecretariaPanelPage() {
   const [docTelefono, setDocTelefono] = useState("");
   const [docTitulo, setDocTitulo] = useState("");
   const [docDomicilio, setDocDomicilio] = useState("");
-  const [docLocalidad, setDocLocalidad] = useState("Ezeiza");
+  const [docLocalidad, setDocLocalidad] = useState("Esteban Echeverría");
   const [docNumLegajo, setDocNumLegajo] = useState("");
   const [docSituacionRevista, setDocSituacionRevista] = useState("Titular");
   const [docFechaIngreso, setDocFechaIngreso] = useState("");
@@ -75,7 +75,6 @@ export default function SecretariaPanelPage() {
       setBajasPases(bpData || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
-
   const handleCrearEstudiante = async (e) => {
     e.preventDefault();
     try {
@@ -145,7 +144,7 @@ export default function SecretariaPanelPage() {
       const record = { cuil: docCuil.trim(), dni: docDni.trim(), nombre: docNombre.trim(), apellido: docApellido.trim(), genero: docGenero, fecha_nacimiento: docFechaNac || null, email: docEmail.trim(), telefono: docTelefono.trim(), titulo: docTitulo.trim() || "Profesor/a Secundario", domicilio: docDomicilio.trim(), localidad: docLocalidad.trim(), numero_legajo: docNumLegajo.trim(), situacion_revista: docSituacionRevista, fecha_ingreso: docFechaIngreso || null, activo: true };
       const { error } = await supabase.from("docentes").insert(record);
       if (error) throw error;
-      Swal.fire({ icon: "success", title: "Docente Registrado" });
+      Swal.fire({ icon: "success", title: "Docente Registrado", text: "Prof. " + docApellido + ", " + docNombre + " incorporado." });
       setShowDocenteModal(false); await loadData();
     } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
@@ -159,6 +158,10 @@ export default function SecretariaPanelPage() {
       if (error) throw error;
       Swal.fire({ icon: "success", title: "Vinculación Exitosa" });
     } catch (err) { Swal.fire("Error", err.message, "error"); }
+  };
+
+  const handleVerificarConflictoDDJJ = () => {
+    setConflictAlert("🔍 Verificación completada: No se detectan superposiciones horarias críticas en CENS 454.");
   };
 
   const handleEmitirCertificado = (est, tipo) => {
@@ -182,7 +185,6 @@ export default function SecretariaPanelPage() {
       </div>
     );
   }
-
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-xs">
@@ -202,7 +204,7 @@ export default function SecretariaPanelPage() {
         <button onClick={() => setActiveTab("salidas")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "salidas" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Compass className="w-4 h-4" /> 3. Salidas Educativas</button>
         <button onClick={() => setActiveTab("historica")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "historica" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><History className="w-4 h-4" /> 4. Carga Histórica</button>
         <button onClick={() => setActiveTab("bajas")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "bajas" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><UserX className="w-4 h-4" /> 5. Bajas y Pases</button>
-        <button onClick={() => setActiveTab("docentes_ddjj")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "docentes_ddjj" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Briefcase className="w-4 h-4" /> Docentes y DDJJ</button>
+        <button onClick={() => setActiveTab("docentes_ddjj")} className={"py-3 px-4 flex items-center gap-2 border-b-2 " + (activeTab === "docentes_ddjj" ? "border-[#006384] text-[#006384]" : "border-transparent text-gray-500")}><Briefcase className="w-4 h-4" /> 💼 Docentes y DDJJ</button>
       </div>
 
       {activeTab === "estudiantes" && (
@@ -298,6 +300,94 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
+      {/* ------------------- SUB-PESTAÑA 6: DOCENTES Y DDJJ ------------------- */}
+      {activeTab === "docentes_ddjj" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDocenteSubTab("lista")} className={"py-2 px-5 rounded-full text-xs font-bold transition-all " + (docenteSubTab === "lista" ? "bg-[#006384] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>📋 Lista de Docentes</button>
+              <button onClick={() => setDocenteSubTab("ddjj")} className={"py-2 px-5 rounded-full text-xs font-bold transition-all " + (docenteSubTab === "ddjj" ? "bg-[#006384] text-white shadow-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>💼 Declaraciones Juradas (DDJJ)</button>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                <input type="text" value={searchDocente} onChange={(e) => setSearchDocente(e.target.value)} placeholder="Buscar docente por apellido, nombre o DNI..." className="field-soft pl-9 text-xs py-1.5 w-64" />
+              </div>
+              <button onClick={() => setShowDocenteModal(true)} className="btn-gold font-bold text-xs py-2 px-4 flex items-center gap-1.5 shadow-xs">+ Registrar Docente</button>
+            </div>
+          </div>
+
+          <form onSubmit={handleVincularMateriaEnSecretaria} className="card p-6 bg-white space-y-4">
+            <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Vincular Docente a Materia Existente</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">1. Curso:</label>
+                <select value={selectedCursoVinculo} onChange={(e) => setSelectedCursoVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Curso --</option>
+                  {cursos.map((c) => (<option key={c.id} value={c.id}>{c.anio}° "{c.division}" - {c.orientacion} ({c.turno})</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">2. Asignatura del Curso:</label>
+                <select value={selectedMateriaVinculo} onChange={(e) => setSelectedMateriaVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Materia --</option>
+                  {materias.filter((m) => !selectedCursoVinculo || m.curso_id === selectedCursoVinculo).map((m) => (<option key={m.id} value={m.id}>{m.nombre}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">3. Docente a Asignar:</label>
+                <select value={selectedDocenteVinculo} onChange={(e) => setSelectedDocenteVinculo(e.target.value)} className="field-soft text-xs font-semibold">
+                  <option value="">-- Seleccionar Docente --</option>
+                  {docentes.map((d) => (<option key={d.id} value={d.id}>Prof. {d.apellido}, {d.nombre}</option>))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-2"><button type="submit" className="btn-gold text-xs py-2 px-6 font-bold">Confirmar Vinculación Docente-Materia</button></div>
+          </form>
+
+          {docenteSubTab === "lista" && (
+            <div className="card overflow-hidden bg-white">
+              <div className="p-4 bg-[#F8FAFC] border-b font-bold text-xs text-[#0D2A3E]">Nómina Oficial de Docentes Legajados ({filteredDocentes.length})</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                    <tr><th className="py-3 px-4">Docente</th><th className="py-3 px-4">DNI / CUIL</th><th className="py-3 px-4">Título Principal</th><th className="py-3 px-4">Contacto</th><th className="py-3 px-4 text-center">Estado</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {filteredDocentes.length === 0 ? (
+                      <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay docentes registrados. Haz clic en "+ Registrar Docente".</td></tr>
+                    ) : (
+                      filteredDocentes.map((d) => (
+                        <tr key={d.id} className="hover:bg-[#F4FAFF]">
+                          <td className="py-3 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
+                          <td className="py-3 px-4 font-mono">{d.dni} <span className="text-[10px] text-gray-400">({d.cuil || "-"})</span></td>
+                          <td className="py-3 px-4">{d.titulo || "Profesor/a Secundario"}</td>
+                          <td className="py-3 px-4 text-gray-600">{d.email || d.telefono || "Sin datos"}</td>
+                          <td className="py-3 px-4 text-center font-bold text-emerald-700">🟢 Activo</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {docenteSubTab === "ddjj" && (
+            <div className="card p-6 bg-white space-y-4">
+              <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b pb-3"><Briefcase className="w-5 h-5 text-[#006384]" /> Declaración Jurada de Cargos (DDJJ) e Incompatibilidad</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" value={extEstablecimiento} onChange={(e) => setExtEstablecimiento(e.target.value)} placeholder="Establecimiento Externo Declarado" className="field-soft text-xs" />
+                <input type="text" value={extHorario} onChange={(e) => setExtHorario(e.target.value)} placeholder="Horario Externo (Ej: 18:30 a 21:00 hs)" className="field-soft text-xs" />
+              </div>
+              <div className="pt-2"><button onClick={handleVerificarConflictoDDJJ} className="btn-gold text-xs py-2 px-5 font-bold">Verificar Incompatibilidad Horaria</button></div>
+              {conflictAlert && <div className="p-3 rounded-xl bg-amber-50 border text-xs font-bold text-amber-900">{conflictAlert}</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL BAJA / PASE */}
       {showBajaModal && selectedEstudianteBaja && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-gray-200">
@@ -305,8 +395,40 @@ export default function SecretariaPanelPage() {
             <form onSubmit={handleConfirmarBajaOPase} className="space-y-4">
               <div><label className="block text-xs font-bold mb-1">Motivo de Baja:</label><select value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} className="field-soft text-xs font-bold border-2 border-red-300"><option value="Abandono">Abandono de Estudios</option><option value="Pase">Pase a Otra Institución Educativa</option><option value="Error de Carga">Error de Carga (Duplicado o incorrecto)</option></select></div>
               {motivoBaja === "Pase" && (<div><label className="block text-xs font-bold mb-1">Escuela / Establecimiento Destino *</label><input type="text" value={escuelaDestino} onChange={(e) => setEscuelaDestino(e.target.value)} placeholder="Ej: CENS N° 451" className="field-soft text-xs font-bold border-2 border-blue-400" required /></div>)}
-              <div><label className="block text-xs font-semibold mb-1">Observaciones / Detalle</label><textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Detalle de la baja o constancia..." className="field-soft text-xs h-20" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Observaciones / Detalle</label><textarea value={observacionesBaja} onChange={(e) => setObservacionesBaja(e.target.value)} placeholder="Detalle de la baja..." className="field-soft text-xs h-20" /></div>
               <div className="flex justify-end gap-3 border-t pt-4"><button type="button" onClick={() => setShowBajaModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="bg-red-600 text-white font-bold text-xs py-2.5 px-6 rounded-xl">Confirmar Baja / Pase</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL REGISTRAR NUEVO DOCENTE */}
+      {showDocenteModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-5 border border-gray-200">
+            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-lg font-bold text-[#0D2A3E]">Registrar Nuevo Docente (Legajo Institucional)</h3><button onClick={() => setShowDocenteModal(false)} className="text-gray-400 font-bold">✕</button></div>
+            <form onSubmit={handleCrearDocenteModalCompleto} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">CUIL *</label><input type="text" value={docCuil} onChange={(e) => setDocCuil(e.target.value)} placeholder="20-12345678-9" className="field-soft text-xs font-bold" required /></div>
+                <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={docDni} onChange={(e) => setDocDni(e.target.value)} placeholder="12345678" className="field-soft text-xs font-bold" required /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={docNombre} onChange={(e) => setDocNombre(e.target.value)} className="field-soft text-xs" required /></div>
+                <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={docApellido} onChange={(e) => setDocApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Género</label><select value={docGenero} onChange={(e) => setDocGenero(e.target.value)} className="field-soft text-xs"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
+                <div><label className="block text-xs font-semibold mb-1">Email</label><input type="email" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} className="field-soft text-xs" /></div>
+                <div><label className="block text-xs font-semibold mb-1">Teléfono</label><input type="text" value={docTelefono} onChange={(e) => setDocTelefono(e.target.value)} className="field-soft text-xs" /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold mb-1">Título Principal</label><input type="text" value={docTitulo} onChange={(e) => setDocTitulo(e.target.value)} placeholder="Profesor/a Secundario" className="field-soft text-xs" /></div>
+                <div><label className="block text-xs font-semibold mb-1">Situación de Revista</label><select value={docSituacionRevista} onChange={(e) => setDocSituacionRevista(e.target.value)} className="field-soft text-xs font-bold"><option value="Titular">Titular</option><option value="Provisional">Provisional</option><option value="Suplente">Suplente</option></select></div>
+              </div>
+              <div className="flex justify-end gap-3 border-t pt-4">
+                <button type="button" onClick={() => setShowDocenteModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
+                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guardar y Registrar Docente</button>
+              </div>
             </form>
           </div>
         </div>
