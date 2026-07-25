@@ -35,7 +35,7 @@ export default function LibroDicytPage() {
     }
   }
 
-  const handleGuard?arRegistro = async (e) => {
+  const handleGuardarRegistro = async (e) => {
     e.preventDefault();
     if (!contenido.trim()) return;
 
@@ -90,7 +90,7 @@ export default function LibroDicytPage() {
       </div>
 
       {/* Formulario de Carga de Tema */}
-      <form onSubmit={handleGuard?arRegistro} className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
+      <form onSubmit={handleGuardarRegistro} className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
         <h3 className="text-sm font-bold font-heading text-[#0D2A3E]">
           Cargar Nuevo Registro de Clase / Módulo
         </h3>

@@ -145,7 +145,7 @@ export default function TeacherPortalPage() {
     }));
   };
 
-  const handleGuard?arCalificaciones = async () => {
+  const handleGuardarCalificaciones = async () => {
     if (!selectedMateriaId) return;
     setSaving(true);
     try {
@@ -171,7 +171,7 @@ export default function TeacherPortalPage() {
     }
   };
 
-  const handleGuard?arFichaDocente = async (e) => {
+  const handleGuardarFichaDocente = async (e) => {
     e.preventDefault();
     try {
       if (docenteData.id) {
@@ -273,7 +273,7 @@ export default function TeacherPortalPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuard?arCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guard?ar Calificaciones"}</button></div>
+              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guardar Calificaciones"}</button></div>
             </div>
           </div>
         ) : (
@@ -354,7 +354,7 @@ export default function TeacherPortalPage() {
 
       {activeTab === "ficha" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <form onSubmit={handleGuard?arFichaDocente} className="lg:col-span-2 card p-6 bg-white space-y-5">
+          <form onSubmit={handleGuardarFichaDocente} className="lg:col-span-2 card p-6 bg-white space-y-5">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><User className="w-5 h-5 text-[#006384]" /> Actualizar Datos de Contacto</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">NOMBRE</label><input type="text" value={docenteData.nombre} onChange={(e) => setDocenteData({ ...docenteData, nombre: e.target.value })} className="field-soft text-xs font-medium" /></div>
@@ -366,7 +366,7 @@ export default function TeacherPortalPage() {
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">FECHA DE NACIMIENTO</label><input type="date" value={docenteData.fechaNac} onChange={(e) => setDocenteData({ ...docenteData, fechaNac: e.target.value })} className="field-soft text-xs font-medium" /></div>
               <div><label className="block text-xs font-semibold text-gray-700 mb-1">TÍTULO</label><input type="text" value={docenteData.titulo} onChange={(e) => setDocenteData({ ...docenteData, titulo: e.target.value })} placeholder="Ej: Profesor de Geografía" className="field-soft text-xs font-medium" /></div>
             </div>
-            <div className="pt-3 border-t border-gray-100 flex justify-end"><button type="submit" className="btn-primary font-bold text-xs py-2.5 px-6 bg-[#006384]">Guard?ar Cambios</button></div>
+            <div className="pt-3 border-t border-gray-100 flex justify-end"><button type="submit" className="btn-primary font-bold text-xs py-2.5 px-6 bg-[#006384]">Guardar Cambios</button></div>
           </form>
           <div className="card p-6 bg-white space-y-4">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Materias Asignadas en CENS 454</h3>
@@ -456,7 +456,7 @@ export default function TeacherPortalPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuard?arCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guard?ar Calificaciones"}</button></div>
+                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guardar Calificaciones"}</button></div>
               </div>
             </div>
           ) : (

@@ -1194,7 +1194,7 @@ export default function SecretariaPanelPage() {
               <div><label className="block text-xs font-semibold mb-1">CUIL</label><input type="text" value={newCuil} onChange={(e) => setNewCuil(e.target.value)} className="field-soft text-xs" /></div>
               <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={newApellido} onChange={(e) => setNewApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
               <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={newNombre} onChange={(e) => setNewNombre(e.target.value)} className="field-soft text-xs" required /></div>
-              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guard?ar Legajo</button></div>
+              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guardar Legajo</button></div>
             </form>
           </div>
         </div>
@@ -1240,7 +1240,7 @@ export default function SecretariaPanelPage() {
               </div>
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={() => setShowDocenteModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button>
-                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guard?ar y Registrar Docente</button>
+                <button type="submit" className="btn-primary bg-[#006384] text-xs font-bold py-2.5 px-6">Guardar y Registrar Docente</button>
               </div>
             </form>
           </div>

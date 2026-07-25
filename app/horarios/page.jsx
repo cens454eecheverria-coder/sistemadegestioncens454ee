@@ -123,7 +123,7 @@ export default function HorariosPage() {
     }));
   };
 
-  const handleGuard?arHorarios = async () => {
+  const handleGuardarHorarios = async () => {
     if (!selectedCursoId) return;
 
     try {
@@ -214,10 +214,10 @@ export default function HorariosPage() {
           </button>
           {canEdit && (
             <button
-              onClick={handleGuard?arHorarios}
+              onClick={handleGuardarHorarios}
               className="btn-gold text-xs py-2.5 px-5 font-bold"
             >
-              Guard?ar Matriz Horaria
+              Guardar Matriz Horaria
             </button>
           )}
         </div>

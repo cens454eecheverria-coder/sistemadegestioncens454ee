@@ -92,7 +92,7 @@ export default function AlertasPage() {
     window.print();
   };
 
-  const handleGuard?arBitacora = () => {
+  const handleGuardarBitacora = () => {
     Swal.fire({
       icon: 'success',
       title: 'Acta Guard?ada en Bitácora',
@@ -291,10 +291,10 @@ export default function AlertasPage() {
                 Imprimir Acta
               </button>
               <button
-                onClick={handleGuard?arBitacora}
+                onClick={handleGuardarBitacora}
                 className="btn-gold text-xs py-2 px-4"
               >
-                Guard?ar en Bitácora
+                Guardar en Bitácora
               </button>
             </div>
           </div>

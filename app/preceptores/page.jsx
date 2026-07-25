@@ -329,7 +329,7 @@ export default function PreceptorPage() {
     setAsistencias((prev) => ({ ...prev, [estudianteId]: estado }));
   };
 
-  const handleGuard?arAsistencias = async () => {
+  const handleGuardarAsistencias = async () => {
     if (!selectedCurso) return;
     setSaving(true);
     try {
@@ -585,11 +585,11 @@ export default function PreceptorPage() {
                 Curso: <span className="text-[#F5C442] font-extrabold">{selectedCurso ? selectedCurso.anio + "ro " + selectedCurso.division : "-"}</span> • Total: {estudiantes.length} Estudiantes
               </h3>
               <button
-                onClick={handleGuard?arAsistencias}
+                onClick={handleGuardarAsistencias}
                 disabled={saving}
                 className="btn-gold font-bold text-xs py-2 px-5 rounded-xl shadow-md"
               >
-                {saving ? "Guard?ando..." : "Guard?ar Presentismo"}
+                {saving ? "Guard?ando..." : "Guardar Presentismo"}
               </button>
             </div>
 
@@ -1109,7 +1109,7 @@ export default function PreceptorPage() {
 
               <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 shrink-0">
                 <button type="button" onClick={() => setShowLegajoModal(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cancelar</button>
-                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Guard?ar Modificaciones</button>
+                <button type="submit" className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl shadow-md font-extrabold">Guardar Modificaciones</button>
               </div>
             </form>
           </div>
