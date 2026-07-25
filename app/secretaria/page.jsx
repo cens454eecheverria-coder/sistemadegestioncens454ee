@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
 import { generateAnexo4SalidaDocx, generateAnexo5SalidaDocx } from '@/lib/generateSalidasDocx';
-import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap } from "lucide-react";
+import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar } from "lucide-react";
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
@@ -326,23 +326,15 @@ export default function SecretariaPanelPage() {
 
     const initialNotas = {};
     mats.forEach(m => {
-      initialNotas[m.id] = { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
+      initialNotas[m.id] = { valoracion: "TEA", nota: "", intensificacion: "", nota_final: "" };
     });
     setHistoricaNotas(initialNotas);
   };
 
   const handleHistoricaNotaChange = (materiaId, field, val) => {
     setHistoricaNotas(prev => {
-      const current = prev[materiaId] || { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
-      const updated = { ...current, [field]: val };
-      if ((field === "nota_q1" || field === "nota_q2") && updated.nota_q1 && updated.nota_q2) {
-        const q1 = parseFloat(updated.nota_q1);
-        const q2 = parseFloat(updated.nota_q2);
-        if (!isNaN(q1) && !isNaN(q2)) {
-          updated.nota_final = Math.round((q1 + q2) / 2).toString();
-        }
-      }
-      return { ...prev, [materiaId]: updated };
+      const current = prev[materiaId] || { valoracion: "TEA", nota: "", intensificacion: "", nota_final: "" };
+      return { ...prev, [materiaId]: { ...current, [field]: val } };
     });
   };
 
@@ -389,10 +381,10 @@ export default function SecretariaPanelPage() {
           estudiante_id: targetEstId,
           materia_id: m.id,
           ciclo_lectivo: historicaAnio,
-          nota_q1: n.nota_q1 ? parseFloat(n.nota_q1) : null,
-          nota_q2: n.nota_q2 ? parseFloat(n.nota_q2) : null,
-          nota_final: n.nota_final ? parseFloat(n.nota_final) : null,
-          valoracion: n.valoracion || "TEA"
+          valoracion: n.valoracion || "TEA",
+          nota: n.nota || null,
+          intensificacion: n.intensificacion || null,
+          nota_final: n.nota_final || null
         };
       });
 
@@ -1124,7 +1116,7 @@ export default function SecretariaPanelPage() {
                     {/* Botones Selecci?n de A?o Lectivo */}
                     <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
                       <label className="block text-xs font-extrabold tracking-wider text-gray-600 uppercase flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-indigo-600" /> A?O LECTIVO HIST?RICO
+                        <Calendar className="w-4 h-4 text-indigo-600" /> AÑO LECTIVO HISTÓRICO
                       </label>
                       <div className="grid grid-cols-3 gap-3">
                         {["2025", "2024", "2023", "2022", "2021", "2020"].map((yr) => (
@@ -1332,45 +1324,18 @@ export default function SecretariaPanelPage() {
                         <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
                           <tr>
                             <th className="py-3.5 px-4">Asignatura / Materia</th>
-                            <th className="py-3.5 px-4 text-center w-28">1? Cuat.</th>
-                            <th className="py-3.5 px-4 text-center w-28">2? Cuat.</th>
-                            <th className="py-3.5 px-4 text-center w-28">Nota Final</th>
                             <th className="py-3.5 px-4 text-center w-32">Valoraci?n</th>
+                            <th className="py-3.5 px-4 text-center w-24">Nota</th>
+                            <th className="py-3.5 px-4 text-center w-36">Intensificaci?n</th>
+                            <th className="py-3.5 px-4 text-center w-28">Nota Final</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
                           {historicaMaterias.map((m) => {
-                            const n = historicaNotas[m.id] || { nota_q1: "", nota_q2: "", nota_final: "", valoracion: "TEA" };
+                            const n = historicaNotas[m.id] || { valoracion: "TEA", nota: "", intensificacion: "", nota_final: "" };
                             return (
                               <tr key={m.id} className="hover:bg-gray-50">
                                 <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{m.nombre}</td>
-                                <td className="py-3.5 px-4 text-center">
-                                  <input
-                                    type="text"
-                                    value={n.nota_q1}
-                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_q1", e.target.value)}
-                                    placeholder="1-10"
-                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
-                                  />
-                                </td>
-                                <td className="py-3.5 px-4 text-center">
-                                  <input
-                                    type="text"
-                                    value={n.nota_q2}
-                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_q2", e.target.value)}
-                                    placeholder="1-10"
-                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
-                                  />
-                                </td>
-                                <td className="py-3.5 px-4 text-center">
-                                  <input
-                                    type="text"
-                                    value={n.nota_final}
-                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_final", e.target.value)}
-                                    placeholder="Final"
-                                    className="field-soft text-xs py-1 px-2 text-center font-extrabold text-[#006384]"
-                                  />
-                                </td>
                                 <td className="py-3.5 px-4 text-center">
                                   <select
                                     value={n.valoracion}
@@ -1381,6 +1346,33 @@ export default function SecretariaPanelPage() {
                                     <option value="TEP">TEP</option>
                                     <option value="TED">TED</option>
                                   </select>
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.nota}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota", e.target.value)}
+                                    placeholder="-"
+                                    className="field-soft text-xs py-1 px-2 text-center font-bold"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.intensificacion}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "intensificacion", e.target.value)}
+                                    placeholder="Dic / Feb"
+                                    className="field-soft text-xs py-1 px-2 text-center"
+                                  />
+                                </td>
+                                <td className="py-3.5 px-4 text-center">
+                                  <input
+                                    type="text"
+                                    value={n.nota_final}
+                                    onChange={(e) => handleHistoricaNotaChange(m.id, "nota_final", e.target.value)}
+                                    placeholder="Final"
+                                    className="field-soft text-xs py-1 px-2 text-center font-extrabold text-[#006384]"
+                                  />
                                 </td>
                               </tr>
                             );
