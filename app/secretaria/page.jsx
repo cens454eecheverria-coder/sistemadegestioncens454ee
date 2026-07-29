@@ -506,14 +506,36 @@ export default function SecretariaPanelPage() {
 
   const handleCrearDocenteModalCompleto = async (e) => {
     e.preventDefault();
-    if (!docDni || !docNombre || !docApellido) { Swal.fire("Error", "Ingrese DNI, Nombre y Apellido.", "error"); return; }
+    if (!docDni || !docNombre || !docApellido) {
+      Swal.fire("Error", "Ingrese DNI, Nombre y Apellido del docente.", "error");
+      return;
+    }
     try {
-      const record = { cuil: docCuil.trim(), dni: docDni.trim(), nombre: docNombre.trim(), apellido: docApellido.trim(), genero: docGenero, fecha_nacimiento: docFechaNac || null, email: docEmail.trim(), telefono: docTelefono.trim(), titulo: docTitulo.trim() || "Profesor/a Secundario", domicilio: docDomicilio.trim(), localidad: docLocalidad.trim(), numero_legajo: docNumLegajo.trim(), situacion_revista: docSituacionRevista, fecha_ingreso: docFechaIngreso || null, estado: "activo", activo: true };
+      const record = {
+        cuil: docCuil.trim() || null,
+        dni: docDni.trim(),
+        nombre: docNombre.trim(),
+        apellido: docApellido.trim(),
+        email: docEmail.trim() || null,
+        telefono: docTelefono.trim() || null,
+        titulo: docTitulo.trim() || "Profesor/a Secundario",
+        activo: true
+      };
       const { error } = await supabase.from("docentes").insert(record);
       if (error) throw error;
-      Swal.fire({ icon: "success", title: "Docente Registrado", text: "Prof. " + docApellido + ", " + docNombre + " incorporado." });
-      setShowDocenteModal(false); await loadData();
-    } catch (err) { Swal.fire("Error", err.message, "error"); }
+      Swal.fire({
+        icon: "success",
+        title: "Docente Registrado",
+        text: "Prof. " + docApellido + ", " + docNombre + " incorporado/a exitosamente al legajo.",
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setShowDocenteModal(false);
+      setDocCuil(""); setDocDni(""); setDocNombre(""); setDocApellido(""); setDocEmail(""); setDocTelefono(""); setDocTitulo("");
+      await loadData();
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
   };
 
   const handleVincularMateriaEnSecretaria = async (e) => {
