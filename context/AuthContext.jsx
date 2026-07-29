@@ -35,8 +35,8 @@ export function AuthProvider({ children }) {
     if (reason === "inactivity") {
       Swal.fire({
         icon: "warning",
-        title: "Sesi?n Finalizada",
-        text: "Tu sesi?n ha caducado autom?ticamente por inactividad (15 minutos) para resguardar la seguridad y conexi?n institucional.",
+        title: "Sesión Finalizada",
+        text: "Tu sesión ha caducado autom?ticamente por inactividad (15 minutos) para resguardar la seguridad y conexi?n institucional.",
         confirmButtonColor: "#006384",
         confirmButtonText: "Entendido",
       });
@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
     router.push("/login");
   }, [router]);
 
-  // Restablecer el temporizador de inactividad al detectar interacci?n del usuario
+  // Restablecer el temporizador de inactividad al detectar interacción del usuario
   const resetInactivityTimer = useCallback(() => {
     if (!user) return;
 
@@ -73,13 +73,13 @@ export function AuthProvider({ children }) {
         const now = Date.now();
 
         if (lastActivityTime && now - lastActivityTime > INACTIVITY_TIMEOUT_MS) {
-          // La sesi?n venci? mientras la solapa estuvo cerrada o inactiva
+          // La sesión venci? mientras la solapa estuvo cerrada o inactiva
           logout("inactivity");
         } else {
           setUser(parsedUser);
         }
       } catch (e) {
-        console.error("Error al restaurar sesi?n:", e);
+        console.error("Error al restaurar sesión:", e);
       }
     }
     setLoading(false);
@@ -124,14 +124,14 @@ export function AuthProvider({ children }) {
       userData = {
         id: data.user.id,
         email: data.user.email,
-        nombre: isDirectivo ? "Director/Secretar?a CENS 454" : "Preceptor?a CENS 454",
+        nombre: isDirectivo ? "Director/Secretaría CENS 454" : "Preceptoría CENS 454",
         role: isDirectivo ? "admin" : "preceptor",
       };
     } else if (roleType === "profesor" || roleType === "docente") {
       const cuilVal = typeof credentials === "object" ? credentials.cuil : credentials;
       if (!cuilVal || !cuilVal.trim()) {
         setLoading(false);
-        throw new Error("Debe ingresar un n?mero de CUIL o DNI.");
+        throw new Error("Debe ingresar un número de CUIL o DNI.");
       }
       const cleanCuil = cuilVal.replace(/[^0-9]/g, "");
       let realDocente = null;
@@ -160,7 +160,7 @@ export function AuthProvider({ children }) {
       const dniVal = typeof credentials === "object" ? credentials.dni : credentials;
       if (!dniVal || !dniVal.trim()) {
         setLoading(false);
-        throw new Error("Debe ingresar un n?mero de DNI de estudiante.");
+        throw new Error("Debe ingresar un número de DNI de estudiante.");
       }
       const cleanDni = dniVal.replace(/[^0-9]/g, "");
 

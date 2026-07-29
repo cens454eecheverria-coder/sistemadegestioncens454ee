@@ -349,7 +349,7 @@ export default function PreceptorPage() {
 
       Swal.fire({
         icon: "success",
-        title: "Asistencia Guard?ada",
+        title: "Asistencia Guardada",
         text: "Se registraron " + records.length + " asistencias para el " + fecha + ".",
         timer: 1500,
         showConfirmButton: false
@@ -589,7 +589,7 @@ export default function PreceptorPage() {
                 disabled={saving}
                 className="btn-gold font-bold text-xs py-2 px-5 rounded-xl shadow-md"
               >
-                {saving ? "Guard?ando..." : "Guardar Presentismo"}
+                {saving ? "Guardando..." : "Guardar Presentismo"}
               </button>
             </div>
 

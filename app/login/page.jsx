@@ -31,7 +31,7 @@ export default function LoginPage() {
     try {
       if (activeTab === "admin") {
         if (!email.trim() || !password) {
-          Swal.fire("Atenci?n", "Ingrese su correo institucional y contrase?a de Directivo.", "warning");
+          Swal.fire("Atención", "Ingrese su correo institucional y contraseña de Directivo.", "warning");
           setLoading(false);
           return;
         }
@@ -40,16 +40,16 @@ export default function LoginPage() {
         router.push("/dashboard");
       } else if (activeTab === "preceptor") {
         if (!email.trim() || !password) {
-          Swal.fire("Atenci?n", "Ingrese su correo institucional y contrase?a de Preceptor?a.", "warning");
+          Swal.fire("Atención", "Ingrese su correo institucional y contraseña de Preceptoría.", "warning");
           setLoading(false);
           return;
         }
         await loginStaff(email.trim(), password);
-        Swal.fire({ icon: "success", title: "Bienvenida Preceptor?a", text: "Accediendo al Panel de Presentismo...", timer: 1500, showConfirmButton: false });
+        Swal.fire({ icon: "success", title: "Bienvenida Preceptoría", text: "Accediendo al Panel de Presentismo...", timer: 1500, showConfirmButton: false });
         router.push("/preceptores");
       } else if (activeTab === "profesor") {
         if (!cuil.trim()) {
-          Swal.fire("Atenci?n", "Ingrese su n?mero de CUIL o DNI docente.", "warning");
+          Swal.fire("Atención", "Ingrese su número de CUIL o DNI docente.", "warning");
           setLoading(false);
           return;
         }
@@ -58,16 +58,16 @@ export default function LoginPage() {
         router.push("/docentes");
       } else if (activeTab === "estudiante") {
         if (!dni.trim()) {
-          Swal.fire("Atenci?n", "Ingrese su n?mero de DNI de estudiante.", "warning");
+          Swal.fire("Atención", "Ingrese su número de DNI de estudiante.", "warning");
           setLoading(false);
           return;
         }
         await loginEstudiante(dni.trim());
-        Swal.fire({ icon: "success", title: "Consulta de Bolet?n", text: "Accediendo a sus calificaciones...", timer: 1500, showConfirmButton: false });
+        Swal.fire({ icon: "success", title: "Consulta de Boletín", text: "Accediendo a sus calificaciones...", timer: 1500, showConfirmButton: false });
         router.push("/estudiantes");
       }
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Error de Ingreso", text: err.message || "No se pudo iniciar sesi?n. Verifique las credenciales." });
+      Swal.fire({ icon: "error", title: "Error de Ingreso", text: err.message || "No se pudo iniciar sesión. Verifique las credenciales." });
     } finally {
       setLoading(false);
     }
@@ -79,10 +79,10 @@ export default function LoginPage() {
         <div className="bg-gradient-to-r from-[#0D2A3E] to-[#006384] p-6 text-white text-center space-y-2">
           <img src="/logo.png" alt="Logo CENS 454" className="w-16 h-16 mx-auto object-contain bg-white/10 p-1.5 rounded-xl border border-[#F5C442]/50 shadow-md" />
           <h2 className="text-xl font-bold font-heading">Acceso al Sistema CENS 454</h2>
-          <p className="text-xs text-gray-200 font-medium">Esteban Echeverr?a (Regi?n 5)</p>
+          <p className="text-xs text-gray-200 font-medium">Esteban Echeverría (Región 5)</p>
         </div>
 
-        {/* Pesta?as de Selecci?n de Rol */}
+        {/* Pestañas de Selección de Rol */}
         <div className="grid grid-cols-4 border-b border-gray-200 text-xs font-bold text-center bg-gray-50">
           <button
             type="button"
@@ -121,7 +121,7 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* Formulario Din?mico */}
+        {/* Formulario Dinámico */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {activeTab === "admin" && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center gap-2">
@@ -147,7 +147,7 @@ export default function LoginPage() {
           {activeTab === "estudiante" && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Consulta p?blica de <strong>Bolet?n y Calificaciones</strong> por DNI.</span>
+              <span>Consulta pública de <strong>Boletín y Calificaciones</strong> por DNI.</span>
             </div>
           )}
 
@@ -155,7 +155,7 @@ export default function LoginPage() {
           {(activeTab === "admin" || activeTab === "preceptor") && (
             <>
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Correo Electr?nico</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Correo Electrónico</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                   <input
@@ -170,7 +170,7 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Contrase?a</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Contraseña</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                   <input
@@ -189,7 +189,7 @@ export default function LoginPage() {
           {/* Campo para Profesor */}
           {activeTab === "profesor" && (
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">N?mero de CUIL / DNI Docente *</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Número de CUIL / DNI Docente *</label>
               <div className="relative">
                 <CreditCard className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                 <input
@@ -207,7 +207,7 @@ export default function LoginPage() {
           {/* Campo para Estudiante */}
           {activeTab === "estudiante" && (
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">N?mero de DNI Estudiante *</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Número de DNI Estudiante *</label>
               <div className="relative">
                 <CreditCard className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
                 <input

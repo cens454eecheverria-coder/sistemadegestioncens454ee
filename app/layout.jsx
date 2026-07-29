@@ -48,7 +48,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="es">
       <head>
-        <title>CENS 454 EE - Sistema de Gesti?n</title>
+        <title>CENS 454 EE - Sistema de Gestión</title>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#006384" />
         <meta name="mobile-web-app-capable" content="yes" />

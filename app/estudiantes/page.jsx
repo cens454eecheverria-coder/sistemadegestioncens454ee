@@ -118,7 +118,7 @@ export default function StudentPortalPage() {
       if (calData && calData.length > 0) {
         setCalificaciones(calData);
       } else {
-        // Intentar obtener materias asignadas al curso si no hay notas guardadas a?n
+        // Intentar obtener materias asignadas al curso si no hay notas guardadas aún
         let cursoId = studentObj.curso_id;
         if (!cursoId) {
           const { data: acData } = await supabase
@@ -173,7 +173,7 @@ export default function StudentPortalPage() {
         setAsistenciaSummary({ presentes: 0, ausentes: 0, total: 0 });
       }
     } catch (e) {
-      console.error("Error al cargar detalles de bolet?n:", e);
+      console.error("Error al cargar detalles de boletín:", e);
     } finally {
       setLoading(false);
     }
@@ -186,7 +186,7 @@ export default function StudentPortalPage() {
         <div className="card p-5 bg-white rounded-2xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="w-full sm:w-1/2">
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5 text-[#006384]" /> 1. Filtrar por Curso / Divisi?n:
+              <Filter className="w-3.5 h-3.5 text-[#006384]" /> 1. Filtrar por Curso / División:
             </label>
             <select
               value={selectedCursoId}
@@ -225,7 +225,7 @@ export default function StudentPortalPage() {
         </div>
       )}
 
-      {/* Header Bolet?n */}
+      {/* Header Boletín */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#0D2A3E] to-[#006384] text-white p-6 rounded-2xl shadow-md border border-white/10">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-[#F5C442] text-[#0D2A3E] flex items-center justify-center font-bold text-xl font-heading shadow-md">
@@ -271,12 +271,12 @@ export default function StudentPortalPage() {
         </div>
       </div>
 
-      {/* Bolet?n de Calificaciones */}
+      {/* Boletín de Calificaciones */}
       <div className="card overflow-hidden bg-white shadow-xs rounded-2xl border border-gray-200">
         <div className="card-header p-4 px-6 bg-[#0D2A3E] text-white flex items-center justify-between">
           <span className="font-heading text-xs font-bold tracking-wide flex items-center gap-2">
             <Award className="w-5 h-5 text-[#F5C442]" />
-            Bolet?n Digital de Calificaciones
+            Boletín Digital de Calificaciones
           </span>
           <span className="text-[11px] font-bold bg-blue-900/60 text-blue-200 px-3 py-1 rounded-full border border-blue-700">
             Ciclo Lectivo {cicloLectivo}
@@ -290,7 +290,7 @@ export default function StudentPortalPage() {
                 <th className="py-3.5 px-4">Asignatura</th>
                 <th className="py-3.5 px-4 text-center">1? Cuatrimestre</th>
                 <th className="py-3.5 px-4 text-center">2? Cuatrimestre</th>
-                <th className="py-3.5 px-4 text-center">Calificaci?n Final</th>
+                <th className="py-3.5 px-4 text-center">Calificación Final</th>
                 <th className="py-3.5 px-4 text-center">Estado Cursada</th>
               </tr>
             </thead>
@@ -298,7 +298,7 @@ export default function StudentPortalPage() {
               {loading ? (
                 <tr>
                   <td colSpan="5" className="text-center py-8 text-gray-500 font-semibold">
-                    Cargando bolet?n del estudiante...
+                    Cargando boletín del estudiante...
                   </td>
                 </tr>
               ) : calificaciones.length === 0 ? (
@@ -306,7 +306,7 @@ export default function StudentPortalPage() {
                   <td colSpan="5" className="text-center py-10 text-gray-400 font-bold space-y-2">
                     <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-1" />
                     <p>No se registran calificaciones cargadas para este ciclo lectivo.</p>
-                    <p className="text-[11px] text-gray-400 font-normal">A medida que los profesores carguen las notas en el sistema, aparecer?n en este reporte.</p>
+                    <p className="text-[11px] text-gray-400 font-normal">A medida que los profesores carguen las notas en el sistema, aparecerán en este reporte.</p>
                   </td>
                 </tr>
               ) : (
@@ -334,7 +334,7 @@ export default function StudentPortalPage() {
                           aprobado ? (
                             <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">Aprobada</span>
                           ) : (
-                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Intensificaci?n</span>
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Intensificación</span>
                           )
                         ) : (
                           <span className="text-gray-400 font-medium">En Cursada</span>

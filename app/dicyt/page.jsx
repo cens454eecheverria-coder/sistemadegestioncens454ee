@@ -165,7 +165,7 @@ export default function LibroDicytPage() {
           className="btn-primary text-xs py-2.5 px-6 font-bold"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Guard?ando...' : 'Firmar y Registrar Clase'}
+          {saving ? 'Guardando...' : 'Firmar y Registrar Clase'}
         </button>
       </form>
 

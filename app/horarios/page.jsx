@@ -152,7 +152,7 @@ export default function HorariosPage() {
 
       Swal.fire({
         icon: 'success',
-        title: 'Horarios Guard?ados',
+        title: 'Horarios Guardados',
         text: 'Se actualizó la matriz horaria en Supabase.',
         timer: 1500,
         showConfirmButton: false,

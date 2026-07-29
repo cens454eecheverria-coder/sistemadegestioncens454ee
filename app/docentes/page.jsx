@@ -163,7 +163,7 @@ export default function TeacherPortalPage() {
         await supabase.from("calificaciones").upsert(records, { onConflict: "estudiante_id,materia_id" });
       }
 
-      Swal.fire({ icon: "success", title: "Calificaciones Guard?adas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
+      Swal.fire({ icon: "success", title: "Calificaciones Guardadas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
     } catch (err) {
       Swal.fire("Error", err.message, "error");
     } finally {
@@ -273,7 +273,7 @@ export default function TeacherPortalPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guardar Calificaciones"}</button></div>
+              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
             </div>
           </div>
         ) : (
@@ -456,7 +456,7 @@ export default function TeacherPortalPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guard?ando..." : "Guardar Calificaciones"}</button></div>
+                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
               </div>
             </div>
           ) : (

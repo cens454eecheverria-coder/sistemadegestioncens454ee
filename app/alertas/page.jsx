@@ -95,7 +95,7 @@ export default function AlertasPage() {
   const handleGuardarBitacora = () => {
     Swal.fire({
       icon: 'success',
-      title: 'Acta Guard?ada en Bitácora',
+      title: 'Acta Guardada en Bitácora',
       text: 'Se registró la intervención pedagógica en el legajo del estudiante.',
       timer: 1500,
       showConfirmButton: false,

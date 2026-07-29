@@ -8,7 +8,7 @@ export default function PwaRegister() {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
           .then((registration) => {
-            console.log('PWA ServiceWorker registrado con ?xito:', registration.scope);
+            console.log('PWA ServiceWorker registrado con éxito:', registration.scope);
           })
           .catch((err) => {
             console.error('PWA ServiceWorker error al registrar:', err);

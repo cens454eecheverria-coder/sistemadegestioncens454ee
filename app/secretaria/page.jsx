@@ -160,7 +160,7 @@ export default function SecretariaPanelPage() {
         Swal.fire("Atención", "Ingrese la Escuela o Establecimiento Destino para el Pase.", "warning"); return;
       }
       if (motivoBaja === "Error de Carga") {
-        const confirm = await Swal.fire({ title: "Confirmar Eliminación por Error de Carga", text: "?Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acci?n eliminar? el registro de la instituci?n.", icon: "warning", showCancelButton: true, confirmButtonText: "Eliminar Registro Completo" });
+        const confirm = await Swal.fire({ title: "Confirmar Eliminación por Error de Carga", text: "¿Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.", icon: "warning", showCancelButton: true, confirmButtonText: "Eliminar Registro Completo" });
         if (confirm.isConfirmed) {
           await supabase.from("estudiantes").delete().eq("id", selectedEstudianteBaja.id);
           Swal.fire("Eliminado", "Se eliminó el estudiante cargado por error.", "success");
@@ -345,7 +345,7 @@ export default function SecretariaPanelPage() {
 
       if (historicaTipoEstudiante === "nuevo") {
         if (!historicaNuevoNombre.trim() || !historicaNuevoApellido.trim() || !historicaNuevoDni.trim()) {
-          Swal.fire("Atenci?n", "Completa Apellido, Nombre y DNI del estudiante histórico.", "warning");
+          Swal.fire("Atención", "Completa Apellido, Nombre y DNI del estudiante histórico.", "warning");
           setHistoricaSaving(false);
           return;
         }
@@ -370,7 +370,7 @@ export default function SecretariaPanelPage() {
       }
 
       if (!targetEstId) {
-        Swal.fire("Atenci?n", "Debes seleccionar o crear un estudiante.", "warning");
+        Swal.fire("Atención", "Debes seleccionar o crear un estudiante.", "warning");
         setHistoricaSaving(false);
         return;
       }
@@ -480,7 +480,7 @@ export default function SecretariaPanelPage() {
     try {
       const confirm = await Swal.fire({
         title: "Eliminar Legajo Docente",
-        text: "?Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acci?n eliminar? el registro de la instituci?n." + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
+        text: "¿Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución." + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
@@ -1089,7 +1089,7 @@ export default function SecretariaPanelPage() {
               }}
               className={"px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-all " + (historicaSubTab === "registros" ? "bg-indigo-600 text-white shadow-md" : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200")}
             >
-              <FileText className="w-4 h-4" /> Ver Registros Hist?ricos
+              <FileText className="w-4 h-4" /> Ver Registros Históricos
             </button>
           </div>
 
@@ -1119,7 +1119,7 @@ export default function SecretariaPanelPage() {
                 </div>
               </div>
 
-              {/* PASO 1: Configuración del Ciclo Hist?rico */}
+              {/* PASO 1: Configuración del Ciclo Histórico */}
               {historicaStep === 1 && (
                 <div className="space-y-6 max-w-4xl mx-auto">
                   <div className="bg-indigo-50 border border-indigo-200 p-5 rounded-2xl flex items-start gap-4 text-indigo-950">
@@ -1127,15 +1127,15 @@ export default function SecretariaPanelPage() {
                       !
                     </div>
                     <div>
-                      <h3 className="text-base font-bold font-heading">Configuración del Ciclo Hist?rico</h3>
+                      <h3 className="text-base font-bold font-heading">Configuración del Ciclo Histórico</h3>
                       <p className="text-xs text-indigo-800 mt-0.5">
-                        Selecciona el a?o lectivo y curso al que pertenecieron los registros que vas a digitalizar.
+                        Selecciona el año lectivo y curso al que pertenecieron los registros que vas a digitalizar.
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Botones Selecci?n de A?o Lectivo */}
+                    {/* Botones Selección de Año Lectivo */}
                     <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
                       <label className="block text-xs font-extrabold tracking-wider text-gray-600 uppercase flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-indigo-600" /> AÑO LECTIVO HISTÓRICO
@@ -1157,7 +1157,7 @@ export default function SecretariaPanelPage() {
                     {/* Selector de Curso Base */}
                     <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
                       <label className="block text-xs font-extrabold tracking-wider text-gray-600 uppercase flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-indigo-600" /> CURSO / DIVISI?N (PLANTILLA BASE)
+                        <BookOpen className="w-4 h-4 text-indigo-600" /> CURSO / DIVISIÓN (PLANTILLA BASE)
                       </label>
                       <select
                         value={historicaCursoId}
@@ -1190,7 +1190,7 @@ export default function SecretariaPanelPage() {
                 </div>
               )}
 
-              {/* PASO 2: Selecci?n o Alta de Estudiante */}
+              {/* PASO 2: Selección o Alta de Estudiante */}
               {historicaStep === 2 && (
                 <div className="space-y-6 max-w-4xl mx-auto">
                   <div className="card p-6 bg-white space-y-6 rounded-2xl border border-gray-200 shadow-xs">
@@ -1200,7 +1200,7 @@ export default function SecretariaPanelPage() {
                         Paso 2: Datos del Estudiante (Ciclo {historicaAnio})
                       </h3>
                       <span className="text-xs font-bold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
-                        A?o Lectivo {historicaAnio}
+                        Año Lectivo {historicaAnio}
                       </span>
                     </div>
 
@@ -1240,7 +1240,7 @@ export default function SecretariaPanelPage() {
                       </div>
                     ) : (
                       <div className="space-y-4 bg-indigo-50/50 p-5 rounded-xl border border-indigo-100">
-                        <h4 className="text-xs font-extrabold text-indigo-900 uppercase">Formulario R?pido de Alta de Ex-Alumno</h4>
+                        <h4 className="text-xs font-extrabold text-indigo-900 uppercase">Formulario Rápido de Alta de Ex-Alumno</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
@@ -1248,7 +1248,7 @@ export default function SecretariaPanelPage() {
                               type="text"
                               value={historicaNuevoApellido}
                               onChange={(e) => setHistoricaNuevoApellido(e.target.value)}
-                              placeholder="Ej: P?rez"
+                              placeholder="Ej: Pérez"
                               className="field-soft text-xs font-bold"
                             />
                           </div>
@@ -1333,7 +1333,7 @@ export default function SecretariaPanelPage() {
                           Paso 3: Matriz de Calificaciones Históricas ({historicaAnio})
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          Digitalizaci?n de notas para las materias del curso seleccionado.
+                          Digitalización de notas para las materias del curso seleccionado.
                         </p>
                       </div>
                       <span className="text-xs font-bold bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
@@ -1346,9 +1346,9 @@ export default function SecretariaPanelPage() {
                         <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200">
                           <tr>
                             <th className="py-3.5 px-4">Asignatura / Materia</th>
-                            <th className="py-3.5 px-4 text-center w-32">Valoraci?n</th>
+                            <th className="py-3.5 px-4 text-center w-32">Valoración</th>
                             <th className="py-3.5 px-4 text-center w-24">Nota</th>
-                            <th className="py-3.5 px-4 text-center w-36">Intensificaci?n</th>
+                            <th className="py-3.5 px-4 text-center w-36">Intensificación</th>
                             <th className="py-3.5 px-4 text-center w-28">Nota Final</th>
                           </tr>
                         </thead>
@@ -1426,7 +1426,7 @@ export default function SecretariaPanelPage() {
             </div>
           )}
 
-          {/* VISTA 2: VER REGISTROS HIST?RICOS */}
+          {/* VISTA 2: VER REGISTROS HISTÓRICOS */}
           {historicaSubTab === "registros" && (
             <div className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-4">
@@ -1460,7 +1460,7 @@ export default function SecretariaPanelPage() {
                       <th className="py-3 px-4 text-center">1? Cuat.</th>
                       <th className="py-3 px-4 text-center">2? Cuat.</th>
                       <th className="py-3 px-4 text-center">Nota Final</th>
-                      <th className="py-3 px-4 text-center">Valoraci?n</th>
+                      <th className="py-3 px-4 text-center">Valoración</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
