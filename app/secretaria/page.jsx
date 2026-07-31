@@ -146,15 +146,82 @@ export default function SecretariaPanelPage() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
 
-  const handleCrearEstudiante = async (e) => {
+    // Edit Student Modal States
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedEditEst, setSelectedEditEst] = useState(null);
+  const [editDni, setEditDni] = useState("");
+  const [editCuil, setEditCuil] = useState("");
+  const [editNombre, setEditNombre] = useState("");
+  const [editApellido, setEditApellido] = useState("");
+  const [editGenero, setEditGenero] = useState("");
+  const [editFechaNacimiento, setEditFechaNacimiento] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editTelefono, setEditTelefono] = useState("");
+  const [editCiudadNacimiento, setEditCiudadNacimiento] = useState("");
+  const [editOrientacion, setEditOrientacion] = useState("");
+  const [editCursoId, setEditCursoId] = useState("");
+  const [editEstado, setEditEstado] = useState("activo");
+
+  const handleOpenEditModal = (est) => {
+    setSelectedEditEst(est);
+    setEditDni(est.dni || "");
+    setEditCuil(est.cuil || "");
+    setEditNombre(est.nombre || "");
+    setEditApellido(est.apellido || "");
+    setEditGenero(est.genero || "");
+    setEditFechaNacimiento(est.fecha_nacimiento || "");
+    setEditEmail(est.email || "");
+    setEditTelefono(est.telefono || "");
+    setEditCiudadNacimiento(est.ciudad_nacimiento || "");
+    setEditOrientacion(est.orientacion || "");
+    setEditCursoId(est.curso_id || "");
+    setEditEstado(est.estado || "activo");
+    setShowEditModal(true);
+  };
+
+  const handleGuardarModificacionEstudiante = async (e) => {
     e.preventDefault();
+    if (!selectedEditEst) return;
+    if (!editDni.trim() || !editNombre.trim() || !editApellido.trim()) {
+      Swal.fire("Atención", "Por favor complete DNI, Nombre y Apellido del estudiante.", "warning");
+      return;
+    }
+
     try {
-      const record = { dni: newDni.trim(), cuil: newCuil.trim(), apellido: newApellido.trim(), nombre: newNombre.trim(), estado: "activo" };
-      const { error } = await supabase.from("estudiantes").insert(record);
+      const payload = {
+        dni: editDni.trim(),
+        cuil: editCuil.trim() || null,
+        nombre: editNombre.trim(),
+        apellido: editApellido.trim(),
+        genero: editGenero || null,
+        fecha_nacimiento: editFechaNacimiento || null,
+        email: editEmail.trim() || null,
+        telefono: editTelefono.trim() || null,
+        orientacion: editOrientacion || null,
+        curso_id: editCursoId || null,
+        estado: editEstado || "activo"
+      };
+
+      const { error } = await supabase
+        .from("estudiantes")
+        .update(payload)
+        .eq("id", selectedEditEst.id);
+
       if (error) throw error;
-      Swal.fire({ icon: "success", title: "Legajo Creado", text: "Se creó el legajo con éxito.", timer: 1500, showConfirmButton: false });
-      setShowAddModal(false); await loadData();
-    } catch (err) { Swal.fire("Error", err.message, "error"); }
+
+      Swal.fire({
+        icon: "success",
+        title: "Legajo Actualizado Exitosamente",
+        text: "Los datos y curso de " + editApellido + ", " + editNombre + " fueron actualizados.",
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      setShowEditModal(false);
+      await loadData();
+    } catch (err) {
+      Swal.fire("Error", err.message, "error");
+    }
   };
 
   const handleOpenBajaModal = (est) => {
@@ -599,7 +666,7 @@ export default function SecretariaPanelPage() {
           <p className="text-xs text-gray-500 mt-1">CENS Nº 454 - Esteban Echeverría (Región 5)</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={() => setShowAddModal(true)} className="btn-gold font-bold text-xs py-2.5 px-4 flex items-center gap-2"><UserPlus className="w-4 h-4" /> Crear Legajo Estudiante</button>
+          
           <button onClick={() => setShowDocenteModal(true)} className="btn-primary font-bold text-xs py-2.5 px-4 flex items-center gap-2 bg-[#006384]"><UserPlus className="w-4 h-4" /> + Registrar Docente</button>
         </div>
       </div>
@@ -677,11 +744,16 @@ export default function SecretariaPanelPage() {
                         <button onClick={() => handleEmitirCertificado(est, "Analítico Parcial")} className="btn-gold text-[10px] py-1 px-2">Analítico Parcial</button>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        {isInactive ? (
-                          <button onClick={() => handleReactivarEstudiante(est)} className="bg-emerald-600 text-white font-bold text-[11px] py-1 px-3 rounded-lg flex items-center gap-1 mx-auto"><RefreshCw className="w-3.5 h-3.5" /> Reactivar</button>
-                        ) : (
-                          <button onClick={() => handleOpenBajaModal(est)} className="bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] py-1 px-3 rounded-lg border border-red-200 flex items-center gap-1 mx-auto"><UserX className="w-3.5 h-3.5" /> Dar de Baja / Pase</button>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button onClick={() => handleOpenEditModal(est)} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] py-1.5 px-2.5 rounded-lg border border-indigo-200 flex items-center gap-1 shadow-2xs">
+                            <FileText className="w-3.5 h-3.5" /> Modificar Legajo
+                          </button>
+                          {isInactive ? (
+                            <button onClick={() => handleReactivarEstudiante(est)} className="bg-emerald-600 text-white font-bold text-[11px] py-1.5 px-2.5 rounded-lg flex items-center gap-1"><RefreshCw className="w-3.5 h-3.5" /> Reactivar</button>
+                          ) : (
+                            <button onClick={() => handleOpenBajaModal(est)} className="bg-red-50 hover:bg-red-100 text-red-700 font-bold text-[11px] py-1.5 px-2.5 rounded-lg border border-red-200 flex items-center gap-1"><UserX className="w-3.5 h-3.5" /> Baja/Pase</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1825,17 +1897,117 @@ export default function SecretariaPanelPage() {
         </div>
       )}
 
-      {/* MODAL CREAR LEGAJO ESTUDIANTE */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-gray-200">
-            <div className="flex justify-between items-center border-b pb-3"><h3 className="text-base font-bold text-[#0D2A3E]">Nuevo Legajo Estudiante</h3><button onClick={() => setShowAddModal(false)} className="text-gray-400 font-bold">✕</button></div>
-            <form onSubmit={handleCrearEstudiante} className="space-y-3">
-              <div><label className="block text-xs font-semibold mb-1">DNI *</label><input type="text" value={newDni} onChange={(e) => setNewDni(e.target.value)} className="field-soft text-xs font-bold" required /></div>
-              <div><label className="block text-xs font-semibold mb-1">CUIL</label><input type="text" value={newCuil} onChange={(e) => setNewCuil(e.target.value)} className="field-soft text-xs" /></div>
-              <div><label className="block text-xs font-semibold mb-1">Apellido *</label><input type="text" value={newApellido} onChange={(e) => setNewApellido(e.target.value)} className="field-soft text-xs font-bold" required /></div>
-              <div><label className="block text-xs font-semibold mb-1">Nombre *</label><input type="text" value={newNombre} onChange={(e) => setNewNombre(e.target.value)} className="field-soft text-xs" required /></div>
-              <div className="flex justify-end gap-2 border-t pt-3"><button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary text-xs py-2 px-4">Cancelar</button><button type="submit" className="btn-gold text-xs font-bold py-2 px-5">Guardar Legajo</button></div>
+      {/* MODAL MODIFICAR LEGAJO ESTUDIANTE */}
+      {showEditModal && selectedEditEst && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col border border-gray-200 overflow-hidden">
+            <div className="p-5 border-b flex justify-between items-center bg-[#0D2A3E] text-white shrink-0">
+              <div>
+                <h3 className="text-lg font-bold">Modificar Legajo de Estudiante</h3>
+                <p className="text-xs text-blue-200 font-medium">Edición de datos personales, estado y asignación de curso</p>
+              </div>
+              <button type="button" onClick={() => setShowEditModal(false)} className="text-gray-300 hover:text-white font-bold text-lg p-1">✕</button>
+            </div>
+
+            <form onSubmit={handleGuardarModificacionEstudiante} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-white">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-[#0D2A3E] flex items-center gap-2 border-b pb-2">
+                    <User className="w-4 h-4 text-[#006384]" /> Datos Personales del Estudiante
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">DNI *</label>
+                      <input type="text" value={editDni} onChange={(e) => setEditDni(e.target.value)} placeholder="Ej: 38492011" className="field-soft text-xs font-bold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">CUIL</label>
+                      <input type="text" value={editCuil} onChange={(e) => setEditCuil(e.target.value)} placeholder="20-38492011-9" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Apellido *</label>
+                      <input type="text" value={editApellido} onChange={(e) => setEditApellido(e.target.value)} placeholder="Apellido del estudiante" className="field-soft text-xs font-bold" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nombre *</label>
+                      <input type="text" value={editNombre} onChange={(e) => setEditNombre(e.target.value)} placeholder="Nombre del estudiante" className="field-soft text-xs" required />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Género</label>
+                      <select value={editGenero} onChange={(e) => setEditGenero(e.target.value)} className="field-soft text-xs">
+                        <option value="">Seleccionar...</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
+                      <input type="date" value={editFechaNacimiento} onChange={(e) => setEditFechaNacimiento(e.target.value)} className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">E-mail</label>
+                      <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="correo@ejemplo.com" className="field-soft text-xs" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
+                      <input type="text" value={editTelefono} onChange={(e) => setEditTelefono(e.target.value)} placeholder="Ej: 11 5555-4444" className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
+                      <select value={editOrientacion} onChange={(e) => setEditOrientacion(e.target.value)} className="field-soft text-xs font-bold">
+                        <option value="">Seleccionar Orientación...</option>
+                        <option value="Economía y Administración">Economía y Administración</option>
+                        <option value="Ciencias Sociales">Ciencias Sociales</option>
+                        <option value="Ciencias Naturales">Ciencias Naturales</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Estado de Legajo</label>
+                      <select value={editEstado} onChange={(e) => setEditEstado(e.target.value)} className="field-soft text-xs font-bold">
+                        <option value="activo">Regular / Activo</option>
+                        <option value="egresado">Egresado</option>
+                        <option value="inactivo">Inactivo / Baja</option>
+                        <option value="Pase">Pase Institucional</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Curso Asignado (Asignar o Modificar División)</label>
+                    <select value={editCursoId} onChange={(e) => setEditCursoId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-400">
+                      <option value="">-- Sin Curso Asignado --</option>
+                      {cursos.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.anio}º "{c.division}" - {c.orientacion} ({c.turno})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t bg-gray-50 flex justify-end gap-3 shrink-0">
+                <button type="button" onClick={() => setShowEditModal(false)} className="btn-secondary text-xs py-2.5 px-5">
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-gold font-bold text-xs py-2.5 px-6 shadow-md">
+                  Guardar Cambios en Legajo
+                </button>
+              </div>
             </form>
           </div>
         </div>
