@@ -131,7 +131,7 @@ export default function SecretariaPanelPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const { data: estData } = await supabase.from("estudiantes").select("*, cursos(id, anio, division, orientacion, turno)").order("apellido");
+      const { data: estData } = await supabase.from("estudiantes").select("*").order("apellido");
       setEstudiantes(estData || []);
       const { data: docData } = await supabase.from("docentes").select("*").order("apellido");
       setDocentes(docData || []);
@@ -657,14 +657,19 @@ export default function SecretariaPanelPage() {
                       <td className="py-3.5 px-4 font-mono">{est.dni}</td>
                       <td className="py-3.5 px-4 text-center font-bold">{isInactive ? <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-100 text-red-800">🔴 Inactivo</span> : <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800">🟢 Regular</span>}</td>
                       <td className="py-3.5 px-4 text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs font-bold text-[#006384]">
-                            {est.cursos ? `${est.cursos.anio}º "${est.cursos.division}" (${est.cursos.turno})` : "Sin Curso Asignado"}
-                          </span>
-                          <span className="text-[11px] font-semibold text-gray-500">
-                            {est.orientacion || (est.cursos ? est.cursos.orientacion : "Economía y Administración")}
-                          </span>
-                        </div>
+                        {(() => {
+                          const assignedCurso = cursos.find((c) => c.id === est.curso_id);
+                          return (
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-bold text-[#006384]">
+                                {assignedCurso ? `${assignedCurso.anio}º "${assignedCurso.division}" (${assignedCurso.turno})` : "Sin Curso Asignado"}
+                              </span>
+                              <span className="text-[11px] font-semibold text-gray-500">
+                                {assignedCurso ? assignedCurso.orientacion : (est.orientacion || "Economía y Administración")}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3.5 px-4 text-center space-x-1">
                         <button onClick={() => handleEmitirCertificado(est, "Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
