@@ -77,6 +77,14 @@ export default function SecretariaPanelPage() {
   const [newCuil, setNewCuil] = useState("");
   const [newApellido, setNewApellido] = useState("");
   const [newNombre, setNewNombre] = useState("");
+  // Additional Student Modal States (matching Preceptor?a)
+  const [newGenero, setNewGenero] = useState("");
+  const [newFechaNacimiento, setNewFechaNacimiento] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newTelefono, setNewTelefono] = useState("");
+  const [newCiudadNacimiento, setNewCiudadNacimiento] = useState("");
+  const [newOrientacion, setNewOrientacion] = useState("");
+  const [newCursoId, setNewCursoId] = useState("");
 
   // Modal Registrar Docente
   const [showDocenteModal, setShowDocenteModal] = useState(false);
