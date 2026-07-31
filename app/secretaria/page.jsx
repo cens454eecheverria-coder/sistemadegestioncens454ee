@@ -66,6 +66,7 @@ export default function SecretariaPanelPage() {
   const [salidaAlumnos, setSalidaAlumnos] = useState([]);
 
   const [search, setSearch] = useState("");
+  const [selectedCursoFilter, setSelectedCursoFilter] = useState("todos");
   const [searchDocente, setSearchDocente] = useState("");
   const [searchBaja, setSearchBaja] = useState("");
   const [searchTitulo, setSearchTitulo] = useState("");
@@ -130,7 +131,7 @@ export default function SecretariaPanelPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const { data: estData } = await supabase.from("estudiantes").select("*").order("apellido");
+      const { data: estData } = await supabase.from("estudiantes").select("*, cursos(id, anio, division, orientacion, turno)").order("apellido");
       setEstudiantes(estData || []);
       const { data: docData } = await supabase.from("docentes").select("*").order("apellido");
       setDocentes(docData || []);
@@ -567,7 +568,11 @@ export default function SecretariaPanelPage() {
     setShowDocModal(true);
   };
 
-  const filteredEstudiantes = estudiantes.filter((e) => e.apellido.toLowerCase().includes(search.toLowerCase()) || e.nombre.toLowerCase().includes(search.toLowerCase()) || (e.dni && e.dni.includes(search)));
+  const filteredEstudiantes = estudiantes.filter((e) => {
+    const matchSearch = e.apellido.toLowerCase().includes(search.toLowerCase()) || e.nombre.toLowerCase().includes(search.toLowerCase()) || (e.dni && e.dni.includes(search));
+    const matchCurso = selectedCursoFilter === "todos" || (e.curso_id && e.curso_id === selectedCursoFilter);
+    return matchSearch && matchCurso;
+  });
   const filteredDocentes = docentes.filter((d) => d.apellido.toLowerCase().includes(searchDocente.toLowerCase()) || d.nombre.toLowerCase().includes(searchDocente.toLowerCase()) || (d.dni && d.dni.includes(searchDocente)));
   const filteredBajasPases = bajasPases.filter((bp) => {
     const name = bp.estudiantes ? bp.estudiantes.apellido + " " + bp.estudiantes.nombre : "";
@@ -611,9 +616,24 @@ export default function SecretariaPanelPage() {
       {activeTab === "estudiantes" && (
         <div className="space-y-4">
           <div className="card p-4 bg-white">
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Búsqueda por DNI o Nombre..." className="field-soft pl-9 text-xs" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Búsqueda por DNI o Nombre..." className="field-soft pl-9 text-xs" />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[#006384] shrink-0" />
+                <label className="text-xs font-bold text-gray-700 shrink-0">Filtrar por Curso:</label>
+                <select value={selectedCursoFilter} onChange={(e) => setSelectedCursoFilter(e.target.value)} className="field-soft text-xs font-bold bg-white border border-gray-300 min-w-[220px]">
+                  <option value="todos">Todos los Cursos y Divisiones</option>
+                  {cursos.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.anio}º "{c.division}" - {c.orientacion} ({c.turno})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <div className="card overflow-hidden">
@@ -636,7 +656,16 @@ export default function SecretariaPanelPage() {
                       <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
                       <td className="py-3.5 px-4 font-mono">{est.dni}</td>
                       <td className="py-3.5 px-4 text-center font-bold">{isInactive ? <span className="px-2.5 py-1 rounded-full text-[10px] bg-red-100 text-red-800">🔴 Inactivo</span> : <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-100 text-emerald-800">🟢 Regular</span>}</td>
-                      <td className="py-3.5 px-4 text-center"><span className="text-xs font-semibold text-gray-700">{est.orientacion || "Ciencias Sociales"}</span></td>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-bold text-[#006384]">
+                            {est.cursos ? `${est.cursos.anio}º "${est.cursos.division}" (${est.cursos.turno})` : "Sin Curso Asignado"}
+                          </span>
+                          <span className="text-[11px] font-semibold text-gray-500">
+                            {est.orientacion || (est.cursos ? est.cursos.orientacion : "Economía y Administración")}
+                          </span>
+                        </div>
+                      </td>
                       <td className="py-3.5 px-4 text-center space-x-1">
                         <button onClick={() => handleEmitirCertificado(est, "Alumno Regular")} className="btn-primary text-[10px] py-1 px-2 bg-[#006384]">Alumno Regular</button>
                         <button onClick={() => handleEmitirCertificado(est, "Constancia Vacante")} className="btn-primary text-[10px] py-1 px-2 bg-[#0B7EA5]">Constancia Vacante</button>
