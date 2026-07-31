@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
 import { generateAnexo4SalidaDocx, generateAnexo5SalidaDocx } from '@/lib/generateSalidasDocx';
-import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar } from "lucide-react";
+import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar, Filter, User } from "lucide-react";
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
