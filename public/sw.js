@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cens454-cache-v2';
+const CACHE_NAME = 'cens454-cache-v3';
 const urlsToCache = [
   '/',
   '/manifest.json',
