@@ -191,12 +191,21 @@ export default function PreceptorPage() {
 
       if (matList && matList.length > 0) {
         const matIds = matList.map(m => m.id);
-        const { data: dmData } = await supabase.from("docente_materia").select("materia_id, docentes(nombre, apellido)").in("materia_id", matIds);
+        const { data: dmData } = await supabase.from("docente_materia").select("materia_id, cargo, docentes(nombre, apellido)").in("materia_id", matIds);
         const docMap = {};
         if (dmData) {
           dmData.forEach(item => {
             if (item.docentes) {
-              docMap[item.materia_id] = "Prof. " + item.docentes.nombre + " " + item.docentes.apellido;
+              const nameStr = "Prof. " + item.docentes.apellido + ", " + item.docentes.nombre;
+              if (item.cargo === "suplente" || item.cargo === "provisorio") {
+                if (docMap[item.materia_id]) {
+                  docMap[item.materia_id] += " (Suplente: " + item.docentes.apellido + ", " + item.docentes.nombre + ")";
+                } else {
+                  docMap[item.materia_id] = nameStr + " (Suplente)";
+                }
+              } else {
+                docMap[item.materia_id] = nameStr;
+              }
             }
           });
         }

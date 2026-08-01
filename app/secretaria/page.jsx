@@ -113,6 +113,8 @@ export default function SecretariaPanelPage() {
   const [selectedCursoVinculo, setSelectedCursoVinculo] = useState("");
   const [selectedMateriaVinculo, setSelectedMateriaVinculo] = useState("");
   const [selectedDocenteVinculo, setSelectedDocenteVinculo] = useState("");
+  const [selectedCargoVinculo, setSelectedCargoVinculo] = useState("titular");
+  const [docenteMateriaList, setDocenteMateriaList] = useState([]);
 
   // Modal Dar de Baja / Pase Estudiante
   const [showBajaModal, setShowBajaModal] = useState(false);
@@ -143,6 +145,8 @@ export default function SecretariaPanelPage() {
       setBajasPases(bpData || []);
       const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*, docentes(nombre, apellido, dni, cuil)").order("created_at", { ascending: false });
       setDdjjDocentes(ddjjData || []);
+      const { data: dmData } = await supabase.from("docente_materia").select("*, docentes(nombre, apellido, dni), materias(nombre, curso_id)");
+      setDocenteMateriaList(dmData || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   }
 
