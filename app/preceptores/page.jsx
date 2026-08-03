@@ -86,6 +86,7 @@ export default function PreceptorPage() {
   const [boletinCalificaciones, setBoletinCalificaciones] = useState([]);
   const [boletinAsistencia, setBoletinAsistencia] = useState({ presentes: 0, ausentes: 0, total: 0 });
   const [loadingBoletin, setLoadingBoletin] = useState(false);
+  const [inasistenciasDocentes, setInasistenciasDocentes] = useState([]);
 
   useEffect(() => {
     loadCursos();
@@ -526,6 +527,12 @@ export default function PreceptorPage() {
           className={"py-3 px-6 rounded-xl transition-all flex items-center gap-2 " + (activePreceptorTab === "planillas" ? "bg-[#006384] text-white shadow-xs" : "text-gray-600 hover:bg-gray-50")}
         >
           <FileSpreadsheet className="w-4 h-4" /> Planillas de Calificación
+        </button>
+        <button
+          onClick={() => setActivePreceptorTab("inasistencias_docentes")}
+          className={"py-3 px-6 rounded-xl transition-all flex items-center gap-2 " + (activePreceptorTab === "inasistencias_docentes" ? "bg-[#006384] text-white shadow-xs" : "text-gray-600 hover:bg-gray-50")}
+        >
+          <AlertCircle className="w-4 h-4 text-amber-500" /> Avisos Inasistencia Docente
         </button>
       </div>
 
