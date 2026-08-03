@@ -849,6 +849,83 @@ export default function PreceptorPage() {
       )}
 
       {/* ----------------- TAB 3: PLANILLAS DE CALIFICACIÓN? ----------------- */}
+      {/* ----------------- TAB 4: AVISOS DE INASISTENCIA DOCENTE ----------------- */}
+      {activePreceptorTab === "inasistencias_docentes" && (
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
+            <div>
+              <h2 className="text-xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-500" />
+                Control de Avisos de Inasistencia Docente
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Registro oficial de inasistencias cargadas por los docentes para coordinar la cobertura de clases y guardia pedagógica.
+              </p>
+            </div>
+            <div className="bg-amber-50 text-amber-800 text-xs font-bold px-3.5 py-2 rounded-xl border border-amber-200 self-start sm:self-auto">
+              Total Avisos: {inasistenciasDocentes.length}
+            </div>
+          </div>
+
+          {inasistenciasDocentes.length === 0 ? (
+            <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-gray-300 text-gray-500 text-sm">
+              <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-60" />
+              No hay avisos de inasistencia docente registrados actualmente en el sistema.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse border border-gray-200">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                    <th className="p-3.5 border border-gray-200">Docente</th>
+                    <th className="p-3.5 border border-gray-200">DNI / Contacto</th>
+                    <th className="p-3.5 border border-gray-200">Causa / Tipo</th>
+                    <th className="p-3.5 border border-gray-200 text-center">Días</th>
+                    <th className="p-3.5 border border-gray-200">Período Afectado</th>
+                    <th className="p-3.5 border border-gray-200">Observaciones</th>
+                    <th className="p-3.5 border border-gray-200 text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {inasistenciasDocentes.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition">
+                      <td className="p-3.5 border border-gray-200 font-bold text-gray-900">
+                        {item.docentes ? item.docentes.apellido + ", " + item.docentes.nombre : "Docente"}
+                      </td>
+                      <td className="p-3.5 border border-gray-200 text-gray-600">
+                        <div>DNI: {item.docentes?.dni || "N/D"}</div>
+                        {item.docentes?.telefono && (
+                          <div className="text-[10px] text-gray-400">Tel: {item.docentes.telefono}</div>
+                        )}
+                      </td>
+                      <td className="p-3.5 border border-gray-200">
+                        <span className={"inline-block px-2.5 py-1 rounded text-[11px] font-bold " + (item.tipo === "Causas Particulares" ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-blue-100 text-blue-800 border border-blue-300")}>
+                          {item.tipo}
+                        </span>
+                      </td>
+                      <td className="p-3.5 border border-gray-200 text-center font-bold text-gray-800">
+                        {item.cantidad_dias} día(s)
+                      </td>
+                      <td className="p-3.5 border border-gray-200 font-medium text-gray-700">
+                        Desde {item.fecha_inicio} al {item.fecha_fin || item.fecha_inicio}
+                      </td>
+                      <td className="p-3.5 border border-gray-200 text-gray-600 max-w-xs">
+                        {item.observaciones || "Sin observaciones"}
+                      </td>
+                      <td className="p-3.5 border border-gray-200 text-center">
+                        <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full">
+                          {item.estado || "Notificado"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {activePreceptorTab === "planillas" && (
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
