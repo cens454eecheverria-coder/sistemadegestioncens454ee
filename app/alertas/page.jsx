@@ -20,6 +20,7 @@ export default function AlertasPage() {
   const [filterRiesgo, setFilterRiesgo] = useState('todos'); // todos, verde, amarillo, rojo
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [inasistenciasDocentesAlerts, setInasistenciasDocentesAlerts] = useState([]);
 
   // Modal Acta
   const [selectedStudentActa, setSelectedStudentActa] = useState(null);
@@ -33,6 +34,12 @@ export default function AlertasPage() {
     setLoading(true);
     try {
       // 1. Obtener lista de estudiantes activos reales
+      const { data: inasistDocData } = await supabase
+        .from("inasistencias_docentes")
+        .select("*, docentes(nombre, apellido, dni, email)")
+        .order("created_at", { ascending: false });
+      setInasistenciasDocentesAlerts(inasistDocData || []);
+
       const { data: estData } = await supabase
         .from('estudiantes')
         .select('*')

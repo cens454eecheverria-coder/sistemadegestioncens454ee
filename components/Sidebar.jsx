@@ -28,6 +28,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   // Matriz de Accesos por Rol
   const menuItems = [
+  { label: "Aviso Inasistencia", href: "/aviso-inasistencia", icon: AlertCircle, roles: ["admin", "preceptor", "docente"] },
     { name: 'Dashboard General', href: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
     { name: 'Panel de Preceptores', href: '/preceptores', icon: ClipboardCheck, roles: ['admin', 'preceptor'] },
     { name: 'Semáforo de Riesgo', href: '/alertas', icon: AlertTriangle, roles: ['admin', 'preceptor'] },
