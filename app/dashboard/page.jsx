@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const { cicloLectivo } = useAuth();
   const [activeTab, setActiveTab] = useState("estadisticas");
   const [loading, setLoading] = useState(true);
+  const [inasistenciasDocentes, setInasistenciasDocentes] = useState([]);
 
   const [reportTipo, setReportTipo] = useState("mensual");
   const [reportMes, setReportMes] = useState("Agosto");
@@ -40,6 +41,11 @@ export default function DashboardPage() {
       const countMatricula = activos.length;
 
       const { data: docentes } = await supabase.from("docentes").select("*");
+      const { data: inasistData } = await supabase
+        .from("inasistencias_docentes")
+        .select("*, docentes(nombre, apellido, dni, email)")
+        .order("created_at", { ascending: false });
+      setInasistenciasDocentes(inasistData || []);
       const docentesActivosList = (docentes || []).filter(d => d.estado === "activo" || d.activo === true);
       const countDocentes = docentesActivosList.length;
 
@@ -110,7 +116,7 @@ export default function DashboardPage() {
       });
 
       const promedioGeneralCalculado = totalNotasCount > 0 ? parseFloat((sumaNotas / totalNotasCount).toFixed(2)) : 0;
-      setStats({ totalMatricula: countMatricula, asistenciaGeneral: pctAsistencia, promedioNotas: promedioGeneralCalculado, docentesActivos: countDocentes, horasCatAsignadas: horasCatTotal, coberturaPct: coberturaAsignaturas });
+      setStats({ totalMatricula: countMatricula, asistenciaGeneral: pctAsistencia, promedioNotas: promedioGeneralCalculado, docentesActivos: countDocentes, horasCatAsignadas: horasCatTotal, coberturaPct: coberturaAsignaturas, inasistenciasCount: (inasistData || []).length });
 
       let fem = 0; let masc = 0; let otroGen = 0;
       let r18_24 = 0; let r25_39 = 0; let r40_49 = 0; let r50plus = 0; let sinEspecEdad = 0;
@@ -222,9 +228,72 @@ export default function DashboardPage() {
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between"><div><span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">% ASISTENCIA MEDIA</span><span className="text-3xl font-black font-heading text-[#0D2A3E] mt-1 block">{stats.asistenciaGeneral}%</span></div><div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><Percent className="w-6 h-6" /></div></div>
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between"><div><span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">PROMEDIO DE NOTAS</span><span className="text-3xl font-black font-heading text-[#0D2A3E] mt-1 block">{stats.promedioNotas}</span></div><div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><Star className="w-6 h-6" /></div></div>
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between"><div><span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">DOCENTES ACTIVOS</span><span className="text-3xl font-black font-heading text-[#0D2A3E] mt-1 block">{stats.docentesActivos}</span></div><div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center"><GraduationCap className="w-6 h-6" /></div></div>
+<div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between"><div><span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider block">AVISOS INASISTENCIA</span><span className="text-3xl font-black font-heading text-amber-600 mt-1 block">{stats.inasistenciasCount || 0}</span></div><div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><AlertCircle className="w-6 h-6" /></div></div>
           </div>
 
-          <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                <div className="flex items-center gap-2 font-bold font-heading text-lg text-[#0D2A3E]">
+                  <AlertCircle className="w-5 h-5 text-amber-500" />
+                  Avisos de Inasistencia Docente Recientes
+                </div>
+                <span className="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 font-bold">
+                  {inasistenciasDocentes.length} registrado(s)
+                </span>
+              </div>
+
+              {inasistenciasDocentes.length === 0 ? (
+                <div className="text-center py-6 text-xs text-gray-500">
+                  No hay avisos de inasistencia docente registrados recientemente.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                        <th className="p-3 border border-gray-200">Docente</th>
+                        <th className="p-3 border border-gray-200">Tipo de Inasistencia</th>
+                        <th className="p-3 border border-gray-200 text-center">Días</th>
+                        <th className="p-3 border border-gray-200">Período</th>
+                        <th className="p-3 border border-gray-200">Observaciones</th>
+                        <th className="p-3 border border-gray-200 text-center">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {inasistenciasDocentes.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50 transition">
+                          <td className="p-3 border border-gray-200 font-bold text-gray-900">
+                            {item.docentes ? item.docentes.apellido + ", " + item.docentes.nombre : "Docente"}
+                            <span className="block text-[10px] text-gray-500 font-normal">DNI: {item.docentes?.dni || "N/D"}</span>
+                          </td>
+                          <td className="p-3 border border-gray-200">
+                            <span className={"inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold " + (item.tipo === "Causas Particulares" ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-blue-100 text-blue-800 border border-blue-300")}>
+                              {item.tipo}
+                            </span>
+                          </td>
+                          <td className="p-3 border border-gray-200 text-center font-bold text-gray-800">
+                            {item.cantidad_dias} día(s)
+                          </td>
+                          <td className="p-3 border border-gray-200 whitespace-nowrap text-gray-700 font-medium">
+                            {item.fecha_inicio} al {item.fecha_fin || item.fecha_inicio}
+                          </td>
+                          <td className="p-3 border border-gray-200 text-gray-600 max-w-xs truncate">
+                            {item.observaciones || "Sin observaciones"}
+                          </td>
+                          <td className="p-3 border border-gray-200 text-center">
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              {item.estado || "Notificado"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+<div className="space-y-6">
             <div className="flex items-center gap-3 border-b border-gray-200 pb-3"><h2 className="text-xl font-bold font-heading text-[#0D2A3E]">Matricula</h2></div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
