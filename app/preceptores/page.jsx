@@ -102,10 +102,11 @@ export default function PreceptorPage() {
     try {
       const { data, error } = await supabase
         .from("inasistencias_docentes")
-        .select("*, docentes(nombre, apellido, dni, email, telefono)").or("estado.eq.Pendiente,archivado.eq.false")
+        .select("*, docentes(nombre, apellido, dni, email, telefono)")
         .order("created_at", { ascending: false });
       if (!error && data) {
-        setInasistenciasDocentes(data);
+        const activeNotices = data.filter(item => item.estado !== "Procesado / Archivado" && item.archivado !== true);
+        setInasistenciasDocentes(activeNotices);
       }
     } catch (err) {
       console.warn("inasistencias_docentes warning:", err);

@@ -38,9 +38,9 @@ export default function AlertasPage() {
       try {
         const { data: iData, error: iErr } = await supabase
           .from("inasistencias_docentes")
-          .select("*, docentes(nombre, apellido, dni, email)").or("estado.eq.Pendiente,archivado.eq.false")
+          .select("*, docentes(nombre, apellido, dni, email)")
           .order("created_at", { ascending: false });
-        if (!iErr && iData) inasistDocData = iData;
+        if (!iErr && iData) inasistDocData = iData.filter(item => item.estado !== "Procesado / Archivado" && item.archivado !== true);
       } catch (err) { console.warn("inasistencias_docentes query warning:", err); }
       setInasistenciasDocentesAlerts(inasistDocData);
 
