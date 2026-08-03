@@ -41,11 +41,15 @@ export default function DashboardPage() {
       const countMatricula = activos.length;
 
       const { data: docentes } = await supabase.from("docentes").select("*");
-      const { data: inasistData } = await supabase
-        .from("inasistencias_docentes")
-        .select("*, docentes(nombre, apellido, dni, email)")
-        .order("created_at", { ascending: false });
-      setInasistenciasDocentes(inasistData || []);
+      let inasistData = [];
+      try {
+        const { data: iData, error: iErr } = await supabase
+          .from("inasistencias_docentes")
+          .select("*, docentes(nombre, apellido, dni, email)")
+          .order("created_at", { ascending: false });
+        if (!iErr && iData) inasistData = iData;
+      } catch (err) { console.warn("inasistencias_docentes query warning:", err); }
+      setInasistenciasDocentes(inasistData);
       const docentesActivosList = (docentes || []).filter(d => d.estado === "activo" || d.activo === true);
       const countDocentes = docentesActivosList.length;
 

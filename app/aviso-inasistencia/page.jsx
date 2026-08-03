@@ -123,7 +123,19 @@ export default function AvisoInasistenciaPage() {
 
       const { error } = await supabase.from("inasistencias_docentes").insert(payload);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === "42P01" || (error.message && error.message.includes("inasistencias_docentes"))) {
+          Swal.fire({
+            icon: "warning",
+            title: "Tabla de Inasistencias no creada",
+            html: "La tabla <code>inasistencias_docentes</code> aún no fue creada en la base de datos de Supabase.<br><br>Por favor ejecute el script SQL <code>sql/create_inasistencias_docentes.sql</code> en el SQL Editor de su panel de Supabase.",
+            confirmButtonColor: "#2563eb"
+          });
+          setSubmitting(false);
+          return;
+        }
+        throw error;
+      }
 
       let mensajeExtra = "";
       if (tipoInasistencia === "Causas Particulares") {
@@ -154,7 +166,7 @@ export default function AvisoInasistenciaPage() {
       setFechaInicio(new Date().toISOString().split("T")[0]);
       setTipoInasistencia("Licencia Médica");
     } catch (err) {
-      console.error("Error guardando inasistencia:", err);
+      console.error("Error guardando inasistencia:", err.message || err.details || JSON.stringify(err));
       Swal.fire({
         icon: "error",
         title: "Error al registrar aviso",

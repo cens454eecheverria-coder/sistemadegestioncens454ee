@@ -34,11 +34,15 @@ export default function AlertasPage() {
     setLoading(true);
     try {
       // 1. Obtener lista de estudiantes activos reales
-      const { data: inasistDocData } = await supabase
-        .from("inasistencias_docentes")
-        .select("*, docentes(nombre, apellido, dni, email)")
-        .order("created_at", { ascending: false });
-      setInasistenciasDocentesAlerts(inasistDocData || []);
+      let inasistDocData = [];
+      try {
+        const { data: iData, error: iErr } = await supabase
+          .from("inasistencias_docentes")
+          .select("*, docentes(nombre, apellido, dni, email)")
+          .order("created_at", { ascending: false });
+        if (!iErr && iData) inasistDocData = iData;
+      } catch (err) { console.warn("inasistencias_docentes query warning:", err); }
+      setInasistenciasDocentesAlerts(inasistDocData);
 
       const { data: estData } = await supabase
         .from('estudiantes')

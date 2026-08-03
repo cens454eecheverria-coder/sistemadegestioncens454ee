@@ -93,6 +93,26 @@ export default function PreceptorPage() {
   }, [cicloLectivo]);
 
   useEffect(() => {
+    if (activePreceptorTab === "inasistencias_docentes") {
+      loadInasistenciasDocentes();
+    }
+  }, [activePreceptorTab]);
+
+  async function loadInasistenciasDocentes() {
+    try {
+      const { data, error } = await supabase
+        .from("inasistencias_docentes")
+        .select("*, docentes(nombre, apellido, dni, email, telefono)")
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        setInasistenciasDocentes(data);
+      }
+    } catch (err) {
+      console.warn("inasistencias_docentes warning:", err);
+    }
+  }
+
+  useEffect(() => {
     if (selectedCurso) {
       loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     }
