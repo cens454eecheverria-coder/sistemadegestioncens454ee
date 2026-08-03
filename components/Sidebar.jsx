@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {
-  AlertCircle, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
+  AlertCircle,
   LayoutDashboard,
   ClipboardCheck,
   AlertTriangle,
@@ -29,7 +29,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   // Matriz de Accesos por Rol
   const menuItems = [
-  { label: "Aviso Inasistencia", href: "/aviso-inasistencia", icon: AlertCircle, roles: ["admin", "preceptor", "docente"] },
+  { name: "Aviso Inasistencia", href: "/aviso-inasistencia", icon: AlertCircle, roles: ["admin", "preceptor", "profesor"] },
     { name: 'Dashboard General', href: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
     { name: 'Panel de Preceptores', href: '/preceptores', icon: ClipboardCheck, roles: ['admin', 'preceptor'] },
     { name: 'Semáforo de Riesgo', href: '/alertas', icon: AlertTriangle, roles: ['admin', 'preceptor'] },
