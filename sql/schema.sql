@@ -169,3 +169,21 @@ ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS direccion TEXT;
 
 -- COLUMNA CURSO_ID OPCIONAL EN ESTUDIANTES
 ALTER TABLE estudiantes ADD COLUMN IF NOT EXISTS curso_id UUID;
+
+
+-- 8. TABLA INASISTENCIAS DOCENTES
+CREATE TABLE IF NOT EXISTS inasistencias_docentes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  docente_id UUID REFERENCES docentes(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL,
+  cantidad_dias INT NOT NULL DEFAULT 1,
+  fecha_inicio DATE NOT NULL,
+  fecha_fin DATE,
+  observaciones TEXT,
+  estado VARCHAR(50) DEFAULT 'Pendiente',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE inasistencias_docentes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "inasistencias_docentes_all_policy" ON inasistencias_docentes;
+CREATE POLICY "inasistencias_docentes_all_policy" ON inasistencias_docentes FOR ALL TO public, anon, authenticated USING (true) WITH CHECK (true);
