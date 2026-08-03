@@ -23,3 +23,6 @@ CREATE POLICY "inasistencias_docentes_all_policy" ON public.inasistencias_docent
 
 -- Notificar a PostgREST para actualizar el caché de tablas en tiempo real
 NOTIFY pgrst, 'reload schema';
+
+-- Agregar columna archivado si no existe
+ALTER TABLE public.inasistencias_docentes ADD COLUMN IF NOT EXISTS archivado BOOLEAN DEFAULT false;

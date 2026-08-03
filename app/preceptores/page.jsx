@@ -102,7 +102,7 @@ export default function PreceptorPage() {
     try {
       const { data, error } = await supabase
         .from("inasistencias_docentes")
-        .select("*, docentes(nombre, apellido, dni, email, telefono)")
+        .select("*, docentes(nombre, apellido, dni, email, telefono)").or("estado.eq.Pendiente,archivado.eq.false")
         .order("created_at", { ascending: false });
       if (!error && data) {
         setInasistenciasDocentes(data);

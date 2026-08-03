@@ -18,6 +18,7 @@ export default function SecretariaPanelPage() {
   const [materias, setMaterias] = useState([]);
   const [bajasPases, setBajasPases] = useState([]);
   const [ddjjDocentes, setDdjjDocentes] = useState([]);
+  const [inasistenciasSecretaria, setInasistenciasSecretaria] = useState([]);
   // State Carga Histórica (Pasos 1, 2 y 3)
   const [historicaSubTab, setHistoricaSubTab] = useState("nuevo"); // "nuevo" | "registros"
   const [historicaStep, setHistoricaStep] = useState(1);
@@ -145,6 +146,15 @@ export default function SecretariaPanelPage() {
       setBajasPases(bpData || []);
       const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*, docentes(nombre, apellido, dni, cuil)").order("created_at", { ascending: false });
       setDdjjDocentes(ddjjData || []);
+      let inasistData = [];
+      try {
+        const { data: iData } = await supabase
+          .from("inasistencias_docentes")
+          .select("*, docentes(id, nombre, apellido, dni, cuil, email, telefono)")
+          .order("created_at", { ascending: false });
+        if (iData) inasistData = iData;
+      } catch (err) { console.warn("inasistencias_docentes query error:", err); }
+      setInasistenciasSecretaria(inasistData);
       const { data: dmData } = await supabase.from("docente_materia").select("*, docentes(nombre, apellido, dni), materias(nombre, curso_id)");
       setDocenteMateriaList(dmData || []);
     } catch (e) { console.error(e); } finally { setLoading(false); }
@@ -518,7 +528,39 @@ export default function SecretariaPanelPage() {
       await loadData();
     } catch (err) { Swal.fire("Error", err.message, "error"); }
   };
-    const handleToggleEstadoDocente = async (docente) => {
+      const handleArchivarInasistencia = async (item) => {
+    try {
+      const docName = item.docentes ? item.docentes.apellido + ", " + item.docentes.nombre : "el docente";
+      const confirm = await Swal.fire({
+        title: "Archivar / Limpiar Aviso",
+        text: "¿Desea quitar el aviso de inasistencia de Prof. " + docName + " del panel diario de preceptores? El registro se conservará en el legajo del docente.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Sí, Limpiar del Panel",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#006384"
+      });
+      if (confirm.isConfirmed) {
+        const { error } = await supabase
+          .from("inasistencias_docentes")
+          .update({ estado: "Procesado / Archivado", archivado: true })
+          .eq("id", item.id);
+        if (error) throw error;
+        Swal.fire({
+          icon: "success",
+          title: "Aviso Archivado",
+          text: "El aviso fue retirado del panel activo de preceptores y permanece registrado en el legajo del docente.",
+          timer: 1800,
+          showConfirmButton: false
+        });
+        await loadData();
+      }
+    } catch (err) {
+      Swal.fire("Error", err.message || "No se pudo archivar el aviso.", "error");
+    }
+  };
+
+  const handleToggleEstadoDocente = async (docente) => {
     try {
       const isCurrentlyInactive = docente.estado === "inactivo" || docente.activo === false;
       const nuevoEstado = isCurrentlyInactive ? "activo" : "inactivo";
@@ -1788,7 +1830,92 @@ export default function SecretariaPanelPage() {
 
               <div className="card p-0 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-xs">
                 <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold flex justify-between items-center">
-                  <span>Nómina de Declaraciones Juradas Presentadas ({ddjjDocentes.length})</span>
+                  
+            {/* Control de Inasistencias Docentes y Limpieza de Panel */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200 pb-4">
+                <div>
+                  <h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                    Gestión de Inasistencias Docentes y Limpieza de Panel
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Administre los avisos de inasistencia cargados por los docentes. Al "Limpiar del Panel", el aviso se quita del panel operativo de preceptores pero se conserva permanentemente en el legajo docente.
+                  </p>
+                </div>
+                <span className="bg-blue-50 text-[#006384] text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-200 self-start sm:self-auto">
+                  Total Registros: {inasistenciasSecretaria.length}
+                </span>
+              </div>
+
+              {inasistenciasSecretaria.length === 0 ? (
+                <div className="text-center py-8 text-xs text-gray-400 font-bold bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No hay avisos de inasistencia cargados recientemente.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left border-collapse border border-gray-200">
+                    <thead>
+                      <tr className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                        <th className="p-3 border border-gray-200">Docente</th>
+                        <th className="p-3 border border-gray-200">Tipo de Inasistencia</th>
+                        <th className="p-3 border border-gray-200 text-center">Días</th>
+                        <th className="p-3 border border-gray-200">Período</th>
+                        <th className="p-3 border border-gray-200">Observaciones</th>
+                        <th className="p-3 border border-gray-200 text-center">Estado Panel</th>
+                        <th className="p-3 border border-gray-200 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {inasistenciasSecretaria.map((item) => {
+                        const isArchived = item.archivado === true || item.estado === "Procesado / Archivado";
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-50 transition">
+                            <td className="p-3 border border-gray-200 font-bold text-gray-900">
+                              {item.docentes ? item.docentes.apellido + ", " + item.docentes.nombre : "Docente"}
+                              <span className="block text-[10px] text-gray-500 font-normal">DNI: {item.docentes?.dni || "N/D"}</span>
+                            </td>
+                            <td className="p-3 border border-gray-200">
+                              <span className={"inline-block px-2.5 py-0.5 rounded text-[11px] font-bold " + (item.tipo === "Causas Particulares" ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-blue-100 text-blue-800 border border-blue-300")}>
+                                {item.tipo}
+                              </span>
+                            </td>
+                            <td className="p-3 border border-gray-200 text-center font-bold text-gray-800">
+                              {item.cantidad_dias} día(s)
+                            </td>
+                            <td className="p-3 border border-gray-200 font-medium text-gray-700 whitespace-nowrap">
+                              {item.fecha_inicio} al {item.fecha_fin || item.fecha_inicio}
+                            </td>
+                            <td className="p-3 border border-gray-200 text-gray-600 max-w-xs truncate">
+                              {item.observaciones || "Sin observaciones"}
+                            </td>
+                            <td className="p-3 border border-gray-200 text-center">
+                              <span className={"text-[10px] font-bold px-2.5 py-0.5 rounded-full " + (isArchived ? "bg-gray-100 text-gray-600 border border-gray-300" : "bg-emerald-100 text-emerald-800 border border-emerald-300")}>
+                                {isArchived ? "Archivado en Legajo" : "Activo en Preceptoría"}
+                              </span>
+                            </td>
+                            <td className="p-3 border border-gray-200 text-center">
+                              {!isArchived ? (
+                                <button
+                                  onClick={() => handleArchivarInasistencia(item)}
+                                  className="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold py-1 px-3 rounded-lg transition"
+                                >
+                                  🧹 Limpiar del Panel
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-gray-400 italic">Conservado en Legajo</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <span>Nómina de Declaraciones Juradas Presentadas ({ddjjDocentes.length})</span>
                   <span className="text-[11px] text-blue-200 font-normal">Carga activa por docentes</span>
                 </div>
 

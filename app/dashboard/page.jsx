@@ -45,7 +45,7 @@ export default function DashboardPage() {
       try {
         const { data: iData, error: iErr } = await supabase
           .from("inasistencias_docentes")
-          .select("*, docentes(nombre, apellido, dni, email)")
+          .select("*, docentes(nombre, apellido, dni, email)").or("estado.eq.Pendiente,archivado.eq.false")
           .order("created_at", { ascending: false });
         if (!iErr && iData) inasistData = iData;
       } catch (err) { console.warn("inasistencias_docentes query warning:", err); }

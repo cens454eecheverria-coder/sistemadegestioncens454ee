@@ -19,6 +19,7 @@ export default function TeacherPortalPage() {
   const [alumnos, setAlumnos] = useState([]);
   const [calificacionesMap, setCalificacionesMap] = useState({});
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [misInasistencias, setMisInasistencias] = useState([]);
   const [saving, setSaving] = useState(false);
   const [printingModal, setPrintingModal] = useState(false);
   const [printType, setPrintType] = useState("NOTAS");
@@ -368,7 +369,64 @@ export default function TeacherPortalPage() {
             </div>
             <div className="pt-3 border-t border-gray-100 flex justify-end"><button type="submit" className="btn-primary font-bold text-xs py-2.5 px-6 bg-[#006384]">Guardar Cambios</button></div>
           </form>
-          <div className="card p-6 bg-white space-y-4">
+          
+        {/* Historial de Inasistencias del Docente (Legajo) */}
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+            <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-[#006384]" />
+              Historial de Inasistencias en Legajo
+            </h3>
+            <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-[#006384] font-bold border border-blue-200">
+              {misInasistencias.length} registro(s)
+            </span>
+          </div>
+
+          {misInasistencias.length === 0 ? (
+            <div className="text-center py-6 text-xs text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              No registra inasistencias cargadas en la institución.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse border border-gray-200">
+                <thead>
+                  <tr className="bg-gray-100 text-gray-700 font-bold uppercase text-[10px]">
+                    <th className="p-3 border border-gray-200">Causa / Tipo</th>
+                    <th className="p-3 border border-gray-200 text-center">Días</th>
+                    <th className="p-3 border border-gray-200">Desde / Hasta</th>
+                    <th className="p-3 border border-gray-200">Observaciones</th>
+                    <th className="p-3 border border-gray-200 text-center">Estado Legajo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {misInasistencias.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50 transition">
+                      <td className="p-3 border border-gray-200 font-bold">
+                        <span className={"inline-block px-2.5 py-0.5 rounded text-[11px] " + (item.tipo === "Causas Particulares" ? "bg-amber-100 text-amber-800 border border-amber-300" : "bg-blue-100 text-blue-800 border border-blue-300")}>
+                          {item.tipo}
+                        </span>
+                      </td>
+                      <td className="p-3 border border-gray-200 text-center font-bold">{item.cantidad_dias} día(s)</td>
+                      <td className="p-3 border border-gray-200 font-medium text-gray-700 whitespace-nowrap">
+                        {item.fecha_inicio} al {item.fecha_fin || item.fecha_inicio}
+                      </td>
+                      <td className="p-3 border border-gray-200 text-gray-600 max-w-xs truncate">
+                        {item.observaciones || "Sin observaciones"}
+                      </td>
+                      <td className="p-3 border border-gray-200 text-center">
+                        <span className={"text-[10px] font-bold px-2.5 py-0.5 rounded-full " + (item.archivado ? "bg-gray-100 text-gray-600" : "bg-emerald-100 text-emerald-800")}>
+                          {item.archivado ? "Procesado en Legajo" : "Activo en Preceptoría"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="card p-6 bg-white space-y-4">
             <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><BookOpen className="w-5 h-5 text-[#006384]" /> Materias Asignadas en CENS 454</h3>
             {materiasAsignadas.length === 0 ? (
               <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1">
