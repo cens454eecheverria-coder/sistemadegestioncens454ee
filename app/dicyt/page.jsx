@@ -1,23 +1,35 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
-import { BookMarked, Plus, Calendar, Save, CheckCircle, AlertCircle } from 'lucide-react';
+import { BookMarked, Save, AlertCircle, Pencil, Trash2, X, Check } from 'lucide-react';
+
+const TAREAS_DICYT = [
+  'Proyecto Institucional',
+  'Seguimiento de Trayectorias de Estudiantes',
+  'Trabajo en Círculo Dialógico',
+];
 
 export default function LibroDicytPage() {
   const [registros, setRegistros] = useState([]);
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
-  const [modulo, setModulo] = useState('1');
-  const [contenido, setContenido] = useState('');
+  const [tarea, setTarea] = useState(TAREAS_DICYT[0]);
   const [actividades, setActividades] = useState('');
-  const [docenteNombre, setDocenteNombre] = useState('');
+  const [dicyt, setDicyt] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Edit state
+  const [editId, setEditId] = useState(null);
+  const [editTarea, setEditTarea] = useState('');
+  const [editActividades, setEditActividades] = useState('');
+  const [editDicyt, setEditDicyt] = useState('');
+  const [editFecha, setEditFecha] = useState('');
+
   useEffect(() => {
     loadDicyt();
-  }, [fecha]);
+  }, []);
 
   async function loadDicyt() {
     setLoading(true);
@@ -26,7 +38,6 @@ export default function LibroDicytPage() {
         .from('libro_dicyt')
         .select('*')
         .order('fecha', { ascending: false });
-
       setRegistros(data || []);
     } catch (e) {
       console.error(e);
@@ -37,16 +48,16 @@ export default function LibroDicytPage() {
 
   const handleGuardarRegistro = async (e) => {
     e.preventDefault();
-    if (!contenido.trim()) return;
+    if (!tarea) return;
 
     setSaving(true);
     try {
       const newRecord = {
         fecha: fecha,
-        modulo: parseInt(modulo),
-        contenido_desarrollado: contenido.trim(),
+        modulo: 1,
+        contenido_desarrollado: tarea,
         actividades: actividades.trim() || null,
-        observaciones: docenteNombre.trim() ? "Dictado por: " + docenteNombre.trim() : null,
+        observaciones: dicyt.trim() ? dicyt.trim() : null,
       };
 
       const { error } = await supabase.from('libro_dicyt').insert(newRecord);
@@ -54,24 +65,69 @@ export default function LibroDicytPage() {
 
       Swal.fire({
         icon: 'success',
-        title: 'Clase Registrada',
-        text: 'Se guardó la entrada en el Libro de Temas DICYT.',
+        title: 'Registro Guardado',
+        text: 'Se guardó la entrada en el Libro DICyT.',
         timer: 1500,
         showConfirmButton: false,
       });
 
-      setContenido('');
+      setTarea(TAREAS_DICYT[0]);
       setActividades('');
-      setDocenteNombre('');
+      setDicyt('');
       await loadDicyt();
     } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.message,
-      });
+      Swal.fire({ icon: 'error', title: 'Error', text: err.message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEliminar = async (id) => {
+    const confirm = await Swal.fire({
+      title: '¿Eliminar registro?',
+      text: 'Esta acción no se puede deshacer.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#dc2626',
+    });
+    if (!confirm.isConfirmed) return;
+
+    const { error } = await supabase.from('libro_dicyt').delete().eq('id', id);
+    if (error) {
+      Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+    } else {
+      await loadDicyt();
+    }
+  };
+
+  const startEdit = (r) => {
+    setEditId(r.id);
+    setEditTarea(r.contenido_desarrollado || TAREAS_DICYT[0]);
+    setEditActividades(r.actividades || '');
+    setEditDicyt(r.observaciones || '');
+    setEditFecha(r.fecha || '');
+  };
+
+  const cancelEdit = () => setEditId(null);
+
+  const handleGuardarEdicion = async (id) => {
+    const { error } = await supabase
+      .from('libro_dicyt')
+      .update({
+        fecha: editFecha,
+        contenido_desarrollado: editTarea,
+        actividades: editActividades.trim() || null,
+        observaciones: editDicyt.trim() || null,
+      })
+      .eq('id', id);
+
+    if (error) {
+      Swal.fire({ icon: 'error', title: 'Error al guardar', text: error.message });
+    } else {
+      setEditId(null);
+      await loadDicyt();
     }
   };
 
@@ -81,7 +137,7 @@ export default function LibroDicytPage() {
         <div>
           <h1 className="text-2xl font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
             <BookMarked className="w-6 h-6 text-[#006384]" />
-            Libro de Temas DICYT - Registro Diario
+            Libro de Temas DICyT - Registro Diario
           </h1>
           <p className="text-xs text-gray-500 mt-1">
             Digitalización del Registro de Desempeño Institucional y Curricular por Trayecto - CENS 454
@@ -89,15 +145,15 @@ export default function LibroDicytPage() {
         </div>
       </div>
 
-      {/* Formulario de Carga de Tema */}
+      {/* Formulario de Carga */}
       <form onSubmit={handleGuardarRegistro} className="card p-6 bg-white space-y-4 rounded-2xl border border-gray-200 shadow-xs">
         <h3 className="text-sm font-bold font-heading text-[#0D2A3E]">
-          Cargar Nuevo Registro de Clase / Módulo
+          Cargar Nuevo Registro DICyT
         </h3>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha de Clase:</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Fecha:</label>
             <input
               type="date"
               value={fecha}
@@ -108,25 +164,12 @@ export default function LibroDicytPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Módulo Horario:</label>
-            <select
-              value={modulo}
-              onChange={(e) => setModulo(e.target.value)}
-              className="field-soft font-semibold text-xs"
-            >
-              <option value="1">1º Módulo</option>
-              <option value="2">2º Módulo</option>
-              <option value="3">3º Módulo</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Docente Cargo / Suplente:</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">DICyT:</label>
             <input
               type="text"
-              value={docenteNombre}
-              onChange={(e) => setDocenteNombre(e.target.value)}
-              placeholder="Ej: Prof. Martínez"
+              value={dicyt}
+              onChange={(e) => setDicyt(e.target.value)}
+              placeholder="Ej: Prof. García"
               className="field-soft text-xs"
             />
           </div>
@@ -134,27 +177,29 @@ export default function LibroDicytPage() {
 
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">
-            Contenidos Conceptuales Desarrollados:
+            Tarea: <span className="text-red-500">*</span>
           </label>
-          <textarea
-            rows="2"
-            value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-            placeholder="Detallar unidades y temas explicados..."
-            className="field-soft text-xs"
+          <select
+            value={tarea}
+            onChange={(e) => setTarea(e.target.value)}
+            className="field-soft font-semibold text-xs"
             required
-          />
+          >
+            {TAREAS_DICYT.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">
-            Actividades Pedagógicas Realizadas:
+            Actividades Realizadas:
           </label>
           <textarea
-            rows="2"
+            rows="3"
             value={actividades}
             onChange={(e) => setActividades(e.target.value)}
-            placeholder="Ejercicios, lecturas, evaluaciones o debates..."
+            placeholder="Descripción de las actividades realizadas en la sesión..."
             className="field-soft text-xs"
           />
         </div>
@@ -162,43 +207,101 @@ export default function LibroDicytPage() {
         <button
           type="submit"
           disabled={saving}
-          className="btn-primary text-xs py-2.5 px-6 font-bold"
+          className="btn-primary text-xs py-2.5 px-6 font-bold flex items-center gap-2"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Guardando...' : 'Firmar y Registrar Clase'}
+          {saving ? 'Guardando...' : 'Firmar y Registrar'}
         </button>
       </form>
 
-      {/* Historial de Registros DICYT */}
+      {/* Historial de Registros */}
       <div className="card p-0 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-xs">
-        <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold">
-          Historial de Partes Diarios Registrados
+        <div className="bg-[#0D2A3E] text-white p-4 px-6 font-heading text-xs font-bold flex justify-between items-center">
+          <span>Historial de Registros DICyT</span>
+          <span className="text-blue-200 font-normal">{registros.length} registro(s)</span>
         </div>
         <div className="divide-y divide-gray-100 bg-white">
           {loading ? (
-            <div className="p-8 text-center text-xs text-gray-500 font-bold">Cargando Libro DICYT...</div>
+            <div className="p-8 text-center text-xs text-gray-500 font-bold">Cargando Libro DICyT...</div>
           ) : registros.length === 0 ? (
             <div className="p-10 text-center text-xs text-gray-400 font-bold space-y-2">
               <AlertCircle className="w-8 h-8 text-gray-300 mx-auto mb-1" />
-              <p>No hay registros cargados en el Libro de Temas DICYT actualmente.</p>
+              <p>No hay registros cargados en el Libro DICyT actualmente.</p>
             </div>
           ) : (
-            registros.map((r) => (
-              <div key={r.id} className="p-5 space-y-2 hover:bg-gray-50 transition-colors">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-[#006384] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
-                    Fecha: {r.fecha} • {r.modulo}º Módulo
-                  </span>
-                  <span className="text-gray-500 font-semibold">{r.observaciones || 'Docente Titular'}</span>
+            registros.map((r) =>
+              editId === r.id ? (
+                // ── MODO EDICIÓN ──────────────────────────────────────
+                <div key={r.id} className="p-5 bg-blue-50 border-l-4 border-blue-400 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-700">Fecha:</label>
+                      <input type="date" value={editFecha} onChange={(e) => setEditFecha(e.target.value)} className="field-soft text-xs mt-1" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-700">DICyT:</label>
+                      <input type="text" value={editDicyt} onChange={(e) => setEditDicyt(e.target.value)} className="field-soft text-xs mt-1" placeholder="Ej: Prof. García" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700">Tarea:</label>
+                    <select value={editTarea} onChange={(e) => setEditTarea(e.target.value)} className="field-soft text-xs mt-1">
+                      {TAREAS_DICYT.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-700">Actividades:</label>
+                    <textarea rows="2" value={editActividades} onChange={(e) => setEditActividades(e.target.value)} className="field-soft text-xs mt-1" />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button onClick={() => handleGuardarEdicion(r.id)} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-4 rounded-lg flex items-center gap-1.5 transition">
+                      <Check className="w-3.5 h-3.5" /> Guardar Cambios
+                    </button>
+                    <button onClick={cancelEdit} className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold py-1.5 px-4 rounded-lg flex items-center gap-1.5 transition">
+                      <X className="w-3.5 h-3.5" /> Cancelar
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs font-bold text-[#0D2A3E]">{r.contenido_desarrollado}</p>
-                {r.actividades && (
-                  <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                    <strong>Actividades:</strong> {r.actividades}
-                  </p>
-                )}
-              </div>
-            ))
+              ) : (
+                // ── MODO VISTA ────────────────────────────────────────
+                <div key={r.id} className="p-5 space-y-2 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-[#006384] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100 text-xs">
+                        {r.fecha}
+                      </span>
+                      <span className="text-xs font-bold text-[#0D2A3E] bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">
+                        {r.contenido_desarrollado}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {r.observaciones && (
+                        <span className="text-gray-500 font-semibold text-xs hidden sm:inline">{r.observaciones}</span>
+                      )}
+                      <button
+                        onClick={() => startEdit(r)}
+                        className="text-xs font-bold py-1 px-2.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition flex items-center gap-1"
+                        title="Editar registro"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Editar
+                      </button>
+                      <button
+                        onClick={() => handleEliminar(r.id)}
+                        className="text-xs font-bold py-1 px-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition flex items-center gap-1"
+                        title="Eliminar registro"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                      </button>
+                    </div>
+                  </div>
+                  {r.actividades && (
+                    <p className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                      <strong>Actividades:</strong> {r.actividades}
+                    </p>
+                  )}
+                </div>
+              )
+            )
           )}
         </div>
       </div>
