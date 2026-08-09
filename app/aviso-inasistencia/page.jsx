@@ -316,6 +316,7 @@ export default function AvisoInasistenciaPage() {
                     <option value="Causas Particulares">Causas Particulares</option>
                     <option value="Capacitación / Comisión de Servicio">Capacitación / Comisión de Servicio</option>
                     <option value="Fuerza Mayor / Asunto Urgente">Fuerza Mayor / Asunto Urgente</option>
+                    <option value="Paro / Huelga">Paro / Huelga</option>
                   </select>
                 </div>
 
