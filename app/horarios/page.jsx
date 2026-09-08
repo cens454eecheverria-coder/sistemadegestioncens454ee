@@ -24,6 +24,8 @@ export default function HorariosPage() {
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [selectedDocenteSchedule, setSelectedDocenteSchedule] = useState('');
   const [docenteHorariosList, setDocenteHorariosList] = useState([]);
+  const [docenteMateriaMap, setDocenteMateriaMap] = useState({});
+  const [docenteHorariosGrid, setDocenteHorariosGrid] = useState({});
 
   useEffect(() => {
     loadCursosYDocentes();
@@ -47,9 +49,29 @@ export default function HorariosPage() {
     try {
       const { data: cData } = await supabase.from('cursos').select('*').order('anio');
       const { data: dData } = await supabase.from('docentes').select('*').order('apellido');
+      const { data: dmData } = await supabase
+        .from('docente_materia')
+        .select('*, docentes(id, nombre, apellido), materias(id, nombre, curso_id)');
 
       setCursos(cData || []);
       setDocentes(dData || []);
+
+      const dmMap = {};
+      if (dmData) {
+        dmData.forEach((dm) => {
+          if (!dmMap[dm.materia_id]) {
+            dmMap[dm.materia_id] = [];
+          }
+          if (dm.docentes) {
+            dmMap[dm.materia_id].push({
+              docenteId: dm.docente_id,
+              nombre: "Prof. " + dm.docentes.apellido + ", " + dm.docentes.nombre,
+              cargo: dm.cargo || 'titular'
+            });
+          }
+        });
+      }
+      setDocenteMateriaMap(dmMap);
 
       if (cData && cData.length > 0) {
         setSelectedCursoId(cData[0].id);
@@ -286,13 +308,14 @@ export default function HorariosPage() {
                   {DIAS.map((dia, diaIdx) => {
                     const cellKey = diaIdx + "_" + mod;
                     const cell = grillaHoraria[cellKey] || {};
+                    const docsAsignados = cell.materiaId ? (docenteMateriaMap[cell.materiaId] || []) : [];
                     return (
-                      <td key={diaIdx} className="p-2 border-r border-gray-200 text-center">
+                      <td key={diaIdx} className="p-2 border-r border-gray-200 text-center align-top">
                         <select
                           value={cell.materiaId || ''}
                           disabled={!canEdit}
                           onChange={(e) => handleCellChange(diaIdx, mod, e.target.value)}
-                          className="field-soft text-[11px] py-1 text-center font-semibold disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="field-soft text-[11px] py-1 text-center font-semibold disabled:bg-gray-100 disabled:cursor-not-allowed border border-gray-200"
                         >
                           <option value="">-- Libre --</option>
                           {materias.map((m) => (
@@ -301,6 +324,25 @@ export default function HorariosPage() {
                             </option>
                           ))}
                         </select>
+                        {cell.materiaId && (
+                          <div className="mt-1 space-y-0.5">
+                            {docsAsignados.length > 0 ? (
+                              docsAsignados.map((doc, dIdx) => (
+                                <div
+                                  key={dIdx}
+                                  className={"text-[10px] font-bold px-1.5 py-0.5 rounded text-left flex items-center justify-between gap-1 " + (doc.cargo === 'suplente' ? "bg-amber-100 text-amber-900 border border-amber-300" : "bg-blue-50 text-[#006384] border border-blue-200")}
+                                >
+                                  <span className="truncate">{doc.nombre}</span>
+                                  <span className="shrink-0 text-[8px] uppercase font-extrabold">{doc.cargo === 'suplente' ? 'Supl.' : 'Tit.'}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[10px] text-gray-400 italic bg-gray-50 py-0.5 rounded border border-dashed border-gray-200">
+                                Sin docente asignado
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     );
                   })}

@@ -20,6 +20,7 @@ export default function TeacherPortalPage() {
   const [calificacionesMap, setCalificacionesMap] = useState({});
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [misInasistencias, setMisInasistencias] = useState([]);
+  const [misHorarios, setMisHorarios] = useState([]);
   const [saving, setSaving] = useState(false);
   const [printingModal, setPrintingModal] = useState(false);
   const [printType, setPrintType] = useState("NOTAS");
@@ -97,7 +98,20 @@ export default function TeacherPortalPage() {
             setMateriasAsignadas(list);
             if (list.length > 0) setSelectedMateriaId(list[0].id);
           }
-        } else { setMateriasAsignadas([]); setSelectedMateriaId(""); }
+
+          // Cargar los horarios asignados para todas las materias del docente
+          const { data: hData } = await supabase
+            .from("horarios")
+            .select("*, cursos(anio, division, turno, orientacion), materias(id, nombre)")
+            .in("materia_id", matIds)
+            .order("dia_semana")
+            .order("modulo");
+          setMisHorarios(hData || []);
+        } else {
+          setMateriasAsignadas([]);
+          setSelectedMateriaId("");
+          setMisHorarios([]);
+        }
         const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*").eq("docente_id", profile.id);
         if (ddjjData) { setCargosExternos(ddjjData); }
         const { data: inasData } = await supabase.from("inasistencias_docentes").select("*").eq("docente_id", profile.id).order("fecha_inicio", { ascending: false });
@@ -288,7 +302,91 @@ export default function TeacherPortalPage() {
 
           {/* CONTENEDOR DE IMPRESIÓN OFICIAL */}
           <div id="printable-modal" className="border p-6 sm:p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
-            {printType === "NOTAS" ? (
+            {printType === "HORARIOS" ? (
+              <div className="space-y-6">
+                <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
+                  <div>
+                    <h2 className="text-base font-extrabold text-gray-900 tracking-tight">CENS Nº 454 - ESTEBAN ECHEVERRÍA</h2>
+                    <p className="text-[11px] text-gray-700 font-semibold">Dirección General de Cultura y Educación - Región 5</p>
+                    <p className="text-[10px] text-gray-500">Horario Oficial del Docente frente a curso</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block border border-gray-900 px-3 py-1 text-xs font-black uppercase tracking-wider bg-gray-50">
+                      HORARIO SEMANAL OFICIAL
+                    </span>
+                    <p className="text-[10px] text-gray-600 mt-1 font-medium">Ciclo Lectivo: {cicloLectivo || 2026}</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-300 p-3.5 rounded-lg flex flex-wrap justify-between items-center gap-3 text-xs">
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Docente:</span>
+                    <strong className="text-sm text-gray-900">{docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : docenteData.nombre}</strong>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">DNI / CUIL:</span>
+                    <span className="font-bold text-gray-800">{docenteData.dni} / {docenteData.cuil}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Carga Semanal:</span>
+                    <span className="font-bold text-[#006384]">{misHorarios.length} Módulos</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Turno:</span>
+                    <span className="font-bold text-gray-800">Noche (18:30 a 22:30)</span>
+                  </div>
+                </div>
+
+                <table className="w-full text-left text-xs border border-gray-900 border-collapse">
+                  <thead className="bg-gray-100 text-gray-900 font-bold border-b-2 border-gray-900">
+                    <tr>
+                      <th className="py-2 px-3 border-r border-gray-900 w-28">Día</th>
+                      <th className="py-2 px-3 border-r border-gray-900 text-center w-28">Módulo / Horario</th>
+                      <th className="py-2 px-3 border-r border-gray-900">Asignatura</th>
+                      <th className="py-2 px-3 border-r border-gray-900">Curso / División</th>
+                      <th className="py-2 px-3 text-center">Aula</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-900">
+                    {misHorarios.length === 0 ? (
+                      <tr><td colSpan="5" className="py-6 text-center text-gray-500 italic">No registra módulos horarios asignados en CENS 454.</td></tr>
+                    ) : (
+                      misHorarios.map((h, idx) => {
+                        const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+                        const start = 18 * 60 + 30 + (h.modulo - 1) * 40;
+                        const end = start + 40;
+                        const fmt = (m) => {
+                          const hr = Math.floor(m / 60) % 24;
+                          const mn = m % 60;
+                          return (hr < 10 ? "0" + hr : hr) + ":" + (mn < 10 ? "0" + mn : mn);
+                        };
+                        const franja = fmt(start) + " - " + fmt(end);
+                        return (
+                          <tr key={idx} className="border-b border-gray-900">
+                            <td className="py-2 px-3 font-bold border-r border-gray-900">{dias[h.dia_semana]}</td>
+                            <td className="py-2 px-3 text-center border-r border-gray-900 font-mono text-[11px]">{h.modulo}º ({franja})</td>
+                            <td className="py-2 px-3 font-bold border-r border-gray-900">{h.materias?.nombre || "Asignatura"}</td>
+                            <td className="py-2 px-3 border-r border-gray-900">{h.cursos ? (h.cursos.anio + "º " + h.cursos.division) : "-"}</td>
+                            <td className="py-2 px-3 text-center">{h.aula || "Sede"}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>FIRMA DEL PROFESOR/A</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">Prof. {docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : docenteData.nombre}</p>
+                  </div>
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>FIRMA DE DIRECCIÓN / SECRETARÍA</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">CENS Nº 454 - Esteban Echeverría</p>
+                  </div>
+                </div>
+              </div>
+            ) : printType === "NOTAS" ? (
               <div className="space-y-6">
                 {/* Cabecera Oficial */}
                 <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
@@ -807,20 +905,205 @@ export default function TeacherPortalPage() {
         </div>
       )}
 
-      {activeTab === "horarios" && (
-        <div className="card p-6 bg-white space-y-4">
-          <h3 className="text-base font-bold font-heading text-[#0D2A3E] flex items-center gap-2 border-b border-gray-200 pb-3"><Clock className="w-5 h-5 text-[#006384]" /> Mis Horarios Asignados CENS 454</h3>
-          {materiasAsignadas.length === 0 ? (
-            <p className="text-xs text-gray-500 italic">No posees horarios cargados en CENS 454.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {materiasAsignadas.map((m) => (
-                <div key={m.id} className="p-4 bg-gray-50 rounded-xl border border-gray-200"><h4 className="font-bold text-xs text-[#0D2A3E]">{m.nombre} ({m.cursoNombre})</h4><p className="text-xs text-gray-500 mt-1">📅 Horario oficial de CENS 454</p></div>
-              ))}
+      {activeTab === "horarios" && (() => {
+        const diasSemana = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+        const modulosList = [1, 2, 3, 4, 5, 6];
+        const getFranjaHoraria = (mIdx) => {
+          const start = 18 * 60 + 30 + mIdx * 40;
+          const end = start + 40;
+          const fmt = (mins) => {
+            const h = Math.floor(mins / 60) % 24;
+            const m = mins % 60;
+            return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
+          };
+          return fmt(start) + " - " + fmt(end);
+        };
+
+        const gridMap = {};
+        misHorarios.forEach((h) => {
+          gridMap[h.dia_semana + "_" + h.modulo] = h;
+        });
+
+        const diasActivos = Array.from(new Set(misHorarios.map((h) => h.dia_semana))).sort();
+
+        return (
+          <div className="space-y-6">
+            {/* Header de Resumen Horario */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold font-heading text-[#0D2A3E] flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-[#006384]" />
+                  Cronograma y Horarios Escolares Asignados
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Distribución semanal de materias y módulos frente a curso en CENS Nº 454
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setPrintType("HORARIOS");
+                    setPrintingModal(true);
+                  }}
+                  className="bg-[#006384] hover:bg-[#004f6b] text-white text-xs font-bold py-2.5 px-4 rounded-xl flex items-center gap-2 shadow-xs transition"
+                >
+                  <Printer className="w-4 h-4" /> Imprimir Mi Horario
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Tarjetas de Métricas */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-gray-500 uppercase block">Carga Horaria</span>
+                  <span className="text-xl font-extrabold text-[#0D2A3E]">{misHorarios.length} Módulos</span>
+                  <span className="text-[10px] text-gray-400 block">{(misHorarios.length * 40)} min. semanales</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#006384] flex items-center justify-center font-bold">
+                  <Clock className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-gray-500 uppercase block">Días de Clases</span>
+                  <span className="text-base font-bold text-[#0D2A3E]">
+                    {diasActivos.length > 0 ? diasActivos.map((d) => diasSemana[d]).join(", ") : "Sin asignar"}
+                  </span>
+                  <span className="text-[10px] text-gray-400 block">{diasActivos.length} día(s) por semana</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                  <Calendar className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-gray-500 uppercase block">Turno y Sede</span>
+                  <span className="text-base font-bold text-[#0D2A3E]">Turno Noche</span>
+                  <span className="text-[10px] text-gray-400 block">18:30 a 22:30 • CENS Nº 454</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* GRILLA SEMANAL VISUAL DEL DOCENTE */}
+            <div className="card p-0 bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+              <div className="bg-[#0D2A3E] text-white p-4 px-6 flex items-center justify-between">
+                <h4 className="text-xs font-bold tracking-wide">
+                  Grilla Semanal Unificada: <span className="text-[#F5C442]">{docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : docenteData.nombre}</span>
+                </h4>
+                <span className="text-[11px] font-bold bg-blue-900/60 text-blue-200 px-3 py-1 rounded-full border border-blue-700">
+                  Ciclo {cicloLectivo || 2026}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
+                    <tr>
+                      <th className="py-3 px-3 w-36 border-r border-gray-200">Módulo / Horario</th>
+                      {diasSemana.map((dia) => (
+                        <th key={dia} className="py-3 px-3 text-center border-r border-gray-200 min-w-[170px]">
+                          {dia}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {modulosList.map((mod, modIdx) => (
+                      <tr key={mod} className="hover:bg-gray-50/70">
+                        <td className="py-3 px-3 font-bold text-gray-700 bg-gray-50 border-r border-gray-200">
+                          <div>{mod}º Módulo</div>
+                          <div className="text-[10px] text-gray-400 font-normal">{getFranjaHoraria(modIdx)}</div>
+                        </td>
+
+                        {diasSemana.map((dia, diaIdx) => {
+                          const item = gridMap[diaIdx + "_" + mod];
+                          return (
+                            <td
+                              key={diaIdx}
+                              className={
+                                "p-2 border-r border-gray-200 text-center align-middle " +
+                                (item ? "bg-blue-50/60 font-semibold" : "text-gray-300")
+                              }
+                            >
+                              {item ? (
+                                <div className="bg-white p-2.5 rounded-xl border border-blue-200 shadow-xs space-y-1 text-left">
+                                  <div className="font-bold text-[#0D2A3E] text-xs leading-tight">
+                                    {item.materias?.nombre || "Asignatura"}
+                                  </div>
+                                  <div className="flex items-center justify-between gap-1 pt-0.5">
+                                    <span className="text-[10px] font-bold text-[#006384] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                      {item.cursos ? (item.cursos.anio + "º " + item.cursos.division) : "Curso"}
+                                    </span>
+                                    {item.aula && (
+                                      <span className="text-[9px] text-gray-500 font-mono">
+                                        {item.aula}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 font-normal">--</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* DETALLE CRONOLÓGICO POR DÍA */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+              <h4 className="text-sm font-bold font-heading text-[#0D2A3E] border-b pb-3">
+                Detalle Cronológico de Cursos y Materias
+              </h4>
+
+              {misHorarios.length === 0 ? (
+                <div className="text-center py-8 text-xs text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  No se registran horarios asignados en la grilla oficial para tus asignaturas.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {misHorarios.map((h, idx) => {
+                    const diaNombre = diasSemana[h.dia_semana] || "Día";
+                    const franja = getFranjaHoraria(h.modulo - 1);
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3 bg-[#F8FAFC] rounded-xl border border-gray-200 flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <span className="text-[11px] font-extrabold text-[#0D2A3E] block">
+                            {diaNombre} • {h.modulo}º Módulo ({franja})
+                          </span>
+                          <span className="text-xs text-gray-700 font-bold block mt-0.5">
+                            {h.materias?.nombre || "Asignatura"}
+                          </span>
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            Curso: {h.cursos ? (h.cursos.anio + "º " + h.cursos.division + " - " + (h.cursos.orientacion || "") + " (" + h.cursos.turno + ")") : "-"}
+                          </span>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-100 text-[#006384] shrink-0">
+                          {h.aula || "Sede CENS"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
       {/* RENDER MODAL DE IMPRESIÓN OFICIAL PARA EL DOCENTE */}
       {renderPrintingModal()}
 
