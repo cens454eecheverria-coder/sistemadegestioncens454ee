@@ -42,7 +42,9 @@ export default function TeacherPortalPage() {
       const { data: allMat } = await supabase.from("materias").select("*");
       setAdminMaterias(allMat || []);
 
-      if (isAdmin) {
+      
+
+  if (isAdmin) {
         if (allMat && allMat.length > 0) {
           const { data: cDataMap } = await supabase.from("cursos").select("*");
           const cMap = {};
@@ -98,23 +100,42 @@ export default function TeacherPortalPage() {
         } else { setMateriasAsignadas([]); setSelectedMateriaId(""); }
         const { data: ddjjData } = await supabase.from("ddjj_docentes").select("*").eq("docente_id", profile.id);
         if (ddjjData) { setCargosExternos(ddjjData); }
+        const { data: inasData } = await supabase.from("inasistencias_docentes").select("*").eq("docente_id", profile.id).order("fecha_inicio", { ascending: false });
+        if (inasData) { setMisInasistencias(inasData); }
       }
     } catch (e) { console.error(e); } finally { setLoadingProfile(false); }
   }
 
   async function loadAlumnosYCalificaciones(materiaId) {
+    if (!materiaId) {
+      setAlumnos([]);
+      setCalificacionesMap({});
+      return;
+    }
     try {
       const { data: mData } = await supabase.from("materias").select("curso_id").eq("id", materiaId).single();
       let realAlumnos = [];
       if (mData?.curso_id) {
-        const { data: acData } = await supabase.from("alumnos_cursos").select("estudiante_id, estudiantes(*)").eq("curso_id", mData.curso_id);
-        if (acData && acData.length > 0) {
-          realAlumnos = acData.map((item) => item.estudiantes).filter(Boolean);
+        // Consultar estudiantes pertenecientes únicamente a este curso
+        const { data: estByCurso } = await supabase
+          .from("estudiantes")
+          .select("*")
+          .eq("curso_id", mData.curso_id)
+          .neq("estado", "inactivo")
+          .neq("estado", "Pase")
+          .order("apellido");
+
+        if (estByCurso && estByCurso.length > 0) {
+          realAlumnos = estByCurso;
+        } else {
+          const { data: acData } = await supabase
+            .from("alumnos_cursos")
+            .select("estudiante_id, estudiantes(*)")
+            .eq("curso_id", mData.curso_id);
+          if (acData && acData.length > 0) {
+            realAlumnos = acData.map((item) => item.estudiantes).filter(Boolean);
+          }
         }
-      }
-      if (realAlumnos.length === 0) {
-        const { data: allEst } = await supabase.from("estudiantes").select("*").eq("estado", "activo").order("apellido");
-        realAlumnos = allEst || [];
       }
       setAlumnos(realAlumnos);
 
@@ -123,20 +144,31 @@ export default function TeacherPortalPage() {
       if (califData && califData.length > 0) {
         califData.forEach((c) => {
           initialMap[c.estudiante_id] = {
-            valoracion: c.valoracion || "TEA",
-            nota: c.nota || "",
-            intensificacion: c.intensificacion || "",
-            notaFinal: c.nota_final || "",
-            fecha: c.fecha || new Date().toISOString().split("T")[0]
+            id: c.id,
+            valoracion: c.evaluacion_nombre || "TEA",
+            nota: c.nota != null ? String(c.nota) : "",
+            intensificacion: c.nota_rie != null ? String(c.nota_rie) : "",
+            notaFinal: c.nota_final != null ? String(c.nota_final) : "",
+            fecha: c.created_at ? c.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
           };
         });
-      } else {
-        realAlumnos.forEach((a) => {
-          initialMap[a.id] = { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
-        });
       }
+
+      realAlumnos.forEach((a) => {
+        if (!initialMap[a.id]) {
+          initialMap[a.id] = {
+            valoracion: "TEA",
+            nota: "",
+            intensificacion: "",
+            notaFinal: "",
+            fecha: new Date().toISOString().split("T")[0]
+          };
+        }
+      });
       setCalificacionesMap(initialMap);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   const handleUpdateNotaField = (estId, field, val) => {
@@ -147,26 +179,51 @@ export default function TeacherPortalPage() {
   };
 
   const handleGuardarCalificaciones = async () => {
-    if (!selectedMateriaId) return;
+    if (!selectedMateriaId) {
+      Swal.fire("Atención", "Seleccione una materia antes de guardar.", "warning");
+      return;
+    }
+    if (alumnos.length === 0) {
+      Swal.fire("Atención", "No hay estudiantes en este curso para calificar.", "warning");
+      return;
+    }
     setSaving(true);
     try {
-      const records = Object.keys(calificacionesMap).map((estId) => ({
-        estudiante_id: estId,
-        materia_id: selectedMateriaId,
-        valoracion: calificacionesMap[estId].valoracion,
-        nota: calificacionesMap[estId].nota || null,
-        intensificacion: calificacionesMap[estId].intensificacion || null,
-        nota_final: calificacionesMap[estId].notaFinal || null,
-        fecha: calificacionesMap[estId].fecha || new Date().toISOString().split("T")[0]
-      }));
+      const records = alumnos.map((a) => {
+        const item = calificacionesMap[a.id] || {};
+        const notaNum = item.nota !== "" && item.nota != null && !isNaN(Number(item.nota)) ? Number(item.nota) : null;
+        const finalNum = item.notaFinal !== "" && item.notaFinal != null && !isNaN(Number(item.notaFinal)) ? Number(item.notaFinal) : null;
+        const rieNum = item.intensificacion !== "" && item.intensificacion != null && !isNaN(Number(item.intensificacion)) ? Number(item.intensificacion) : null;
+        return {
+          estudiante_id: a.id,
+          materia_id: selectedMateriaId,
+          evaluacion_nombre: item.valoracion || "TEA",
+          nota: notaNum,
+          nota_rie: rieNum,
+          nota_final: finalNum
+        };
+      });
 
-      if (records.length > 0) {
-        await supabase.from("calificaciones").upsert(records, { onConflict: "estudiante_id,materia_id" });
-      }
+      const estIds = alumnos.map((a) => a.id);
+      await supabase
+        .from("calificaciones")
+        .delete()
+        .eq("materia_id", selectedMateriaId)
+        .in("estudiante_id", estIds);
 
-      Swal.fire({ icon: "success", title: "Calificaciones Guardadas", text: "Se registraron las notas en Supabase.", timer: 1500, showConfirmButton: false });
+      const { error: insErr } = await supabase.from("calificaciones").insert(records);
+      if (insErr) throw insErr;
+
+      Swal.fire({
+        icon: "success",
+        title: "Calificaciones Guardadas",
+        text: `Se registraron las notas de ${records.length} estudiante(s) en Supabase.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+      await loadAlumnosYCalificaciones(selectedMateriaId);
     } catch (err) {
-      Swal.fire("Error", err.message, "error");
+      Swal.fire("Error al guardar", err.message, "error");
     } finally {
       setSaving(false);
     }
@@ -206,6 +263,269 @@ export default function TeacherPortalPage() {
         Swal.fire("Cargo Agregado", "Se incorporó a tu Declaración Jurada.", "success");
       }
     });
+  };
+
+  const renderPrintingModal = () => {
+    if (!printingModal) return null;
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 z-50 overflow-y-auto">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-6 relative border border-gray-200 my-auto">
+          {/* Header del modal (no se imprime) */}
+          <div className="flex justify-between items-center border-b pb-4 no-print">
+            <h3 className="text-lg font-bold text-[#0D2A3E] flex items-center gap-2">
+              <Printer className="w-5 h-5 text-[#006384]" />
+              {printType === "NOTAS"
+                ? "Vista Previa de Planilla Oficial - Calificaciones"
+                : "Vista Previa - Declaración Jurada de Cargos (DDJJ)"}
+            </h3>
+            <button
+              onClick={() => setPrintingModal(false)}
+              className="text-gray-400 hover:text-gray-600 font-bold p-1 rounded-lg hover:bg-gray-100 transition text-lg"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* CONTENEDOR DE IMPRESIÓN OFICIAL */}
+          <div id="printable-modal" className="border p-6 sm:p-8 rounded-xl bg-white space-y-6 text-gray-900 font-sans">
+            {printType === "NOTAS" ? (
+              <div className="space-y-6">
+                {/* Cabecera Oficial */}
+                <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
+                  <div>
+                    <h2 className="text-base font-extrabold text-gray-900 tracking-tight">
+                      CENS Nº 454 - ESTEBAN ECHEVERRÍA
+                    </h2>
+                    <p className="text-[11px] text-gray-700 font-semibold">
+                      Dirección General de Cultura y Educación - Región 5
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      Dirección de Educación de Adultos - Provincia de Buenos Aires
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block border border-gray-900 px-3 py-1 text-xs font-black uppercase tracking-wider bg-gray-50">
+                      PLANILLA OFICIAL DE CALIFICACIONES
+                    </span>
+                    <p className="text-[10px] text-gray-600 mt-1 font-medium">
+                      Fecha: {new Date().toLocaleDateString("es-AR")}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Metadatos del Curso y Materia */}
+                <div className="bg-gray-50 border border-gray-300 p-3.5 rounded-lg flex flex-wrap justify-between items-center gap-3 text-xs">
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Asignatura:</span>
+                    <strong className="text-sm text-gray-900">{materiaActual?.nombre || "Sin Asignatura"}</strong>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Curso y División:</span>
+                    <span className="font-bold text-gray-800">{materiaActual?.cursoNombre || "-"}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Ciclo Lectivo:</span>
+                    <span className="font-bold text-gray-800">{cicloLectivo || 2026}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-gray-600 uppercase text-[10px] block">Profesor a Cargo:</span>
+                    <span className="font-bold text-gray-800">
+                      {docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : (docenteData.nombre || "Docente")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tabla Oficial de Alumnos */}
+                <table className="w-full text-left text-xs border border-gray-900 border-collapse">
+                  <thead className="bg-gray-100 text-gray-900 font-bold border-b-2 border-gray-900">
+                    <tr>
+                      <th className="py-2 px-2 border-r border-gray-900 text-center w-8">#</th>
+                      <th className="py-2 px-3 border-r border-gray-900">ESTUDIANTE</th>
+                      <th className="py-2 px-2 border-r border-gray-900 text-center">DNI</th>
+                      <th className="py-2 px-2 text-center border-r border-gray-900">VALORACIÓN (1º CUATR.)</th>
+                      <th className="py-2 px-2 text-center border-r border-gray-900">NOTA</th>
+                      <th className="py-2 px-2 text-center border-r border-gray-900">INTENSIFICACIÓN</th>
+                      <th className="py-2 px-2 text-center border-r border-gray-900">NOTA FINAL</th>
+                      <th className="py-2 px-2 text-center">FECHA</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-900">
+                    {alumnos.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="py-6 text-center text-gray-500 italic">
+                          No hay estudiantes inscriptos en este curso.
+                        </td>
+                      </tr>
+                    ) : (
+                      alumnos.map((a, idx) => {
+                        const noteData = calificacionesMap[a.id] || {
+                          valoracion: "TEA",
+                          nota: "-",
+                          intensificacion: "-",
+                          notaFinal: "-",
+                          fecha: new Date().toISOString().split("T")[0]
+                        };
+                        return (
+                          <tr key={a.id} className="border-b border-gray-900">
+                            <td className="py-1.5 px-2 text-center border-r border-gray-900 font-medium text-[11px]">{idx + 1}</td>
+                            <td className="py-1.5 px-3 font-bold border-r border-gray-900">{a.apellido}, {a.nombre}</td>
+                            <td className="py-1.5 px-2 text-center border-r border-gray-900 text-[11px]">{a.dni || "-"}</td>
+                            <td className="py-1.5 px-2 text-center font-bold border-r border-gray-900">{noteData.valoracion || "-"}</td>
+                            <td className="py-1.5 px-2 text-center font-semibold border-r border-gray-900">{noteData.nota || "-"}</td>
+                            <td className="py-1.5 px-2 text-center border-r border-gray-900">{noteData.intensificacion || "-"}</td>
+                            <td className="py-1.5 px-2 text-center font-bold border-r border-gray-900">{noteData.notaFinal || "-"}</td>
+                            <td className="py-1.5 px-2 text-center text-[10px]">{noteData.fecha || "-"}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Bloque de Firmas Institucionales */}
+                <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>FIRMA Y ACLARACIÓN DEL PROFESOR/A</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">
+                      Prof. {docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : docenteData.nombre}
+                    </p>
+                  </div>
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>FIRMA DE DIRECCIÓN / SECRETARÍA</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">CENS Nº 454 - Esteban Echeverría</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Cabecera Oficial DDJJ */}
+                <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
+                  <div>
+                    <h2 className="text-base font-extrabold text-gray-900 tracking-tight">
+                      CENS Nº 454 - ESTEBAN ECHEVERRÍA
+                    </h2>
+                    <p className="text-[11px] text-gray-700 font-semibold">
+                      Dirección General de Cultura y Educación - Región 5
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      Régimen de Incompatibilidad Docente - Provincia de Buenos Aires
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block border border-gray-900 px-3 py-1 text-xs font-black uppercase tracking-wider bg-gray-50">
+                      DECLARACIÓN JURADA DE CARGOS (DDJJ)
+                    </span>
+                    <p className="text-[10px] text-gray-600 mt-1 font-medium">Ciclo Lectivo: {cicloLectivo || 2026}</p>
+                  </div>
+                </div>
+
+                {/* Datos del Docente */}
+                <div className="border border-gray-300 p-4 rounded-lg bg-gray-50 text-xs space-y-2">
+                  <h4 className="font-bold text-gray-800 uppercase text-[11px] border-b pb-1">1. Datos Personales del Docente</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                    <div><span className="text-[10px] text-gray-500 block">Apellido y Nombre:</span><strong>{docenteData.apellido ? (docenteData.apellido + ", " + docenteData.nombre) : docenteData.nombre}</strong></div>
+                    <div><span className="text-[10px] text-gray-500 block">DNI:</span><strong>{docenteData.dni || "-"}</strong></div>
+                    <div><span className="text-[10px] text-gray-500 block">CUIL:</span><strong>{docenteData.cuil || "-"}</strong></div>
+                    <div><span className="text-[10px] text-gray-500 block">Título:</span><strong>{docenteData.titulo || "Docente"}</strong></div>
+                  </div>
+                </div>
+
+                {/* Desempeño en CENS 454 */}
+                <div className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase text-gray-900">2. Cargos y Asignaturas en CENS Nº 454</h4>
+                  <table className="w-full text-left text-xs border border-gray-900 border-collapse">
+                    <thead className="bg-gray-100 text-gray-900 font-bold border-b border-gray-900">
+                      <tr>
+                        <th className="p-2 border-r border-gray-900">Asignatura</th>
+                        <th className="p-2 border-r border-gray-900">Curso / División</th>
+                        <th className="p-2 border-r border-gray-900 text-center">Horas</th>
+                        <th className="p-2 text-center">Situación de Revista</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-900">
+                      {materiasAsignadas.length === 0 ? (
+                        <tr><td colSpan="4" className="p-3 text-center text-gray-500 italic">No registra asignaturas vinculadas en CENS 454.</td></tr>
+                      ) : (
+                        materiasAsignadas.map((m) => (
+                          <tr key={m.id} className="border-b border-gray-900">
+                            <td className="p-2 border-r border-gray-900 font-bold">{m.nombre}</td>
+                            <td className="p-2 border-r border-gray-900">{m.cursoNombre}</td>
+                            <td className="p-2 border-r border-gray-900 text-center font-medium">4 Hs. Cát.</td>
+                            <td className="p-2 text-center font-semibold uppercase text-[11px]">CENS Nº 454</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Cargos Externos */}
+                <div className="space-y-2">
+                  <h4 className="font-bold text-xs uppercase text-gray-900">3. Cargos y Desempeño en Otros Establecimientos</h4>
+                  <table className="w-full text-left text-xs border border-gray-900 border-collapse">
+                    <thead className="bg-gray-100 text-gray-900 font-bold border-b border-gray-900">
+                      <tr>
+                        <th className="p-2 border-r border-gray-900">Establecimiento</th>
+                        <th className="p-2 border-r border-gray-900">Distrito</th>
+                        <th className="p-2 border-r border-gray-900">Cargo / Hs</th>
+                        <th className="p-2 text-center">Días y Horarios</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-900">
+                      {cargosExternos.length === 0 ? (
+                        <tr><td colSpan="4" className="p-3 text-center text-gray-500 italic">No declara cargos externos fuera de CENS 454.</td></tr>
+                      ) : (
+                        cargosExternos.map((cg, idx) => (
+                          <tr key={idx} className="border-b border-gray-900">
+                            <td className="p-2 border-r border-gray-900 font-bold">{cg.establecimiento_externo || cg.escuela}</td>
+                            <td className="p-2 border-r border-gray-900">{cg.dias_externos || cg.distrito || "-"}</td>
+                            <td className="p-2 border-r border-gray-900">{cg.cargo_externo || cg.cargo}</td>
+                            <td className="p-2 text-center font-mono text-[11px]">{cg.horario_externo || cg.horario}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Declaración Jurada Disclaimer */}
+                <p className="text-[11px] text-gray-700 leading-relaxed italic border-t pt-3">
+                  Declaro bajo juramento que los datos consignados en la presente son copia fiel y exacta de mi situación de revista docente activa, asumiendo la responsabilidad que establece la legislación provincial vigente.
+                </p>
+
+                {/* Firmas */}
+                <div className="pt-8 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-900">
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>FIRMA DEL DOCENTE DECLARANTE</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">DNI {docenteData.dni || "-"}</p>
+                  </div>
+                  <div className="border-t-2 border-gray-900 pt-2">
+                    <p>INTERVENCIÓN DIRECTIVA / SECRETARÍA</p>
+                    <p className="text-[10px] text-gray-600 font-normal mt-0.5">CENS Nº 454 - Esteban Echeverría</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Botones de acción (no se imprimen) */}
+          <div className="flex justify-end gap-3 border-t pt-4 no-print">
+            <button
+              onClick={() => setPrintingModal(false)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl transition"
+            >
+              Cerrar
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="bg-[#006384] hover:bg-[#004f6b] text-white font-bold text-xs py-2.5 px-6 rounded-xl flex items-center gap-2 shadow-sm transition"
+            >
+              <Printer className="w-4 h-4" /> Imprimir Documento / Guardar PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const materiaActual = materiasAsignadas.find((m) => m.id === selectedMateriaId) || materiasAsignadas[0];
@@ -281,51 +601,7 @@ export default function TeacherPortalPage() {
           <div className="card p-8 bg-white text-center space-y-3"><AlertCircle className="w-8 h-8 text-amber-500 mx-auto" /><h4 className="font-bold text-sm text-[#0D2A3E]">Seleccione un curso y asignatura</h4><p className="text-xs text-gray-500">No hay materias seleccionadas actualmente para calificar.</p></div>
         )}
 
-        {printingModal && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full p-8 space-y-6 relative border border-gray-200">
-              <div className="flex justify-between items-center border-b pb-4"><h3 className="text-lg font-bold text-[#0D2A3E]">Vista Previa de Impresión Oficial - Calificaciones</h3><button onClick={() => setPrintingModal(false)} className="text-gray-400 font-bold">✕</button></div>
-              <div className="border p-8 rounded-xl bg-white space-y-6">
-                <div className="border-b-2 border-gray-900 pb-4 flex justify-between items-start">
-                  <div><h2 className="text-lg font-extrabold text-gray-900">CENS Nº 454 - ESTEBAN ECHEVERRÍAÍA</h2><p className="text-[11px] text-gray-600 font-medium">Dirección General de Cultura y Educación - Provincia de Buenos Aires</p></div>
-                  <div className="text-right"><h3 className="text-xs font-bold text-gray-800 uppercase">PLANILLA DE CALIFICACIONES</h3><p className="text-[10px] text-gray-500 mt-1">Fecha: {new Date().toLocaleDateString("es-AR")}</p></div>
-                </div>
-                <div className="flex justify-between items-end border-b pb-3">
-                  <div><h3 className="text-xl font-black text-[#0D2A3E]">CENS 454 Calificaciones</h3><p className="text-[10px] font-bold text-blue-800 uppercase mt-0.5">MODO: CICLO ACTIVO (2026)</p></div>
-                  <div className="text-right"><h4 className="text-sm font-bold text-gray-900">{materiaActual?.nombre || "Sin Asignatura"}</h4><p className="text-xs text-gray-600 font-medium">Curso: {materiaActual?.cursoNombre || "-"} (Ciclo 2026)</p></div>
-                </div>
-                <table className="w-full text-left text-xs border border-gray-900 border-collapse">
-                  <thead className="bg-gray-100 text-gray-900 font-bold border-b border-gray-900">
-                    <tr><th className="py-2 px-3 border-r border-gray-900">ESTUDIANTE</th><th className="py-2 px-3 text-center border-r border-gray-900">VALORACIÓN</th><th className="py-2 px-3 text-center border-r border-gray-900">NOTA</th><th className="py-2 px-3 text-center border-r border-gray-900">INTENSIFICACIÓN</th><th className="py-2 px-3 text-center border-r border-gray-900">NOTA FINAL</th><th className="py-2 px-3 text-center">FECHA</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-900">
-                    {alumnos.map((a) => {
-                      const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "-", fecha: new Date().toISOString().split("T")[0] };
-                      return (
-                        <tr key={a.id} className="border-b border-gray-900">
-                          <td className="py-2 px-3 font-bold border-r border-gray-900">{a.apellido}, {a.nombre}</td>
-                          <td className="py-2 px-3 text-center font-bold border-r border-gray-900">{noteData.valoracion}</td>
-                          <td className="py-2 px-3 text-center border-r border-gray-900">{noteData.nota || "-"}</td>
-                          <td className="py-2 px-3 text-center border-r border-gray-900">{noteData.intensificacion || "-"}</td>
-                          <td className="py-2 px-3 text-center border-r border-gray-900">{noteData.notaFinal || "-"}</td>
-                          <td className="py-2 px-3 text-center">{noteData.fecha}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs font-bold text-gray-800">
-                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DEL PROFESOR</p></div>
-                  <div className="border-t border-gray-900 pt-2"><p>FIRMA DE DIRECCIÓN? INSTITUCIONAL</p><p className="text-[10px] text-gray-500 font-normal mt-0.5">CENS 454 ESTEBAN ECHEVERRÍAÍA</p></div>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3 border-t pt-4">
-                <button onClick={() => setPrintingModal(false)} className="bg-gray-100 text-gray-700 font-bold text-xs py-2.5 px-5 rounded-xl">Cerrar</button>
-                <button onClick={() => window.print()} className="bg-[#006384] text-white font-bold text-xs py-2.5 px-6 rounded-xl flex items-center gap-2"><Printer className="w-4 h-4" /> Imprimir Documento</button>
-              </div>
-            </div>
-          </div>
-        )}
+        {renderPrintingModal()}
       </div>
     );
   }
@@ -498,19 +774,27 @@ export default function TeacherPortalPage() {
                       <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACION</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACION</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
-                      {alumnos.map((a) => {
-                        const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
-                        return (
-                          <tr key={a.id} className="hover:bg-gray-50/80">
-                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
-                          </tr>
-                        );
-                      })}
+                      {alumnos.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="py-8 text-center text-gray-400">
+                            No hay estudiantes asignados en este curso ({materiaActual?.cursoNombre || "seleccionado"}).
+                          </td>
+                        </tr>
+                      ) : (
+                        alumnos.map((a) => {
+                          const noteData = calificacionesMap[a.id] || { valoracion: "TEA", nota: "", intensificacion: "", notaFinal: "", fecha: new Date().toISOString().split("T")[0] };
+                          return (
+                            <tr key={a.id} className="hover:bg-gray-50/80">
+                              <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
+                              <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
+                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
+                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
+                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
+                              <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -537,6 +821,35 @@ export default function TeacherPortalPage() {
           )}
         </div>
       )}
+      {/* RENDER MODAL DE IMPRESIÓN OFICIAL PARA EL DOCENTE */}
+      {renderPrintingModal()}
+
+      {/* ESTILOS GLOBALES DE IMPRESIÓN (SOLO SE IMPRIME EL DOCUMENTO) */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-modal,
+          #printable-modal * {
+            visibility: visible !important;
+          }
+          #printable-modal {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 10mm !important;
+            background: white !important;
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
