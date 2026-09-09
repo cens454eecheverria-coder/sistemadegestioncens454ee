@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
 import { generateAnexo4SalidaDocx, generateAnexo5SalidaDocx } from '@/lib/generateSalidasDocx';
-import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar, Filter, User } from "lucide-react";
+import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar, Filter, User, Pencil } from "lucide-react";
 
 export default function SecretariaPanelPage() {
   const { role } = useAuth();
@@ -571,24 +571,27 @@ export default function SecretariaPanelPage() {
 
   const handleToggleEstadoDocente = async (docente) => {
     try {
-      const isCurrentlyInactive = docente.estado === "inactivo" || docente.activo === false;
-      const nuevoEstado = isCurrentlyInactive ? "activo" : "inactivo";
-      const nuevoActivoBool = nuevoEstado === "activo";
+      const isCurrentlyInactive = docente.activo === false;
+      const nuevoActivoBool = isCurrentlyInactive; // Si era inactivo (false), se reactiva a true; si era activo, se inactiva a false
+      const nuevoEstadoTexto = nuevoActivoBool ? "Activo" : "Inactivo";
       const accionText = isCurrentlyInactive ? "reactivar" : "dar de baja / inactivar";
+      const accionTitulo = isCurrentlyInactive ? "Reactivar Docente" : "Dar de Baja / Inactivar Docente";
       
       const confirm = await Swal.fire({
-        title: (isCurrentlyInactive ? "Reactivar" : "Dar de Baja") + " Docente",
-        text: "¿Deseas " + accionText + " a Prof. " + docente.apellido + ", " + docente.nombre + "?",
+        title: accionTitulo,
+        text: `¿Deseas ${accionText} al/la docente Prof. ${docente.apellido}, ${docente.nombre}?`,
         icon: "question",
         showCancelButton: true,
-        confirmButtonText: "Sí, " + (isCurrentlyInactive ? "Reactivar" : "Dar de Baja"),
+        confirmButtonColor: nuevoActivoBool ? "#006384" : "#d97706",
+        confirmButtonText: `Sí, ${isCurrentlyInactive ? "Reactivar" : "Dar de Baja"}`,
         cancelButtonText: "Cancelar"
       });
 
       if (confirm.isConfirmed) {
+        // En la base de datos la columna es exclusivamente 'activo' (boolean)
         const { error } = await supabase
           .from("docentes")
-          .update({ estado: nuevoEstado, activo: nuevoActivoBool })
+          .update({ activo: nuevoActivoBool })
           .eq("id", docente.id);
         
         if (error) throw error;
@@ -596,8 +599,8 @@ export default function SecretariaPanelPage() {
         Swal.fire({
           icon: "success",
           title: "Estado Actualizado",
-          text: "El docente " + docente.apellido + " ahora está " + nuevoEstado + ".",
-          timer: 1500,
+          text: `El/la docente Prof. ${docente.apellido}, ${docente.nombre} ahora está ${nuevoEstadoTexto}.`,
+          timer: 1800,
           showConfirmButton: false
         });
         await loadData();
@@ -611,15 +614,27 @@ export default function SecretariaPanelPage() {
     try {
       const confirm = await Swal.fire({
         title: "Eliminar Legajo Docente",
-        text: "¿Deseas eliminar definitivamente el legajo del docente Prof. " + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución." + docente.apellido + ", " + docente.nombre + "? Esta acción eliminará el registro de la institución.",
+        text: `¿Deseas eliminar definitivamente el legajo del docente Prof. ${docente.apellido}, ${docente.nombre}? Esta acción eliminará permanentemente su registro de la institución y sus materias asignadas.`,
         icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: "#d33",
+        confirmButtonColor: "#dc2626",
         confirmButtonText: "Sí, Eliminar Definitivamente",
         cancelButtonText: "Cancelar"
       });
 
       if (confirm.isConfirmed) {
+        // Limpieza defensiva de relaciones vinculadas para garantizar la eliminación sin bloqueos de integridad referencial
+        try {
+          await supabase.from("docente_materia").delete().eq("docente_id", docente.id);
+          await supabase.from("ddjj_docentes").delete().eq("docente_id", docente.id);
+          await supabase.from("horas_n_frente").delete().eq("docente_id", docente.id);
+          await supabase.from("inasistencias_docentes").delete().eq("docente_id", docente.id);
+          await supabase.from("horarios").update({ docente_id: null }).eq("docente_id", docente.id);
+          await supabase.from("salidas_educativas").update({ docente_titular_id: null }).eq("docente_titular_id", docente.id);
+        } catch (cleanErr) {
+          console.warn("Aviso al desvincular relaciones del docente:", cleanErr);
+        }
+
         const { error } = await supabase
           .from("docentes")
           .delete()
@@ -627,12 +642,112 @@ export default function SecretariaPanelPage() {
 
         if (error) throw error;
 
-        Swal.fire("Eliminado", "Se eliminó el legajo docente con éxito.", "success");
+        Swal.fire({
+          icon: "success",
+          title: "Docente Eliminado",
+          text: `Se eliminó el legajo del docente Prof. ${docente.apellido}, ${docente.nombre} con éxito.`,
+          timer: 1800,
+          showConfirmButton: false
+        });
         await loadData();
       }
     } catch (err) {
       Swal.fire("Error", err.message, "error");
     }
+  };
+
+  const handleEditarDocenteModal = (docente) => {
+    Swal.fire({
+      title: "Modificar Legajo Docente",
+      html: `
+        <div style="text-align:left; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">Apellido *</label>
+              <input id="swal-doc-apellido" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.apellido || ''}" placeholder="Apellido">
+            </div>
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">Nombre *</label>
+              <input id="swal-doc-nombre" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.nombre || ''}" placeholder="Nombre">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">DNI *</label>
+              <input id="swal-doc-dni" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.dni || ''}" placeholder="DNI">
+            </div>
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">CUIL</label>
+              <input id="swal-doc-cuil" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.cuil || ''}" placeholder="20-xxxxxxxx-x">
+            </div>
+          </div>
+          <div>
+            <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">Título Principal</label>
+            <input id="swal-doc-titulo" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.titulo || ''}" placeholder="Título">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">Email</label>
+              <input id="swal-doc-email" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.email || ''}" placeholder="correo@abc.gob.ar">
+            </div>
+            <div>
+              <label style="font-weight:600; display:block; margin-bottom:2px; color:#0D2A3E;">Teléfono</label>
+              <input id="swal-doc-telefono" class="swal2-input" style="margin:0; width:100%; height:34px; font-size:12px;" value="${docente.telefono || ''}" placeholder="11 xxxx-xxxx">
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonColor: "#006384",
+      confirmButtonText: "Guardar Cambios",
+      cancelButtonText: "Cancelar",
+      preConfirm: () => {
+        const apellido = document.getElementById("swal-doc-apellido")?.value?.trim();
+        const nombre = document.getElementById("swal-doc-nombre")?.value?.trim();
+        const dni = document.getElementById("swal-doc-dni")?.value?.trim();
+        const cuil = document.getElementById("swal-doc-cuil")?.value?.trim();
+        const titulo = document.getElementById("swal-doc-titulo")?.value?.trim();
+        const email = document.getElementById("swal-doc-email")?.value?.trim();
+        const telefono = document.getElementById("swal-doc-telefono")?.value?.trim();
+
+        if (!apellido || !nombre || !dni) {
+          Swal.showValidationMessage("Apellido, Nombre y DNI son obligatorios");
+          return false;
+        }
+
+        return {
+          apellido,
+          nombre,
+          dni,
+          cuil: cuil || null,
+          titulo: titulo || "Profesor/a Secundario",
+          email: email || null,
+          telefono: telefono || null
+        };
+      }
+    }).then(async (result) => {
+      if (result.isConfirmed && result.value) {
+        try {
+          const { error } = await supabase
+            .from("docentes")
+            .update(result.value)
+            .eq("id", docente.id);
+
+          if (error) throw error;
+
+          Swal.fire({
+            icon: "success",
+            title: "Legajo Actualizado",
+            text: `Se actualizaron los datos del docente Prof. ${result.value.apellido}, ${result.value.nombre}.`,
+            timer: 1800,
+            showConfirmButton: false
+          });
+          await loadData();
+        } catch (err) {
+          Swal.fire("Error", err.message, "error");
+        }
+      }
+    });
   };
 
   const handleCrearDocenteModalCompleto = async (e) => {
@@ -1846,7 +1961,11 @@ export default function SecretariaPanelPage() {
                 <label className="block text-xs font-semibold text-gray-700 mb-1">3. Docente a Asignar:</label>
                 <select value={selectedDocenteVinculo} onChange={(e) => setSelectedDocenteVinculo(e.target.value)} className="field-soft text-xs font-semibold">
                   <option value="">-- Seleccionar Docente --</option>
-                  {docentes.map((d) => (<option key={d.id} value={d.id}>Prof. {d.apellido}, {d.nombre}</option>))}
+                  {docentes.map((d) => (
+                    <option key={d.id} value={d.id} disabled={d.activo === false}>
+                      Prof. {d.apellido}, {d.nombre}{d.activo === false ? " (Inactivo / De baja)" : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1873,7 +1992,7 @@ export default function SecretariaPanelPage() {
                       <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay docentes registrados. Haz clic en "+ Registrar Docente".</td></tr>
                     ) : (
                       filteredDocentes.map((d) => {
-                        const isInactive = d.estado === "inactivo" || d.activo === false;
+                        const isInactive = d.activo === false;
                         return (
                           <tr key={d.id} className="hover:bg-[#F4FAFF] transition-colors">
                             <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{d.apellido}, {d.nombre}</td>
@@ -1891,9 +2010,17 @@ export default function SecretariaPanelPage() {
                               <div className="flex items-center justify-center gap-2">
                                 <button
                                   type="button"
+                                  onClick={() => handleEditarDocenteModal(d)}
+                                  className="text-[11px] font-bold py-1 px-2.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all inline-flex items-center gap-1"
+                                  title="Modificar legajo docente"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" /> Modificar
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={() => handleToggleEstadoDocente(d)}
                                   className={
-                                    "text-[11px] font-bold py-1 px-3 rounded-lg border transition-all " +
+                                    "text-[11px] font-bold py-1 px-2.5 rounded-lg border transition-all " +
                                     (isInactive
                                       ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
                                       : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100")
@@ -1905,7 +2032,7 @@ export default function SecretariaPanelPage() {
                                   type="button"
                                   onClick={() => handleEliminarDocenteModal(d)}
                                   className="text-[11px] font-bold py-1 px-2.5 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all inline-flex items-center gap-1"
-                                  title="Eliminar legajo"
+                                  title="Eliminar legajo definitivamente"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" /> Eliminar
                                 </button>
