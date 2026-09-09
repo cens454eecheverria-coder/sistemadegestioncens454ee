@@ -67,8 +67,26 @@ export default function TeacherPortalPage() {
         const { data: dData } = await supabase.from("docentes").select("*").eq("email", user.email).single();
         realDocente = dData;
       }
+      if (!realDocente && user?.dni) {
+        const { data: dData } = await supabase.from("docentes").select("*").eq("dni", user.dni).single();
+        realDocente = dData;
+      }
       if (!realDocente && dDataList && dDataList.length > 0) {
-        realDocente = dDataList[0];
+        realDocente = dDataList.find((d) => d.activo !== false);
+      }
+
+      if (realDocente && realDocente.activo === false && !isAdmin) {
+        Swal.fire({
+          icon: "error",
+          title: "Acceso Denegado",
+          text: "El legajo docente se encuentra inactivo o dado de baja. Comuníquese con la Secretaría de la institución.",
+          confirmButtonColor: "#006384"
+        }).then(() => {
+          logout();
+          router.push("/login");
+        });
+        setLoadingProfile(false);
+        return;
       }
 
       const profile = {

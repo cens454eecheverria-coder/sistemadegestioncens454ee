@@ -73,10 +73,16 @@ export function AuthProvider({ children }) {
         const now = Date.now();
 
         if (lastActivityTime && now - lastActivityTime > INACTIVITY_TIMEOUT_MS) {
-          // La sesión venci? mientras la solapa estuvo cerrada o inactiva
           logout("inactivity");
         } else {
           setUser(parsedUser);
+          if (parsedUser.role === "profesor" && parsedUser.id) {
+            supabase.from("docentes").select("activo").eq("id", parsedUser.id).single().then(({ data: docCheck }) => {
+              if (docCheck && docCheck.activo === false) {
+                logout();
+              }
+            });
+          }
         }
       } catch (e) {
         console.error("Error al restaurar sesión:", e);
@@ -145,7 +151,12 @@ export function AuthProvider({ children }) {
 
       if (!realDocente) {
         setLoading(false);
-        throw new Error("El CUIL o DNI ingresado (" + cuilVal + ") no se encuentra registrado en el cuerpo docente de la instituci?n.");
+        throw new Error("El CUIL o DNI ingresado (" + cuilVal + ") no se encuentra registrado en el cuerpo docente de la institución.");
+      }
+
+      if (realDocente.activo === false) {
+        setLoading(false);
+        throw new Error("Acceso denegado: El legajo docente se encuentra inactivo o dado de baja. Comuníquese con la Secretaría de la institución.");
       }
 
       userData = {

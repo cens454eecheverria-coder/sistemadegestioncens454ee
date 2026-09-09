@@ -588,7 +588,17 @@ export default function SecretariaPanelPage() {
       });
 
       if (confirm.isConfirmed) {
-        // En la base de datos la columna es exclusivamente 'activo' (boolean)
+        if (!nuevoActivoBool) {
+          // Si pasa a INACTIVO / BAJA: Desvincular de todas las materias y horarios
+          try {
+            await supabase.from("docente_materia").delete().eq("docente_id", docente.id);
+            await supabase.from("horarios").update({ docente_id: null }).eq("docente_id", docente.id);
+          } catch (unlinkErr) {
+            console.warn("Aviso al desvincular materias del docente inactivo:", unlinkErr);
+          }
+        }
+
+        // Actualizar el estado en docentes (conservando sus datos de legajo histórico)
         const { error } = await supabase
           .from("docentes")
           .update({ activo: nuevoActivoBool })
@@ -599,8 +609,10 @@ export default function SecretariaPanelPage() {
         Swal.fire({
           icon: "success",
           title: "Estado Actualizado",
-          text: `El/la docente Prof. ${docente.apellido}, ${docente.nombre} ahora está ${nuevoEstadoTexto}.`,
-          timer: 1800,
+          text: nuevoActivoBool
+            ? `El/la docente Prof. ${docente.apellido}, ${docente.nombre} fue reactivado con éxito.`
+            : `El/la docente Prof. ${docente.apellido}, ${docente.nombre} fue dado de baja / inactivado, desvinculado de sus materias y bloqueado su acceso al sistema.`,
+          timer: 2200,
           showConfirmButton: false
         });
         await loadData();

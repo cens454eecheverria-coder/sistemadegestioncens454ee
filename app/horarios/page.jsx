@@ -48,10 +48,10 @@ export default function HorariosPage() {
   async function loadCursosYDocentes() {
     try {
       const { data: cData } = await supabase.from('cursos').select('*').order('anio');
-      const { data: dData } = await supabase.from('docentes').select('*').order('apellido');
+      const { data: dData } = await supabase.from('docentes').select('*').neq('activo', false).order('apellido');
       const { data: dmData } = await supabase
         .from('docente_materia')
-        .select('*, docentes(id, nombre, apellido), materias(id, nombre, curso_id)');
+        .select('*, docentes(id, nombre, apellido, activo), materias(id, nombre, curso_id)');
 
       setCursos(cData || []);
       setDocentes(dData || []);
@@ -62,7 +62,7 @@ export default function HorariosPage() {
           if (!dmMap[dm.materia_id]) {
             dmMap[dm.materia_id] = [];
           }
-          if (dm.docentes) {
+          if (dm.docentes && dm.docentes.activo !== false) {
             dmMap[dm.materia_id].push({
               docenteId: dm.docente_id,
               nombre: "Prof. " + dm.docentes.apellido + ", " + dm.docentes.nombre,
