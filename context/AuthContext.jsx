@@ -19,8 +19,13 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async (reason = null) => {
     setUser(null);
-    localStorage.removeItem("cens454_user");
-    localStorage.removeItem("cens454_last_activity");
+    try {
+      localStorage.removeItem("cens454_user");
+      localStorage.removeItem("cens454_last_activity");
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn("Storage removal notice:", e);
+    }
 
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -115,6 +120,11 @@ export function AuthProvider({ children }) {
 
   const login = async (roleType, credentials) => {
     setLoading(true);
+    try {
+      localStorage.removeItem("cens454_user");
+      localStorage.removeItem("cens454_last_activity");
+      sessionStorage.clear();
+    } catch (e) {}
     let userData = null;
 
     if (roleType === "admin" || roleType === "preceptor" || roleType === "staff") {
@@ -139,14 +149,42 @@ export function AuthProvider({ children }) {
         setLoading(false);
         throw new Error("Debe ingresar un número de CUIL o DNI.");
       }
-      const cleanCuil = cuilVal.replace(/[^0-9]/g, "");
+      const cleanInput = cuilVal.replace(/[^0-9]/g, "");
+      if (!cleanInput) {
+        setLoading(false);
+        throw new Error("El formato de CUIL o DNI ingresado no es válido.");
+      }
+
       let realDocente = null;
-      const { data: dList } = await supabase.from("docentes").select("*");
+      const { data: dList, error: dListErr } = await supabase.from("docentes").select("*");
+      if (dListErr) {
+        setLoading(false);
+        throw new Error("Error al consultar el cuerpo docente institucional.");
+      }
+
       if (dList && dList.length > 0) {
-        realDocente = dList.find((d) =>
-          (d.cuil && d.cuil.replace(/[^0-9]/g, "") === cleanCuil) ||
-          (d.dni && d.dni.replace(/[^0-9]/g, "") === cleanCuil)
-        );
+        realDocente = dList.find((d) => {
+          const cleanDocCuil = (d.cuil || "").replace(/[^0-9]/g, "");
+          const cleanDocDni = (d.dni || "").replace(/[^0-9]/g, "");
+
+          // 1. Coincidencia directa con CUIL o DNI limpio
+          if (cleanDocCuil && cleanDocCuil === cleanInput) return true;
+          if (cleanDocDni && cleanDocDni === cleanInput) return true;
+
+          // 2. Si el usuario ingresó DNI de 7 u 8 dígitos, comparar con parte interna de CUIL (XX-DNI-Y)
+          if (cleanInput.length >= 7 && cleanInput.length <= 8) {
+            if (cleanDocCuil.length === 11 && cleanDocCuil.slice(2, -1) === cleanInput) return true;
+            if (cleanDocDni.length === 11 && cleanDocDni.slice(2, -1) === cleanInput) return true;
+          }
+
+          // 3. Si el usuario ingresó CUIL de 11 dígitos y el docente tiene DNI de 7 u 8 dígitos
+          if (cleanInput.length === 11) {
+            const inputDniPart = cleanInput.slice(2, -1);
+            if (cleanDocDni && cleanDocDni === inputDniPart) return true;
+          }
+
+          return false;
+        });
       }
 
       if (!realDocente) {
@@ -162,9 +200,11 @@ export function AuthProvider({ children }) {
       userData = {
         id: realDocente.id,
         nombre: "Prof. " + realDocente.apellido + ", " + realDocente.nombre,
+        apellido: realDocente.apellido,
+        nombreDocente: realDocente.nombre,
         role: "profesor",
         cuil: realDocente.cuil || cuilVal,
-        dni: realDocente.dni || cleanCuil,
+        dni: realDocente.dni || cleanInput,
         email: realDocente.email || "",
       };
     } else if (roleType === "estudiante") {

@@ -1,14 +1,22 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { BookOpen, User, Calendar, CheckCircle2, Clock, Award, AlertCircle, Filter } from 'lucide-react';
 
 export default function StudentPortalPage() {
-  const { user, role, cicloLectivo } = useAuth();
+  const router = useRouter();
+  const { user, role, cicloLectivo, loading: authLoading } = useAuth();
 
-  const isStaff = role === 'admin' || role === 'preceptor' || role === 'profesor' || !user?.dni;
+  const isStaff = !!user && (role === 'admin' || role === 'preceptor' || role === 'profesor');
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/login');
+    }
+  }, [user, authLoading, router]);
 
   const [cursos, setCursos] = useState([]);
   const [selectedCursoId, setSelectedCursoId] = useState('todos');
@@ -22,12 +30,13 @@ export default function StudentPortalPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading || !user) return;
     if (isStaff) {
       loadCursosYEstudiantes();
     } else if (user?.dni) {
       loadStudentByDni(user.dni);
     }
-  }, [user, cicloLectivo]);
+  }, [user, cicloLectivo, isStaff, authLoading]);
 
   async function loadCursosYEstudiantes() {
     setLoading(true);
@@ -177,6 +186,17 @@ export default function StudentPortalPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-[#006384] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-gray-500">
+          {authLoading ? "Cargando boletín..." : "Redirigiendo al inicio de sesión..."}
+        </p>
+      </div>
+    );
   }
 
   return (

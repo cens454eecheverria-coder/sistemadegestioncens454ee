@@ -3,12 +3,23 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { User, BookOpen, Calendar, FileText, Printer, LogOut, Plus, Save, Clock, AlertCircle, ShieldCheck, Filter } from "lucide-react";
 
 export default function TeacherPortalPage() {
-  const { user, role, cicloLectivo, logout } = useAuth();
+  const router = useRouter();
+  const { user, role, cicloLectivo, logout, loading: authLoading } = useAuth();
   const isAdmin = role === "admin";
+  const isProfesor = role === "profesor";
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user || (!isAdmin && !isProfesor)) {
+        router.replace("/login");
+      }
+    }
+  }, [user, role, authLoading, isAdmin, isProfesor, router]);
 
   const [activeTab, setActiveTab] = useState("ficha");
 
@@ -34,7 +45,19 @@ export default function TeacherPortalPage() {
   useEffect(() => { if (selectedMateriaId) { loadAlumnosYCalificaciones(selectedMateriaId); } }, [selectedMateriaId]);
 
   async function loadDocenteDataAndMaterias() {
+    if (authLoading || !user || (!isAdmin && !isProfesor)) {
+      setLoadingProfile(false);
+      return;
+    }
     setLoadingProfile(true);
+    setDocenteData({ id: "", nombre: "", apellido: "", cuil: "", dni: "", genero: "Femenino", email: "", telefono: "", fechaNac: "", titulo: "" });
+    setMateriasAsignadas([]);
+    setSelectedMateriaId("");
+    setCargosExternos([]);
+    setAlumnos([]);
+    setCalificacionesMap({});
+    setMisInasistencias([]);
+    setMisHorarios([]);
     try {
       const { data: cData } = await supabase.from("cursos").select("*").order("anio");
       setAdminCursos(cData || []);
@@ -58,21 +81,37 @@ export default function TeacherPortalPage() {
         return;
       }
 
+      // Identificar al docente autenticado estrictamente por su id único
       let realDocente = null;
-      if (user?.cuil) {
-        const { data: dData } = await supabase.from("docentes").select("*").eq("cuil", user.cuil).single();
-        realDocente = dData;
+      if (user?.id) {
+        realDocente = dDataList?.find((d) => d.id === user.id);
+        if (!realDocente) {
+          const { data: dData } = await supabase.from("docentes").select("*").eq("id", user.id).maybeSingle();
+          realDocente = dData;
+        }
       }
-      if (!realDocente && user?.email) {
-        const { data: dData } = await supabase.from("docentes").select("*").eq("email", user.email).single();
-        realDocente = dData;
+      if (!realDocente && user?.cuil) {
+        const cleanUserCuil = user.cuil.replace(/[^0-9]/g, "");
+        realDocente = dDataList?.find((d) => (d.cuil || "").replace(/[^0-9]/g, "") === cleanUserCuil);
       }
       if (!realDocente && user?.dni) {
-        const { data: dData } = await supabase.from("docentes").select("*").eq("dni", user.dni).single();
-        realDocente = dData;
+        const cleanUserDni = user.dni.replace(/[^0-9]/g, "");
+        realDocente = dDataList?.find((d) => (d.dni || "").replace(/[^0-9]/g, "") === cleanUserDni);
       }
-      if (!realDocente && dDataList && dDataList.length > 0) {
-        realDocente = dDataList.find((d) => d.activo !== false);
+
+      // NUNCA asignar dDataList[0] como fallback si no se encontró al docente
+      if (!realDocente) {
+        Swal.fire({
+          icon: "error",
+          title: "Sesión no identificada",
+          text: "No se encontró el legajo correspondiente al docente ingresado. Inicie sesión nuevamente con su DNI o CUIL.",
+          confirmButtonColor: "#006384"
+        }).then(() => {
+          logout();
+          router.push("/login");
+        });
+        setLoadingProfile(false);
+        return;
       }
 
       if (realDocente && realDocente.activo === false && !isAdmin) {
@@ -643,6 +682,24 @@ export default function TeacherPortalPage() {
       </div>
     );
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-[#006384] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-gray-500">Verificando credenciales docentes...</p>
+      </div>
+    );
+  }
+
+  if (!user || (!isAdmin && !isProfesor)) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-[#006384] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-gray-500">Redirigiendo al inicio de sesión...</p>
+      </div>
+    );
+  }
 
   const materiaActual = materiasAsignadas.find((m) => m.id === selectedMateriaId) || materiasAsignadas[0];
   const filteredAdminMaterias = materiasAsignadas.filter((m) => !selectedAdminCursoId || m.curso_id === selectedAdminCursoId);
