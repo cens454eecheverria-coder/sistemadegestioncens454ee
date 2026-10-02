@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { BookOpen, User, Calendar, CheckCircle2, Clock, Award, AlertCircle, Filter } from 'lucide-react';
+import { BookOpen, User, Calendar, CheckCircle2, Clock, Award, AlertCircle, Filter, Globe, MapPin } from 'lucide-react';
 
 export default function StudentPortalPage() {
   const router = useRouter();
@@ -104,6 +104,8 @@ export default function StudentPortalPage() {
         nombre: user.nombre?.split(', ')[1] || user.nombre || 'Estudiante',
         apellido: user.nombre?.split(', ')[0] || '',
         email: user.email || '',
+        nacionalidad: user.nacionalidad || 'Argentina',
+        lugar_nacimiento: user.lugar_nacimiento || user.ciudad_nacimiento || null,
       };
 
       await loadStudentDetails(currentEst);
@@ -246,22 +248,38 @@ export default function StudentPortalPage() {
       )}
 
       {/* Header Boletín */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#0D2A3E] to-[#006384] text-white p-6 rounded-2xl shadow-md border border-white/10">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-[#F5C442] text-[#0D2A3E] flex items-center justify-center font-bold text-xl font-heading shadow-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 bg-gradient-to-r from-[#0D2A3E] via-[#08334d] to-[#006384] text-white p-6 rounded-2xl shadow-md border border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-[#F5C442] text-[#0D2A3E] flex items-center justify-center font-bold text-xl font-heading shadow-md shrink-0">
             {estudianteInfo?.nombre?.charAt(0) || 'E'}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold font-heading">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl font-bold font-heading text-white tracking-tight">
               {estudianteInfo?.apellido ? estudianteInfo.apellido + ", " + estudianteInfo.nombre : (estudianteInfo?.nombre || 'Seleccione un estudiante')}
             </h1>
-            <p className="text-xs text-[#F5C442] font-semibold">
-              DNI: {estudianteInfo?.dni || '-'} | CENS Nº 454 Esteban Echeverría
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold text-[#F5C442] bg-[#F5C442]/10 px-2.5 py-0.5 rounded-full border border-[#F5C442]/30">
+                DNI: {estudianteInfo?.dni || '-'}
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/90 px-2.5 py-0.5 rounded-full border border-white/15">
+                <Globe className="w-3.5 h-3.5 text-[#F5C442]" />
+                <span className="text-white/70">Nacionalidad:</span>
+                <span className="font-bold text-white">{estudianteInfo?.nacionalidad || 'Argentina'}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/90 px-2.5 py-0.5 rounded-full border border-white/15">
+                <MapPin className="w-3.5 h-3.5 text-[#F5C442]" />
+                <span className="text-white/70">Lugar de Nac.:</span>
+                <span className="font-bold text-white">{estudianteInfo?.lugar_nacimiento || estudianteInfo?.ciudad_nacimiento || 'No registrado'}</span>
+              </span>
+              <span className="text-white/60 text-[11px] font-medium hidden lg:inline">
+                • CENS Nº 454 Esteban Echeverría
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/20 text-xs font-semibold self-start sm:self-auto">
+        <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/20 text-xs font-semibold self-start md:self-auto shrink-0 text-center">
+          <span className="block text-[10px] text-white/60 uppercase tracking-wider">Período</span>
           Ciclo Lectivo {cicloLectivo}
         </div>
       </div>
