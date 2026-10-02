@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Swal from "sweetalert2";
 import { generateAnexo4SalidaDocx, generateAnexo5SalidaDocx } from '@/lib/generateSalidasDocx';
+import { PAISES_NACIONALIDAD } from '@/lib/nacionalidades';
 import { Users, UserPlus, FileText, Search, Award, Compass, History, UserX, Briefcase, CheckCircle2, AlertTriangle, Plus, Clock, BookOpen, ShieldAlert, RefreshCw, Trash2, ArrowRightLeft, AlertCircle, Printer, Check, GraduationCap, Calendar, Filter, User, Pencil } from "lucide-react";
 
 export default function SecretariaPanelPage() {
@@ -82,6 +83,9 @@ export default function SecretariaPanelPage() {
   // Additional Student Modal States (matching Preceptor?a)
   const [newGenero, setNewGenero] = useState("");
   const [newFechaNacimiento, setNewFechaNacimiento] = useState("");
+  const [newNacionalidad, setNewNacionalidad] = useState("Argentina");
+  const [newNacionalidadOtra, setNewNacionalidadOtra] = useState("");
+  const [newLugarNacimiento, setNewLugarNacimiento] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newTelefono, setNewTelefono] = useState("");
   const [newCiudadNacimiento, setNewCiudadNacimiento] = useState("");
@@ -169,6 +173,9 @@ export default function SecretariaPanelPage() {
   const [editApellido, setEditApellido] = useState("");
   const [editGenero, setEditGenero] = useState("");
   const [editFechaNacimiento, setEditFechaNacimiento] = useState("");
+  const [editNacionalidad, setEditNacionalidad] = useState("Argentina");
+  const [editNacionalidadOtra, setEditNacionalidadOtra] = useState("");
+  const [editLugarNacimiento, setEditLugarNacimiento] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editTelefono, setEditTelefono] = useState("");
   const [editCiudadNacimiento, setEditCiudadNacimiento] = useState("");
@@ -184,6 +191,19 @@ export default function SecretariaPanelPage() {
     setEditApellido(est.apellido || "");
     setEditGenero(est.genero || "");
     setEditFechaNacimiento(est.fecha_nacimiento || "");
+
+    const nac = est.nacionalidad || "Argentina";
+    if (PAISES_NACIONALIDAD.includes(nac)) {
+      setEditNacionalidad(nac);
+      setEditNacionalidadOtra("");
+    } else {
+      setEditNacionalidad("Otra");
+      setEditNacionalidadOtra(nac);
+    }
+    const lugar = est.lugar_nacimiento || est.ciudad_nacimiento || "";
+    setEditLugarNacimiento(lugar);
+    setEditCiudadNacimiento(lugar);
+
     setEditEmail(est.email || "");
     setEditTelefono(est.telefono || "");
     setEditCiudadNacimiento(est.ciudad_nacimiento || "");
@@ -202,6 +222,11 @@ export default function SecretariaPanelPage() {
     }
 
     try {
+      const finalNacionalidad = editNacionalidad === "Otra"
+        ? (editNacionalidadOtra.trim() || "Argentina")
+        : editNacionalidad;
+      const finalLugarNacimiento = editLugarNacimiento.trim() || null;
+
       const payload = {
         dni: editDni.trim(),
         cuil: editCuil.trim() || null,
@@ -209,6 +234,9 @@ export default function SecretariaPanelPage() {
         apellido: editApellido.trim(),
         genero: editGenero || null,
         fecha_nacimiento: editFechaNacimiento || null,
+        nacionalidad: finalNacionalidad,
+        lugar_nacimiento: finalLugarNacimiento,
+        ciudad_nacimiento: finalLugarNacimiento,
         email: editEmail.trim() || null,
         telefono: editTelefono.trim() || null,
         orientacion: editOrientacion || null,
@@ -2243,6 +2271,44 @@ export default function SecretariaPanelPage() {
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Fecha de Nacimiento</label>
                       <input type="date" value={editFechaNacimiento} onChange={(e) => setEditFechaNacimiento(e.target.value)} className="field-soft text-xs" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidad</label>
+                      <select
+                        value={editNacionalidad}
+                        onChange={(e) => setEditNacionalidad(e.target.value)}
+                        className="field-soft text-xs font-bold"
+                      >
+                        {PAISES_NACIONALIDAD.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                        <option value="Otra">Otra</option>
+                      </select>
+                      {editNacionalidad === "Otra" && (
+                        <input
+                          type="text"
+                          value={editNacionalidadOtra}
+                          onChange={(e) => setEditNacionalidadOtra(e.target.value)}
+                          placeholder="Especifique nacionalidad"
+                          className="field-soft text-xs mt-2"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Lugar de Nacimiento</label>
+                      <input
+                        type="text"
+                        value={editLugarNacimiento}
+                        onChange={(e) => {
+                          setEditLugarNacimiento(e.target.value);
+                          setEditCiudadNacimiento(e.target.value);
+                        }}
+                        placeholder="Ej: Esteban Echeverría"
+                        className="field-soft text-xs"
+                      />
                     </div>
                   </div>
 
