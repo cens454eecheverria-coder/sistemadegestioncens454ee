@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
+import { PAISES_NACIONALIDAD } from "@/lib/nacionalidades";
 import Swal from "sweetalert2";
 import {
   ClipboardCheck,
@@ -62,6 +63,9 @@ export default function PreceptorPage() {
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [genero, setGenero] = useState("");
+  const [nacionalidad, setNacionalidad] = useState("Argentina");
+  const [nacionalidadOtra, setNacionalidadOtra] = useState("");
+  const [lugarNacimiento, setLugarNacimiento] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [ciudadNacimiento, setCiudadNacimiento] = useState("");
   const [direccion, setDireccion] = useState("");
@@ -400,13 +404,18 @@ export default function PreceptorPage() {
     }
 
     try {
+      const finalNacionalidad = nacionalidad === "Otra" ? (nacionalidadOtra.trim() || "Argentina") : (nacionalidad || "Argentina");
+      const finalLugarNac = lugarNacimiento.trim() || null;
+
       const studentData = {
         dni: dni.trim(),
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         genero: genero || "Masculino",
         fecha_nacimiento: fechaNacimiento || null,
-        ciudad_nacimiento: ciudadNacimiento.trim() || null,
+        nacionalidad: finalNacionalidad,
+        lugar_nacimiento: finalLugarNac,
+        ciudad_nacimiento: finalLugarNac,
         direccion: direccion.trim() || null,
         email: email.trim() || null,
         telefono: telefono.trim() || null,
@@ -450,7 +459,7 @@ export default function PreceptorPage() {
       });
 
       setShowInscribirModal(false);
-      setDni(""); setNombre(""); setApellido(""); setGenero(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setEmail(""); setTelefono(""); setOrientacion(""); setTipoCertificado(""); setMateriasAdeudadas(""); setNumeroLibro(""); setNumeroFolio("");
+      setDni(""); setNombre(""); setApellido(""); setGenero(""); setNacionalidad("Argentina"); setNacionalidadOtra(""); setLugarNacimiento(""); setFechaNacimiento(""); setCiudadNacimiento(""); setDireccion(""); setEmail(""); setTelefono(""); setOrientacion(""); setTipoCertificado(""); setMateriasAdeudadas(""); setNumeroLibro(""); setNumeroFolio(""); setFotocopiaDni(false); setPartidaNacimiento(false); setCertificadoEstudios(false);
       if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     } catch (err) {
       Swal.fire("Error al inscribir", err.message, "error");
@@ -461,6 +470,11 @@ export default function PreceptorPage() {
     e.preventDefault();
     if (!selectedLegajoStudent) return;
     try {
+      const finalNacionalidad = selectedLegajoStudent.nacionalidad === "Otra"
+        ? "Argentina"
+        : (selectedLegajoStudent.nacionalidad?.trim() || "Argentina");
+      const finalLugarNac = (selectedLegajoStudent.lugar_nacimiento ?? selectedLegajoStudent.ciudad_nacimiento)?.trim() || null;
+
       const { error } = await supabase
         .from("estudiantes")
         .update({
@@ -469,7 +483,9 @@ export default function PreceptorPage() {
           apellido: selectedLegajoStudent.apellido,
           genero: selectedLegajoStudent.genero || "Masculino",
           fecha_nacimiento: selectedLegajoStudent.fecha_nacimiento || null,
-          ciudad_nacimiento: selectedLegajoStudent.ciudad_nacimiento || null,
+          nacionalidad: finalNacionalidad,
+          lugar_nacimiento: finalLugarNac,
+          ciudad_nacimiento: finalLugarNac,
           direccion: selectedLegajoStudent.direccion || null,
           email: selectedLegajoStudent.email || null,
           telefono: selectedLegajoStudent.telefono || null,
@@ -494,6 +510,18 @@ export default function PreceptorPage() {
         showConfirmButton: false
       });
       setShowLegajoModal(false);
+      setSelectedCalificadorStudent((prev) => {
+        if (prev && prev.id === selectedLegajoStudent.id) {
+          return {
+            ...prev,
+            ...selectedLegajoStudent,
+            nacionalidad: finalNacionalidad,
+            lugar_nacimiento: finalLugarNac,
+            ciudad_nacimiento: finalLugarNac
+          };
+        }
+        return prev;
+      });
       if (selectedCurso) loadEstudiantesYAsistencias(selectedCurso.id, fecha);
     } catch (err) {
       Swal.fire("Error", err.message, "error");
@@ -796,6 +824,10 @@ export default function PreceptorPage() {
                   </h3>
                   <div className="space-y-2.5 text-xs">
                     <div className="flex justify-between py-1 border-b border-gray-100">
+                      <span className="text-gray-500 font-medium">Nacionalidad:</span>
+                      <span className="font-bold text-[#0D2A3E]">{selectedCalificadorStudent.nacionalidad || "Argentina"}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Género:</span>
                       <span className="font-bold text-[#0D2A3E]">{selectedCalificadorStudent.genero || "No especificado"}</span>
                     </div>
@@ -805,7 +837,7 @@ export default function PreceptorPage() {
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-100">
                       <span className="text-gray-500 font-medium">Lugar de Nac.:</span>
-                      <span className="font-bold text-[#0D2A3E]">{selectedCalificadorStudent.ciudad_nacimiento || "Esteban Echeverría"}</span>
+                      <span className="font-bold text-[#0D2A3E]">{selectedCalificadorStudent.lugar_nacimiento || selectedCalificadorStudent.ciudad_nacimiento || "Esteban Echeverría"}</span>
                     </div>
                     <div className="flex justify-between py-1">
                       <span className="text-gray-500 font-medium">Domicilio:</span>
@@ -1146,20 +1178,65 @@ export default function PreceptorPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
-                      <input type="text" value={selectedLegajoStudent.telefono || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, telefono: e.target.value })} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidad</label>
+                      <select
+                        value={
+                          PAISES_NACIONALIDAD.includes(selectedLegajoStudent.nacionalidad)
+                            ? selectedLegajoStudent.nacionalidad
+                            : (selectedLegajoStudent.nacionalidad ? "Otra" : "Argentina")
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedLegajoStudent({
+                            ...selectedLegajoStudent,
+                            nacionalidad: val === "Otra" ? "" : val
+                          });
+                        }}
+                        className="field-soft text-xs"
+                      >
+                        {PAISES_NACIONALIDAD.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                        <option value="Otra">Otra</option>
+                      </select>
+                      {(!PAISES_NACIONALIDAD.includes(selectedLegajoStudent.nacionalidad) && selectedLegajoStudent.nacionalidad !== undefined && selectedLegajoStudent.nacionalidad !== "Argentina" && selectedLegajoStudent.nacionalidad !== null) && (
+                        <input
+                          type="text"
+                          value={selectedLegajoStudent.nacionalidad || ""}
+                          onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, nacionalidad: e.target.value })}
+                          placeholder="Especifique nacionalidad"
+                          className="field-soft text-xs mt-2"
+                        />
+                      )}
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
-                      <input type="text" value={selectedLegajoStudent.ciudad_nacimiento || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, ciudad_nacimiento: e.target.value })} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Lugar de Nacimiento</label>
+                      <input
+                        type="text"
+                        value={selectedLegajoStudent.lugar_nacimiento ?? selectedLegajoStudent.ciudad_nacimiento ?? ""}
+                        onChange={(e) => setSelectedLegajoStudent({
+                          ...selectedLegajoStudent,
+                          lugar_nacimiento: e.target.value,
+                          ciudad_nacimiento: e.target.value
+                        })}
+                        placeholder="Ej. Esteban Echeverría"
+                        className="field-soft text-xs"
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
+                      <input type="text" value={selectedLegajoStudent.telefono || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, telefono: e.target.value })} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
+                    </div>
+                    <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Dirección</label>
                       <input type="text" value={selectedLegajoStudent.direccion || ""} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, direccion: e.target.value })} placeholder="Ej. Av. Luciano Valette 120" className="field-soft text-xs" />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Orientación</label>
                       <select value={selectedLegajoStudent.orientacion || "Ciencias Sociales"} onChange={(e) => setSelectedLegajoStudent({ ...selectedLegajoStudent, orientacion: e.target.value })} className="field-soft text-xs">
@@ -1289,12 +1366,50 @@ export default function PreceptorPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Nacionalidad</label>
+                      <select
+                        value={nacionalidad}
+                        onChange={(e) => setNacionalidad(e.target.value)}
+                        className="field-soft text-xs"
+                      >
+                        {PAISES_NACIONALIDAD.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                        <option value="Otra">Otra</option>
+                      </select>
+                      {nacionalidad === "Otra" && (
+                        <input
+                          type="text"
+                          value={nacionalidadOtra}
+                          onChange={(e) => setNacionalidadOtra(e.target.value)}
+                          placeholder="Especifique nacionalidad"
+                          className="field-soft text-xs mt-2"
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Lugar de Nacimiento</label>
+                      <input
+                        type="text"
+                        value={lugarNacimiento}
+                        onChange={(e) => {
+                          setLugarNacimiento(e.target.value);
+                          setCiudadNacimiento(e.target.value);
+                        }}
+                        placeholder="Ej. Esteban Echeverría"
+                        className="field-soft text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Teléfono</label>
                       <input type="text" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 11 5555-4444" className="field-soft text-xs" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Ciudad de Nacimiento</label>
-                      <input type="text" value={ciudadNacimiento} onChange={(e) => setCiudadNacimiento(e.target.value)} placeholder="Ej. Buenos Aires" className="field-soft text-xs" />
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Dirección</label>
+                      <input type="text" value={direccion} onChange={(e) => setDireccion(e.target.value)} placeholder="Ej. Av. Luciano Valette 120" className="field-soft text-xs" />
                     </div>
                   </div>
 
