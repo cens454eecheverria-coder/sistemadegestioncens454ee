@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
-import { FileCheck, CheckCircle2, XCircle, AlertCircle, Phone, Search } from 'lucide-react';
+import { FileCheck, CheckCircle2, XCircle, AlertCircle, Phone, Search, Globe, MapPin } from 'lucide-react';
 
 export default function AdminPreinscripcionesPage() {
   const [preinscripciones, setPreinscripciones] = useState([]);
@@ -35,6 +35,8 @@ export default function AdminPreinscripcionesPage() {
             nombre: 'Gonzalo Valentín',
             email: 'gonzalo.perez@gmail.com',
             telefono: '11-9988-7766',
+            nacionalidad: 'Argentina',
+            lugar_nacimiento: 'Esteban Echeverría',
             orientacion_interes: 'Ciencias Sociales',
             turno_preferido: 'Noche',
             estado: 'pendiente',
@@ -70,6 +72,9 @@ export default function AdminPreinscripcionesPage() {
               nombre: pre.nombre,
               email: pre.email,
               telefono: pre.telefono,
+              nacionalidad: pre.nacionalidad || 'Argentina',
+              lugar_nacimiento: pre.lugar_nacimiento || null,
+              ciudad_nacimiento: pre.lugar_nacimiento || null,
               estado: 'activo',
               observaciones: `Ingreso por preinscripción web (${pre.orientacion_interes} - Turno ${pre.turno_preferido})`,
             },
@@ -101,9 +106,11 @@ export default function AdminPreinscripcionesPage() {
   const filtered = preinscripciones.filter((p) => {
     const matchEstado = filterEstado === 'todos' || p.estado === filterEstado;
     const matchSearch =
-      p.apellido.toLowerCase().includes(search.toLowerCase()) ||
-      p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      p.dni.includes(search);
+      p.apellido?.toLowerCase().includes(search.toLowerCase()) ||
+      p.nombre?.toLowerCase().includes(search.toLowerCase()) ||
+      p.dni?.includes(search) ||
+      (p.nacionalidad && p.nacionalidad.toLowerCase().includes(search.toLowerCase())) ||
+      (p.lugar_nacimiento && p.lugar_nacimiento.toLowerCase().includes(search.toLowerCase()));
     return matchEstado && matchSearch;
   });
 
@@ -179,9 +186,21 @@ export default function AdminPreinscripcionesPage() {
                 filtered.map((p) => (
                   <tr key={p.id} className="hover:bg-[#F4FAFF] transition-colors">
                     <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">
-                      {p.apellido}, {p.nombre}
+                      <div>{p.apellido}, {p.nombre}</div>
+                      <div className="text-[10px] text-gray-500 font-normal mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="inline-flex items-center gap-1 font-medium text-gray-600">
+                          <Globe className="w-2.5 h-2.5 text-gray-400" />
+                          {p.nacionalidad || 'Argentina'}
+                        </span>
+                        {p.lugar_nacimiento && (
+                          <span className="inline-flex items-center gap-1 text-gray-500">
+                            <MapPin className="w-2.5 h-2.5 text-gray-400" />
+                            {p.lugar_nacimiento}
+                          </span>
+                        )}
+                      </div>
                       {p.observaciones && (
-                        <div className="text-[10px] text-gray-500 font-normal mt-0.5">{p.observaciones}</div>
+                        <div className="text-[10px] text-gray-400 font-normal mt-0.5 italic">{p.observaciones}</div>
                       )}
                     </td>
                     <td className="py-3.5 px-4 font-mono text-gray-600">

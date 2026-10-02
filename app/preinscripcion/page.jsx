@@ -4,12 +4,16 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Swal from 'sweetalert2';
 import { School, Send, CheckCircle2, User, Phone, Mail, MapPin, GraduationCap } from 'lucide-react';
+import { PAISES_NACIONALIDAD } from '@/lib/nacionalidades';
 
 export default function PreinscripcionPublicaPage() {
   const [dni, setDni] = useState('');
   const [cuil, setCuil] = useState('');
   const [apellido, setApellido] = useState('');
   const [nombre, setNombre] = useState('');
+  const [nacionalidad, setNacionalidad] = useState('Argentina');
+  const [nacionalidadOtra, setNacionalidadOtra] = useState('');
+  const [lugarNacimiento, setLugarNacimiento] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [orientacion, setOrientacion] = useState('Ciencias Sociales');
@@ -23,11 +27,17 @@ export default function PreinscripcionPublicaPage() {
     setSubmitting(true);
 
     try {
+      const finalNacionalidad = nacionalidad === 'Otra'
+        ? (nacionalidadOtra.trim() || 'Argentina')
+        : (nacionalidad || 'Argentina');
+
       const record = {
         dni: dni.trim().replaceAll('.', ''),
         cuil: cuil.trim(),
         apellido: apellido.trim(),
         nombre: nombre.trim(),
+        nacionalidad: finalNacionalidad,
+        lugar_nacimiento: lugarNacimiento.trim() || null,
         email: email.trim(),
         telefono: telefono.trim(),
         orientacion_interes: orientacion,
@@ -67,7 +77,7 @@ export default function PreinscripcionPublicaPage() {
             className="w-20 h-20 mx-auto object-contain bg-white/10 p-2 rounded-2xl border border-[#F5C442]/60 shadow-lg"
           />
           <h1 className="text-2xl md:text-3xl font-extrabold font-heading">
-            Preinscripción Ingreso CENS Nº° 454
+            Preinscripción Ingreso CENS Nº 454
           </h1>
           <p className="text-xs text-[#F5C442] font-semibold tracking-wide uppercase">
             Educación Secundaria de Adultos - Esteban Echeverría (Región 5)
@@ -89,8 +99,17 @@ export default function PreinscripcionPublicaPage() {
               onClick={() => {
                 setSuccess(false);
                 setDni('');
+                setCuil('');
                 setApellido('');
                 setNombre('');
+                setNacionalidad('Argentina');
+                setNacionalidadOtra('');
+                setLugarNacimiento('');
+                setEmail('');
+                setTelefono('');
+                setOrientacion('Ciencias Sociales');
+                setTurno('Noche');
+                setObservaciones('');
               }}
               className="btn-primary font-bold text-xs py-2.5 px-6"
             >
@@ -148,6 +167,42 @@ export default function PreinscripcionPublicaPage() {
                   onChange={(e) => setNombre(e.target.value)}
                   className="field-soft text-xs"
                   required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Nacionalidad</label>
+                <select
+                  value={nacionalidad}
+                  onChange={(e) => setNacionalidad(e.target.value)}
+                  className="field-soft font-semibold text-xs"
+                >
+                  {PAISES_NACIONALIDAD.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                  <option value="Otra">Otra</option>
+                </select>
+                {nacionalidad === 'Otra' && (
+                  <input
+                    type="text"
+                    value={nacionalidadOtra}
+                    onChange={(e) => setNacionalidadOtra(e.target.value)}
+                    placeholder="Especifique nacionalidad"
+                    className="field-soft text-xs mt-2"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Lugar de Nacimiento</label>
+                <input
+                  type="text"
+                  value={lugarNacimiento}
+                  onChange={(e) => setLugarNacimiento(e.target.value)}
+                  placeholder="Ej: Esteban Echeverría"
+                  className="field-soft text-xs"
                 />
               </div>
             </div>
