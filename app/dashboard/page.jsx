@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { generateAnexo5Docx } from "@/lib/generateAnexoDocx";
-import { Users, Percent, Star, GraduationCap, Calendar, Download, Printer, BarChart2, PieChart as PieIcon, TrendingUp, BookOpen, Award, AlertCircle, Filter, CheckCircle2, FileText } from "lucide-react";
+import { Users, Percent, Star, GraduationCap, Calendar, Download, Printer, BarChart2, PieChart as PieIcon, TrendingUp, BookOpen, Award, AlertCircle, Filter, CheckCircle2, FileText, Globe, MapPin } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 
 export default function DashboardPage() {
@@ -30,6 +30,9 @@ export default function DashboardPage() {
   const [promedioPorAsignatura, setPromedioPorAsignatura] = useState([]);
   const [cursosDetalleInforme, setCursosDetalleInforme] = useState([]);
   const [materiasDetalleInforme, setMateriasDetalleInforme] = useState([]);
+  const [nacionalidadGlobal, setNacionalidadGlobal] = useState([]);
+  const [lugarNacimientoGlobal, setLugarNacimientoGlobal] = useState([]);
+  const [totalNacionalidades, setTotalNacionalidades] = useState(0);
 
   useEffect(() => { loadDashboardData(); }, [cicloLectivo]);
 
@@ -125,8 +128,16 @@ export default function DashboardPage() {
       let fem = 0; let masc = 0; let otroGen = 0;
       let r18_24 = 0; let r25_39 = 0; let r40_49 = 0; let r50plus = 0; let sinEspecEdad = 0;
       const hoy = new Date();
+      const nacionalidadMap = {};
+      const lugarNacimientoMap = {};
 
       activos.forEach(e => {
+        const nacionalidad = e.nacionalidad?.trim() || 'Argentina';
+        nacionalidadMap[nacionalidad] = (nacionalidadMap[nacionalidad] || 0) + 1;
+
+        const lugarNac = (e.lugar_nacimiento || e.ciudad_nacimiento)?.trim() || 'Sin registrar';
+        lugarNacimientoMap[lugarNac] = (lugarNacimientoMap[lugarNac] || 0) + 1;
+
         const g = String(e.genero || "").toLowerCase();
         if (g.startsWith("f")) fem++; else if (g.startsWith("m")) masc++; else otroGen++;
         if (e.fecha_nacimiento) {
@@ -144,6 +155,21 @@ export default function DashboardPage() {
 
       setGeneroGlobal([{ name: "Femenino", value: fem, color: "#EAB308" }, { name: "Masculino", value: masc, color: "#006384" }, { name: "No especificado", value: otroGen, color: "#CBD5E1" }]);
       setFranjaEtariaGlobal([{ name: "18-24", value: r18_24, color: "#EAB308" }, { name: "25-39", value: r25_39, color: "#006384" }, { name: "40-49", value: r40_49, color: "#38BDF8" }, { name: "50+", value: r50plus, color: "#1E293B" }, { name: "Sin especificar", value: sinEspecEdad, color: "#64748B" }]);
+
+      const PALETA_COLORES = ["#006384", "#EAB308", "#0284C7", "#16A34A", "#8B5CF6", "#F97316", "#EC4899", "#64748B"];
+      const nacionalidadEntries = Object.entries(nacionalidadMap).sort((a, b) => b[1] - a[1]);
+      setTotalNacionalidades(nacionalidadEntries.length);
+      setNacionalidadGlobal(nacionalidadEntries.map(([name, value], idx) => ({
+        name,
+        value,
+        color: PALETA_COLORES[idx % PALETA_COLORES.length]
+      })));
+
+      const lugaresSorted = Object.entries(lugarNacimientoMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([lugar, cantidad]) => ({ lugar, cantidad }));
+      setLugarNacimientoGlobal(lugaresSorted);
 
       const estudianteCursoMap = {};
       (alumnosCursos || []).forEach(ac => { if (ac.estudiante_id && ac.curso_id) estudianteCursoMap[ac.estudiante_id] = ac.curso_id; });
@@ -318,6 +344,59 @@ export default function DashboardPage() {
               <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-[#0D2A3E]"><Users className="w-4 h-4 text-blue-600" />Franja Etaria (Global)</div>
                 <div className="h-64 flex items-center justify-center"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={franjaEtariaGlobal} cx="50%" cy="45%" innerRadius={60} outerRadius={85} paddingAngle={4} dataKey="value">{franjaEtariaGlobal.map((entry, idx) => (<Cell key={"cell-edad-" + idx} fill={entry.color} />))}</Pie><Tooltip /><Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: "11px" }} /></PieChart></ResponsiveContainer></div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#0D2A3E]">
+                    <Globe className="w-4 h-4 text-[#006384]" />
+                    Distribución por Nacionalidad (Global)
+                  </div>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-[#006384] font-bold border border-blue-100">
+                    {totalNacionalidades} nacionalidad(es)
+                  </span>
+                </div>
+                <div className="h-64 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={nacionalidadGlobal}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={60}
+                        outerRadius={85}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {nacionalidadGlobal.map((entry, idx) => (
+                          <Cell key={"cell-nac-" + idx} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-[#0D2A3E]">
+                  <MapPin className="w-4 h-4 text-emerald-600" />
+                  Principales Lugares de Nacimiento
+                </div>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lugarNacimientoGlobal} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                      <XAxis dataKey="lugar" stroke="#94A3B8" fontSize={11} angle={-25} textAnchor="end" interval={0} />
+                      <YAxis stroke="#94A3B8" fontSize={12} allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="cantidad" fill="#006384" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
 
