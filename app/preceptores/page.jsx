@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -182,7 +182,7 @@ export default function PreceptorPage() {
       const map = {};
       if (asisData) {
         asisData.forEach((a) => {
-          map[a.estudiante_id] = a.estado;
+          map[a.estudiante_id] = a.estado === "P" ? "presente" : a.estado === "A" ? "ausente" : a.estado === "J" ? "justificado" : a.estado;
         });
       }
       setAsistencias(map);
@@ -368,16 +368,16 @@ export default function PreceptorPage() {
     if (!selectedCurso) return;
     setSaving(true);
     try {
-      const records = Object.keys(asistencias).map((estId) => ({
-        estudiante_id: estId,
+      const records = estudiantes.map((est) => ({
+        estudiante_id: est.id,
         curso_id: selectedCurso.id,
         fecha: fecha,
-        estado: asistencias[estId]
+        estado: asistencias[est.id] === "A" || asistencias[est.id] === "ausente" ? "ausente" : asistencias[est.id] === "J" || asistencias[est.id] === "justificado" ? "justificado" : asistencias[est.id] === "media_falta" ? "media_falta" : "presente"
       }));
 
       if (records.length > 0) {
         const { error } = await supabase.from("asistencias").upsert(records, {
-          onConflict: "estudiante_id,fecha,curso_id"
+          onConflict: "estudiante_id,curso_id,fecha"
         });
         if (error) throw error;
       }
@@ -677,7 +677,7 @@ export default function PreceptorPage() {
                     </tr>
                   ) : (
                     estudiantes.map((est) => {
-                      const estState = asistencias[est.id] || "P";
+                      const rawState = asistencias[est.id] || "presente"; const estState = rawState === "P" ? "presente" : rawState === "A" ? "ausente" : rawState === "J" ? "justificado" : rawState;
                       return (
                         <tr key={est.id} className="hover:bg-gray-50/80">
                           <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{est.apellido}, {est.nombre}</td>
@@ -686,22 +686,22 @@ export default function PreceptorPage() {
                             <div className="inline-flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
                               <button
                                 type="button"
-                                onClick={() => handleAsistenciaChange(est.id, "P")}
-                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "P" ? "bg-emerald-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
+                                onClick={() => handleAsistenciaChange(est.id, "presente")}
+                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "presente" ? "bg-emerald-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
                               >
                                 Presente
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleAsistenciaChange(est.id, "A")}
-                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "A" ? "bg-red-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
+                                onClick={() => handleAsistenciaChange(est.id, "ausente")}
+                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "ausente" ? "bg-red-600 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
                               >
                                 Ausente
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleAsistenciaChange(est.id, "J")}
-                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "J" ? "bg-amber-500 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
+                                onClick={() => handleAsistenciaChange(est.id, "justificado")}
+                                className={"py-1 px-3 rounded-lg text-xs font-bold transition-all " + (estState === "justificado" ? "bg-amber-500 text-white shadow-xs" : "text-gray-600 hover:bg-gray-200")}
                               >
                                 Justificado
                               </button>
