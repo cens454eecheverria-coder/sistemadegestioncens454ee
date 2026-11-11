@@ -22,3 +22,8 @@ yarn-error.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Accidental nested folder
+sistemadegestioncens454ee/
+*.txt
+

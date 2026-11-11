@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -41,7 +41,7 @@ export default function TeacherPortalPage() {
   const [adminDocentes, setAdminDocentes] = useState([]);
   const [adminMaterias, setAdminMaterias] = useState([]);
 
-  useEffect(() => { loadDocenteDataAndMaterias(); }, [user, cicloLectivo, role]);
+  useEffect(() => { loadDocenteDataAndMaterias(); }, [user?.id, user?.dni, user?.cuil, cicloLectivo, role]);
   useEffect(() => { if (selectedMateriaId) { loadAlumnosYCalificaciones(selectedMateriaId); } }, [selectedMateriaId]);
 
   async function loadDocenteDataAndMaterias() {
@@ -51,8 +51,6 @@ export default function TeacherPortalPage() {
     }
     setLoadingProfile(true);
     setDocenteData({ id: "", nombre: "", apellido: "", cuil: "", dni: "", genero: "Femenino", email: "", telefono: "", fechaNac: "", titulo: "" });
-    setMateriasAsignadas([]);
-    setSelectedMateriaId("");
     setCargosExternos([]);
     setAlumnos([]);
     setCalificacionesMap({});
@@ -153,7 +151,10 @@ export default function TeacherPortalPage() {
           if (mData) {
             const list = mData.map((m) => ({ id: m.id, nombre: m.nombre, cursoNombre: cMap[m.curso_id] || "Curso", ciclo: "Ciclo 2026", curso_id: m.curso_id }));
             setMateriasAsignadas(list);
-            if (list.length > 0) setSelectedMateriaId(list[0].id);
+            setSelectedMateriaId((prev) => {
+              if (prev && list.some((item) => item.id === prev)) return prev;
+              return list.length === 1 ? list[0].id : "";
+            });
           }
 
           // Cargar los horarios asignados para todas las materias del docente
@@ -178,9 +179,9 @@ export default function TeacherPortalPage() {
   }
 
   async function loadAlumnosYCalificaciones(materiaId) {
+    setAlumnos([]);
+    setCalificacionesMap({});
     if (!materiaId) {
-      setAlumnos([]);
-      setCalificacionesMap({});
       return;
     }
     try {
@@ -214,12 +215,13 @@ export default function TeacherPortalPage() {
       const initialMap = {};
       if (califData && califData.length > 0) {
         califData.forEach((c) => {
+          const finalVal = c.nota_final != null ? String(c.nota_final) : (c.nota != null ? String(c.nota) : "");
           initialMap[c.estudiante_id] = {
             id: c.id,
-            valoracion: c.evaluacion_nombre || "TEA",
-            nota: c.nota != null ? String(c.nota) : "",
-            intensificacion: c.nota_rie != null ? String(c.nota_rie) : "",
-            notaFinal: c.nota_final != null ? String(c.nota_final) : "",
+            valoracion: c.evaluacion_nombre || c.valoracion || "TEA",
+            nota: c.nota != null ? String(c.nota) : (c.nota_final != null ? String(c.nota_final) : ""),
+            intensificacion: c.nota_rie != null ? String(c.nota_rie) : (c.intensificacion != null ? String(c.intensificacion) : ""),
+            notaFinal: finalVal,
             fecha: c.created_at ? c.created_at.split("T")[0] : new Date().toISOString().split("T")[0]
           };
         });
@@ -243,27 +245,48 @@ export default function TeacherPortalPage() {
   }
 
   const handleUpdateNotaField = (estId, field, val) => {
-    setCalificacionesMap((prev) => ({
-      ...prev,
-      [estId]: { ...(prev[estId] || {}), [field]: val }
-    }));
+    setCalificacionesMap((prev) => {
+      const current = prev[estId] || {};
+      const updated = { ...current, [field]: val };
+      // Si se edita la nota regular y no hay nota final manual, sincronizar automáticamente
+      if (field === "nota" && (!current.notaFinal || current.notaFinal === current.nota)) {
+        updated.notaFinal = val;
+      }
+      return {
+        ...prev,
+        [estId]: updated
+      };
+    });
   };
 
   const handleGuardarCalificaciones = async () => {
-    if (!selectedMateriaId) {
-      Swal.fire("Atención", "Seleccione una materia antes de guardar.", "warning");
+    const targetMateria = materiasAsignadas.find((m) => m.id === selectedMateriaId);
+    if (!selectedMateriaId || !targetMateria) {
+      Swal.fire("Atención", "Seleccione explícitamente la materia que desea calificar antes de guardar.", "warning");
       return;
     }
     if (alumnos.length === 0) {
       Swal.fire("Atención", "No hay estudiantes en este curso para calificar.", "warning");
       return;
     }
+    const confirmSave = await Swal.fire({
+      icon: "question",
+      title: "Confirmar Guardado de Notas",
+      html: `Se guardarán las calificaciones de <b>${alumnos.length} estudiante(s)</b> en:<br/><br/><span style="color:#006384;font-weight:800;font-size:15px;">${targetMateria.nombre}</span><br/><span style="font-size:13px;color:#475569;">Curso: <b>${targetMateria.cursoNombre}</b></span>`,
+      showCancelButton: true,
+      confirmButtonColor: "#006384",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Sí, guardar en esta materia",
+      cancelButtonText: "Cancelar"
+    });
+    if (!confirmSave.isConfirmed) return;
+
     setSaving(true);
     try {
       const records = alumnos.map((a) => {
         const item = calificacionesMap[a.id] || {};
         const notaNum = item.nota !== "" && item.nota != null && !isNaN(Number(item.nota)) ? Number(item.nota) : null;
-        const finalNum = item.notaFinal !== "" && item.notaFinal != null && !isNaN(Number(item.notaFinal)) ? Number(item.notaFinal) : null;
+        const finalNum = item.notaFinal !== "" && item.notaFinal != null && !isNaN(Number(item.notaFinal)) ? Number(item.notaFinal) : (notaNum ?? null);
         const rieNum = item.intensificacion !== "" && item.intensificacion != null && !isNaN(Number(item.intensificacion)) ? Number(item.intensificacion) : null;
         return {
           estudiante_id: a.id,
@@ -288,8 +311,8 @@ export default function TeacherPortalPage() {
       Swal.fire({
         icon: "success",
         title: "Calificaciones Guardadas",
-        text: `Se registraron las notas de ${records.length} estudiante(s) en Supabase.`,
-        timer: 1800,
+        text: `Se registraron las notas de ${records.length} estudiante(s) en ${targetMateria.nombre} (${targetMateria.cursoNombre}).`,
+        timer: 2200,
         showConfirmButton: false
       });
       await loadAlumnosYCalificaciones(selectedMateriaId);
@@ -701,7 +724,7 @@ export default function TeacherPortalPage() {
     );
   }
 
-  const materiaActual = materiasAsignadas.find((m) => m.id === selectedMateriaId) || materiasAsignadas[0];
+  const materiaActual = materiasAsignadas.find((m) => m.id === selectedMateriaId) || null;
   const filteredAdminMaterias = materiasAsignadas.filter((m) => !selectedAdminCursoId || m.curso_id === selectedAdminCursoId);
   if (isAdmin) {
     return (
@@ -744,7 +767,14 @@ export default function TeacherPortalPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
-                    <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACIÓN? (1° CUATR.)</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACIÓN</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
+                    <tr>
+                      <th className="py-3 px-4">ESTUDIANTE</th>
+                      <th className="py-3 px-4 text-center">VALORACIÓN</th>
+                      <th className="py-3 px-4 text-center">CALIFICACIÓN</th>
+                      <th className="py-3 px-4 text-center">INTENSIFICACIÓN</th>
+                      <th className="py-3 px-4 text-center">CALIFICACIÓN FINAL</th>
+                      <th className="py-3 px-4 text-center">FECHA</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
                     {alumnos.length === 0 ? (
@@ -755,11 +785,52 @@ export default function TeacherPortalPage() {
                         return (
                           <tr key={a.id} className="hover:bg-gray-50/80">
                             <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                            <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                            <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                            <td className="py-3.5 px-4 text-center">
+                              <select
+                                value={noteData.valoracion || "TEA"}
+                                onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)}
+                                className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"
+                              >
+                                <option value="TEA">TEA</option>
+                                <option value="TEP">TEP</option>
+                                <option value="TED">TED</option>
+                              </select>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <input
+                                type="text"
+                                value={noteData.nota || ""}
+                                onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)}
+                                placeholder="-"
+                                className="field-soft text-xs py-1 px-2 w-20 text-center font-bold text-gray-800"
+                              />
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <input
+                                type="text"
+                                value={noteData.intensificacion || ""}
+                                onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)}
+                                placeholder="-"
+                                className="field-soft text-xs py-1 px-2 w-24 text-center text-amber-700"
+                              />
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <input
+                                type="text"
+                                value={noteData.notaFinal || ""}
+                                onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)}
+                                placeholder="-"
+                                className="field-soft text-xs py-1 px-2 w-20 text-center font-extrabold text-[#006384]"
+                              />
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <input
+                                type="date"
+                                value={noteData.fecha || ""}
+                                onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)}
+                                className="field-soft text-xs py-1 px-2 w-32 text-center"
+                              />
+                            </td>
                           </tr>
                         );
                       })
@@ -767,7 +838,7 @@ export default function TeacherPortalPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
+              <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : `Guardar Calificaciones en ${materiaActual.nombre} (${materiaActual.cursoNombre})`}</button></div>
             </div>
           </div>
         ) : (
@@ -930,21 +1001,56 @@ export default function TeacherPortalPage() {
 
       {activeTab === "notas" && (
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><User className="w-4 h-4 text-purple-600" /> Seleccione el Profesor</label><input type="text" value={docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre} disabled className="field-soft text-xs font-bold bg-gray-50 text-gray-700 cursor-not-allowed" /></div>
-            <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-purple-600" /> Seleccione Asignatura</label><select value={selectedMateriaId} onChange={(e) => setSelectedMateriaId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-500 focus:ring-2 focus:ring-blue-200"><option value="">Seleccionar Asignatura...</option>{materiasAsignadas.map((m) => (<option key={m.id} value={m.id}>{m.nombre} - {m.cursoNombre} ({m.ciclo})</option>))}</select></div>
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><User className="w-4 h-4 text-purple-600" /> Profesor Titular / A Cargo</label><input type="text" value={docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre} disabled className="field-soft text-xs font-bold bg-gray-50 text-gray-700 cursor-not-allowed" /></div>
+              <div><label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5"><BookOpen className="w-4 h-4 text-purple-600" /> Seleccione Asignatura a Calificar</label><select value={selectedMateriaId} onChange={(e) => setSelectedMateriaId(e.target.value)} className="field-soft text-xs font-bold border-2 border-blue-500 focus:ring-2 focus:ring-blue-200"><option value="">Seleccionar Asignatura...</option>{materiasAsignadas.map((m) => (<option key={m.id} value={m.id}>{m.nombre} - {m.cursoNombre} ({m.ciclo})</option>))}</select></div>
+            </div>
+            {materiasAsignadas.length > 1 && (
+              <div className="pt-2 border-t border-gray-100 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold text-gray-500 mr-1">Cambio rápido de materia:</span>
+                {materiasAsignadas.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMateriaId(m.id)}
+                    className={"text-xs py-1.5 px-3.5 rounded-xl font-bold transition-all border " + (
+                      selectedMateriaId === m.id
+                        ? "bg-[#006384] text-white border-[#006384] shadow-xs"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    )}
+                  >
+                    {m.nombre} ({m.cursoNombre})
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {materiaActual ? (
             <div className="card p-0 bg-white shadow-xs overflow-hidden rounded-2xl border border-gray-200">
-              <div className="bg-[#1E293B] text-white p-4 px-6 flex items-center justify-between">
-                <h4 className="text-xs font-bold tracking-wide">Profesor a Cargo: <span className="text-blue-400 font-extrabold">{docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre}</span></h4>
-                <button onClick={() => { setPrintType("NOTAS"); setPrintingModal(true); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-2"><Printer className="w-4 h-4" /> Planilla PDF</button>
+              <div className="bg-[#1E293B] text-white p-4 px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold tracking-wide flex items-center gap-2">
+                    <span>Calificando Asignatura:</span>
+                    <span className="text-[#F5C442] font-extrabold">{materiaActual.nombre}</span>
+                    <span className="bg-blue-900/70 text-blue-200 text-[11px] px-2.5 py-0.5 rounded-full border border-blue-700">{materiaActual.cursoNombre}</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 mt-0.5">Profesor a Cargo: <span className="text-blue-300 font-bold">{docenteData.apellido ? docenteData.apellido + ", " + docenteData.nombre : docenteData.nombre}</span></p>
+                </div>
+                <button onClick={() => { setPrintType("NOTAS"); setPrintingModal(true); }} className="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-2 self-start sm:self-auto"><Printer className="w-4 h-4" /> Planilla PDF</button>
               </div>
               <div className="p-6 space-y-4">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead className="bg-gray-50 text-gray-700 font-bold border-b">
-                      <tr><th className="py-3 px-4">ESTUDIANTE</th><th className="py-3 px-4 text-center">VALORACION</th><th className="py-3 px-4 text-center">NOTA</th><th className="py-3 px-4 text-center">INTENSIFICACION</th><th className="py-3 px-4 text-center">NOTA FINAL</th><th className="py-3 px-4 text-center">FECHA</th></tr>
+                      <tr>
+                        <th className="py-3 px-4">ESTUDIANTE</th>
+                        <th className="py-3 px-4 text-center">VALORACIÓN</th>
+                        <th className="py-3 px-4 text-center">CALIFICACIÓN</th>
+                        <th className="py-3 px-4 text-center">INTENSIFICACIÓN</th>
+                        <th className="py-3 px-4 text-center">CALIFICACIÓN FINAL</th>
+                        <th className="py-3 px-4 text-center">FECHA</th>
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {alumnos.length === 0 ? (
@@ -959,11 +1065,52 @@ export default function TeacherPortalPage() {
                           return (
                             <tr key={a.id} className="hover:bg-gray-50/80">
                               <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">{a.apellido}, {a.nombre}</td>
-                              <td className="py-3.5 px-4 text-center"><select value={noteData.valoracion || "TEA"} onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)} className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"><option value="TEA">TEA</option><option value="TEP">TEP</option><option value="TED">TED</option></select></td>
-                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.nota || ""} onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center" /></td>
-                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.intensificacion || ""} onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-24 text-center" /></td>
-                              <td className="py-3.5 px-4 text-center"><input type="text" value={noteData.notaFinal || ""} onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)} placeholder="-" className="field-soft text-xs py-1 px-2 w-16 text-center font-bold" /></td>
-                              <td className="py-3.5 px-4 text-center"><input type="date" value={noteData.fecha || ""} onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)} className="field-soft text-xs py-1 px-2 w-32 text-center" /></td>
+                              <td className="py-3.5 px-4 text-center">
+                                <select
+                                  value={noteData.valoracion || "TEA"}
+                                  onChange={(e) => handleUpdateNotaField(a.id, "valoracion", e.target.value)}
+                                  className="field-soft text-xs py-1 px-3 w-28 text-center font-bold"
+                                >
+                                  <option value="TEA">TEA</option>
+                                  <option value="TEP">TEP</option>
+                                  <option value="TED">TED</option>
+                                </select>
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <input
+                                  type="text"
+                                  value={noteData.nota || ""}
+                                  onChange={(e) => handleUpdateNotaField(a.id, "nota", e.target.value)}
+                                  placeholder="-"
+                                  className="field-soft text-xs py-1 px-2 w-20 text-center font-bold text-gray-800"
+                                />
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <input
+                                  type="text"
+                                  value={noteData.intensificacion || ""}
+                                  onChange={(e) => handleUpdateNotaField(a.id, "intensificacion", e.target.value)}
+                                  placeholder="-"
+                                  className="field-soft text-xs py-1 px-2 w-24 text-center text-amber-700"
+                                />
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <input
+                                  type="text"
+                                  value={noteData.notaFinal || ""}
+                                  onChange={(e) => handleUpdateNotaField(a.id, "notaFinal", e.target.value)}
+                                  placeholder="-"
+                                  className="field-soft text-xs py-1 px-2 w-20 text-center font-extrabold text-[#006384]"
+                                />
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <input
+                                  type="date"
+                                  value={noteData.fecha || ""}
+                                  onChange={(e) => handleUpdateNotaField(a.id, "fecha", e.target.value)}
+                                  className="field-soft text-xs py-1 px-2 w-32 text-center"
+                                />
+                              </td>
                             </tr>
                           );
                         })
@@ -971,7 +1118,33 @@ export default function TeacherPortalPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end pt-4 border-t border-gray-100"><button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">{saving ? "Guardando..." : "Guardar Calificaciones"}</button></div>
+                <div className="flex justify-end pt-4 border-t border-gray-100">
+                  <button onClick={handleGuardarCalificaciones} disabled={saving} className="btn-primary font-bold text-xs py-3 px-8 rounded-xl bg-[#006384]">
+                    {saving ? "Guardando..." : `Guardar Calificaciones en ${materiaActual.nombre} (${materiaActual.cursoNombre})`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : materiasAsignadas.length > 0 ? (
+            <div className="card p-8 bg-white text-center space-y-4 border-2 border-dashed border-blue-200 rounded-2xl">
+              <BookOpen className="w-10 h-10 text-[#006384] mx-auto" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-base text-[#0D2A3E]">Seleccione la asignatura que desea calificar</h4>
+                <p className="text-xs text-gray-500 max-w-md mx-auto">
+                  Posee <b>{materiasAsignadas.length} asignaturas</b> asignadas. Elija explícitamente una materia para abrir su planilla de calificaciones correspondiente:
+                </p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 pt-2">
+                {materiasAsignadas.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedMateriaId(m.id)}
+                    className="py-2.5 px-5 rounded-xl font-bold text-xs bg-[#EEF5FA] hover:bg-[#006384] text-[#0D2A3E] hover:text-white border border-blue-200 transition-all shadow-2xs"
+                  >
+                    {m.nombre} • {m.cursoNombre}
+                  </button>
+                ))}
               </div>
             </div>
           ) : (

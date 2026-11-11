@@ -29,7 +29,16 @@ import {
   Award,
   TrendingUp,
   User,
-  FileCheck2
+  FileCheck2,
+  Filter,
+  CheckCircle,
+  ArrowUpDown,
+  Sparkles,
+  BarChart3,
+  Layers,
+  ChevronRight,
+  Info,
+  SearchX
 } from "lucide-react";
 
 export default function PreceptorPage() {
@@ -52,7 +61,11 @@ export default function PreceptorPage() {
 
   // Planillas tab state
   const [selectedPlanillaCursoId, setSelectedPlanillaCursoId] = useState("");
-  const [planillaFilterMode, setPlanillaFilterMode] = useState("nota_final");
+  const [planillaMateriaFilter, setPlanillaMateriaFilter] = useState("todas"); // "todas", "Q1", "Q2"
+  const [planillaDisplayMode, setPlanillaDisplayMode] = useState("mixto"); // "num", "conceptual", "mixto"
+  const [searchPlanilla, setSearchPlanilla] = useState("");
+  const [planillaEstadoFilter, setPlanillaEstadoFilter] = useState("todos"); // "todos", "aprobados", "intensificacion", "pendientes"
+  const [loadingPlanilla, setLoadingPlanilla] = useState(false);
   const [planillaMaterias, setPlanillaMaterias] = useState([]);
   const [planillaDocentesMap, setPlanillaDocentesMap] = useState({});
   const [planillaCalificacionesMap, setPlanillaCalificacionesMap] = useState({});
@@ -87,6 +100,15 @@ export default function PreceptorPage() {
 
   const [showBoletinModal, setShowBoletinModal] = useState(false);
   const [selectedBoletinStudent, setSelectedBoletinStudent] = useState(null);
+
+  // Sábana Académica State
+  const [showSabanaModal, setShowSabanaModal] = useState(false);
+  const [selectedSabanaStudent, setSelectedSabanaStudent] = useState(null);
+  const [sabanaCalificaciones, setSabanaCalificaciones] = useState([]);
+  const [sabanaAsistencia, setSabanaAsistencia] = useState({ presentes: 0, ausentes: 0, total: 0, porcentaje: 100 });
+  const [sabanaStats, setSabanaStats] = useState({ total: 0, aprobadas: 0, intensificacion: 0, promedio: "-" });
+  const [loadingSabana, setLoadingSabana] = useState(false);
+  const [planillaViewMode, setPlanillaViewMode] = useState("matriz"); // "matriz" | "sabana"
   const [boletinCalificaciones, setBoletinCalificaciones] = useState([]);
   const [boletinAsistencia, setBoletinAsistencia] = useState({ presentes: 0, ausentes: 0, total: 0 });
   const [loadingBoletin, setLoadingBoletin] = useState(false);
@@ -127,7 +149,7 @@ export default function PreceptorPage() {
     if (selectedPlanillaCursoId) {
       loadPlanillaConsolidadaData(selectedPlanillaCursoId);
     }
-  }, [selectedPlanillaCursoId]);
+  }, [selectedPlanillaCursoId, activePreceptorTab]);
 
   async function loadCursos() {
     setLoading(true);
@@ -138,6 +160,9 @@ export default function PreceptorPage() {
         setCursos(data);
         setSelectedCurso(data[0]);
         setCursoAsignadoId(data[0].id);
+        if (!selectedPlanillaCursoId) {
+          setSelectedPlanillaCursoId(data[0].id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -192,6 +217,8 @@ export default function PreceptorPage() {
   }
 
   async function loadPlanillaConsolidadaData(cursoId) {
+    if (!cursoId) return;
+    setLoadingPlanilla(true);
     try {
       let estList = [];
       const { data: acData } = await supabase
@@ -212,15 +239,22 @@ export default function PreceptorPage() {
       }
       setEstudiantes(estList);
 
-      const { data: matList } = await supabase.from("materias").select("*").eq("curso_id", cursoId);
+      const { data: matList } = await supabase
+        .from("materias")
+        .select("*")
+        .eq("curso_id", cursoId)
+        .order("nombre");
       setPlanillaMaterias(matList || []);
 
       if (matList && matList.length > 0) {
-        const matIds = matList.map(m => m.id);
-        const { data: dmData } = await supabase.from("docente_materia").select("materia_id, cargo, docentes(nombre, apellido)").in("materia_id", matIds);
+        const matIds = matList.map((m) => m.id);
+        const { data: dmData } = await supabase
+          .from("docente_materia")
+          .select("materia_id, cargo, docentes(nombre, apellido)")
+          .in("materia_id", matIds);
         const docMap = {};
         if (dmData) {
-          dmData.forEach(item => {
+          dmData.forEach((item) => {
             if (item.docentes) {
               const nameStr = "Prof. " + item.docentes.apellido + ", " + item.docentes.nombre;
               if (item.cargo === "suplente" || item.cargo === "provisorio") {
@@ -237,17 +271,36 @@ export default function PreceptorPage() {
         }
         setPlanillaDocentesMap(docMap);
 
-        const { data: calData } = await supabase.from("calificaciones").select("*").in("materia_id", matIds);
+        const { data: calData } = await supabase
+          .from("calificaciones")
+          .select("*")
+          .in("materia_id", matIds);
+
         const gradeMap = {};
         if (calData) {
-          calData.forEach(c => {
+          calData.forEach((c) => {
             if (!gradeMap[c.estudiante_id]) gradeMap[c.estudiante_id] = {};
-            gradeMap[c.estudiante_id][c.materia_id] = c.nota_final || c.nota || c.valoracion || "-";
+            const finalVal = c.nota_final != null ? c.nota_final : (c.nota != null ? c.nota : null);
+            gradeMap[c.estudiante_id][c.materia_id] = {
+              id: c.id,
+              nota: c.nota != null ? c.nota : null,
+              nota_final: finalVal,
+              nota_rie: c.nota_rie != null ? c.nota_rie : (c.intensificacion != null ? c.intensificacion : null),
+              valoracion: c.evaluacion_nombre || c.valoracion || null,
+              raw: c
+            };
           });
         }
         setPlanillaCalificacionesMap(gradeMap);
+      } else {
+        setPlanillaDocentesMap({});
+        setPlanillaCalificacionesMap({});
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error("Error al cargar planilla consolidada:", e);
+    } finally {
+      setLoadingPlanilla(false);
+    }
   }
 
   async function loadBoletinData(student) {
@@ -318,6 +371,183 @@ export default function PreceptorPage() {
       setLoadingBoletin(false);
     }
   }
+
+  async function loadSabanaData(student) {
+    if (!student) return;
+    setLoadingSabana(true);
+    try {
+      const cId = student.curso_id || selectedPlanillaCurso?.id || selectedCurso?.id;
+      let matList = [];
+      if (cId) {
+        const { data: mData } = await supabase
+          .from("materias")
+          .select("*")
+          .eq("curso_id", cId)
+          .order("nombre");
+        matList = mData || [];
+      } else if (planillaMaterias && planillaMaterias.length > 0) {
+        matList = planillaMaterias;
+      }
+
+      const matIds = matList.map((m) => m.id);
+      let docMap = {};
+      if (matIds.length > 0) {
+        const { data: dmData } = await supabase
+          .from("docente_materia")
+          .select("materia_id, cargo, docentes(nombre, apellido)")
+          .in("materia_id", matIds);
+        if (dmData) {
+          dmData.forEach((item) => {
+            if (item.docentes) {
+              const nameStr = "Prof. " + item.docentes.apellido + ", " + item.docentes.nombre;
+              docMap[item.materia_id] = nameStr;
+            }
+          });
+        }
+      }
+
+      const { data: calData } = await supabase
+        .from("calificaciones")
+        .select("*, materias(nombre)")
+        .eq("estudiante_id", student.id);
+
+      const calMap = {};
+      if (calData) {
+        calData.forEach((c) => {
+          calMap[c.materia_id] = c;
+        });
+      }
+
+      let list = matList.map((m) => {
+        const entry = calMap[m.id] || {};
+        const regularNote = entry.nota != null ? Number(entry.nota) : null;
+        const rie = entry.nota_rie != null ? Number(entry.nota_rie) : (entry.intensificacion != null ? Number(entry.intensificacion) : null);
+        const finalGrade = entry.nota_final != null ? Number(entry.nota_final) : (regularNote != null ? regularNote : null);
+        const val = entry.evaluacion_nombre || entry.valoracion || null;
+        const cuat = getMateriaCuatrimestre(m);
+
+        let estado = "En Cursada";
+        if (finalGrade != null) {
+          estado = finalGrade >= 7 ? "Acreditado" : "En Intensificación";
+        } else if (val) {
+          estado = val === "TEA" ? "Acreditado" : "En Intensificación";
+        }
+
+        return {
+          id: m.id,
+          materia_nombre: m.nombre,
+          docente: docMap[m.id] || planillaDocentesMap[m.id] || "Docente sin asignar",
+          cuatrimestre: cuat === "Q1" ? "1° Cuatrimestre" : cuat === "Q2" ? "2° Cuatrimestre" : "Anual",
+          valoracion: val,
+          nota: regularNote,
+          nota_rie: rie,
+          nota_final: finalGrade,
+          estado
+        };
+      });
+
+      if (list.length === 0) {
+        list = [
+          { id: "1", materia_nombre: "Lengua y Literatura", docente: "Docente sin asignar", cuatrimestre: "1° Cuatrimestre", valoracion: "-", nota: null, nota_rie: null, nota_final: null, estado: "En Cursada" },
+          { id: "2", materia_nombre: "Matemática", docente: "Docente sin asignar", cuatrimestre: "1° Cuatrimestre", valoracion: "-", nota: null, nota_rie: null, nota_final: null, estado: "En Cursada" },
+          { id: "3", materia_nombre: "Historia / Geografía", docente: "Docente sin asignar", cuatrimestre: "2° Cuatrimestre", valoracion: "-", nota: null, nota_rie: null, nota_final: null, estado: "En Cursada" },
+          { id: "4", materia_nombre: "Ciencias Naturales", docente: "Docente sin asignar", cuatrimestre: "2° Cuatrimestre", valoracion: "-", nota: null, nota_rie: null, nota_final: null, estado: "En Cursada" }
+        ];
+      }
+
+      setSabanaCalificaciones(list);
+
+      const { data: asisData } = await supabase
+        .from("asistencias")
+        .select("*")
+        .eq("estudiante_id", student.id);
+
+      let pres = 0;
+      let aus = 0;
+      if (asisData && asisData.length > 0) {
+        asisData.forEach((a) => {
+          if (a.estado === "P" || a.estado === "presente" || a.estado === "J" || a.estado === "justificado") pres += 1;
+          if (a.estado === "A" || a.estado === "ausente") aus += 1;
+        });
+      }
+      const totalAsis = pres + aus;
+      const pct = totalAsis > 0 ? Math.round((pres / totalAsis) * 100) : 100;
+      setSabanaAsistencia({ presentes: pres, ausentes: aus, total: totalAsis, porcentaje: pct });
+
+      const totalMat = list.length;
+      const aprobadas = list.filter((item) => item.estado === "Acreditado").length;
+      const intens = list.filter((item) => item.estado === "En Intensificación").length;
+      let sum = 0;
+      let count = 0;
+      list.forEach((item) => {
+        if (item.nota_final != null && !isNaN(item.nota_final)) {
+          sum += item.nota_final;
+          count++;
+        }
+      });
+      const avg = count > 0 ? (sum / count).toFixed(2) : "-";
+
+      setSabanaStats({
+        total: totalMat,
+        aprobadas,
+        intensificacion: intens,
+        promedio: avg
+      });
+    } catch (e) {
+      console.error("Error al cargar datos de la sábana:", e);
+    } finally {
+      setLoadingSabana(false);
+    }
+  }
+
+  const exportarSabanaIndividualCSV = () => {
+    if (!selectedSabanaStudent) return;
+    const headers = [
+      "N°",
+      "Materia / Módulo",
+      "Docente",
+      "Cuatrimestre",
+      "Valoración Pedagógica",
+      "Calificación Cursada",
+      "Intensificación RIE",
+      "Calificación Final",
+      "Estado"
+    ];
+    const rows = sabanaCalificaciones.map((c, idx) => {
+      return [
+        idx + 1,
+        '"' + (c.materia_nombre || '').replace(/"/g, '""') + '"',
+        '"' + (c.docente || '').replace(/"/g, '""') + '"',
+        c.cuatrimestre || "Anual",
+        c.valoracion || "-",
+        c.nota != null ? c.nota : "-",
+        c.nota_rie != null ? c.nota_rie : "-",
+        c.nota_final != null ? c.nota_final : "-",
+        c.estado || "-"
+      ].join(";");
+    });
+    const cursoNombre = selectedPlanillaCurso ? (selectedPlanillaCurso.anio + "° " + selectedPlanillaCurso.division + "° (" + selectedPlanillaCurso.turno + ")") : "CENS 454";
+    const meta = [
+      '"SÁBANA ACADÉMICA - CENS Nº 454 ESTEBAN ECHEVERRÍA"',
+      '"Estudiante: ' + selectedSabanaStudent.apellido + ', ' + selectedSabanaStudent.nombre + ' - DNI: ' + (selectedSabanaStudent.dni || 'S/D') + '"',
+      '"Curso: ' + cursoNombre + ' - Ciclo Lectivo: ' + (cicloLectivo || 2026) + '"',
+      '"Promedio Final: ' + sabanaStats.promedio + ' - Aprobadas: ' + sabanaStats.aprobadas + '/' + sabanaStats.total + '"',
+      ""
+    ];
+    const csvContent = "\uFEFF" + [...meta, headers.join(";"), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      "Sabana_" + selectedSabanaStudent.apellido + "_" + selectedSabanaStudent.nombre + "_2026.csv"
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleSelectCursoById = (cId) => {
     const found = cursos.find((c) => c.id === cId);
     if (found) {
@@ -538,6 +768,274 @@ export default function PreceptorPage() {
   });
 
   const selectedPlanillaCurso = cursos.find((c) => c.id === selectedPlanillaCursoId);
+
+  const getMateriaCuatrimestre = (m) => {
+    if (!m) return "MODULO";
+    if (m.cuatrimestre === "Q1" || m.cuatrimestre === 1 || m.cuatrimestre === "1") return "Q1";
+    if (m.cuatrimestre === "Q2" || m.cuatrimestre === 2 || m.cuatrimestre === "2") return "Q2";
+    const lower = (m.nombre || "").toLowerCase();
+    if (lower.includes("1° cuatr") || lower.includes("1er cuatr") || lower.includes("(1°") || lower.includes("q1")) return "Q1";
+    if (lower.includes("2° cuatr") || lower.includes("2do cuatr") || lower.includes("(2°") || lower.includes("q2")) return "Q2";
+    return "MODULO";
+  };
+
+  // Cada materia es tratada como un módulo curricular individual con su calificación
+  const getStudentGradeInfo = (estId, materia) => {
+    const data = planillaCalificacionesMap[estId]?.[materia.id];
+    if (!data) {
+      return {
+        nota: null,
+        nota_final: null,
+        nota_rie: null,
+        valoracion: null,
+        hasGrade: false
+      };
+    }
+
+    const finalGrade = data.nota_final != null ? Number(data.nota_final) : (data.nota != null ? Number(data.nota) : null);
+    const regularNote = data.nota != null ? Number(data.nota) : null;
+    const rie = data.nota_rie != null ? Number(data.nota_rie) : null;
+    const val = data.valoracion || null;
+    const hasGrade = finalGrade != null || regularNote != null || val != null;
+
+    return {
+      nota: regularNote,
+      nota_final: finalGrade,
+      nota_rie: rie,
+      valoracion: val,
+      hasGrade
+    };
+  };
+
+  const filteredPlanillaMaterias = React.useMemo(() => {
+    if (planillaMateriaFilter === "todas") {
+      return planillaMaterias;
+    }
+    return planillaMaterias.filter((m) => {
+      const q = getMateriaCuatrimestre(m);
+      if (planillaMateriaFilter === "Q1") return q === "Q1";
+      if (planillaMateriaFilter === "Q2") return q === "Q2";
+      return true;
+    });
+  }, [planillaMaterias, planillaMateriaFilter]);
+
+  // Obtiene el estado académico real del estudiante considerando las materias del filtro activo
+  const getStudentAcademicStatus = (estId, materiaList = filteredPlanillaMaterias) => {
+    const targetList = materiaList.length > 0 ? materiaList : planillaMaterias;
+    const totalMats = targetList.length;
+    let gradedCount = 0;
+    let approvedCount = 0;
+    let intensCount = 0;
+    let sum = 0;
+    let numericCount = 0;
+
+    targetList.forEach((m) => {
+      const g = getStudentGradeInfo(estId, m);
+      const val = g.nota_final ?? g.nota;
+      if (g.hasGrade) {
+        gradedCount++;
+        if (val != null && !isNaN(Number(val))) {
+          sum += Number(val);
+          numericCount++;
+          if (Number(val) >= 7) approvedCount++;
+          else intensCount++;
+        } else if (g.valoracion === "TEA") {
+          approvedCount++;
+        } else if (g.valoracion === "TEP" || g.valoracion === "TED") {
+          intensCount++;
+        }
+      }
+    });
+
+    const avg = numericCount > 0 ? sum / numericCount : 0;
+    const isFullyGraded = totalMats > 0 && gradedCount === totalMats;
+
+    let condicion = "Sin calificaciones";
+    let condicionTipo = "sin_notas"; // "promociona", "intensifica", "cursando", "sin_notas"
+
+    if (gradedCount === 0) {
+      condicion = "Sin notas";
+      condicionTipo = "sin_notas";
+    } else if (isFullyGraded) {
+      if (intensCount === 0 && avg >= 7) {
+        condicion = "Promociona";
+        condicionTipo = "promociona";
+      } else {
+        condicion = "Intensifica (" + intensCount + ")";
+        condicionTipo = "intensifica";
+      }
+    } else {
+      if (intensCount > 0) {
+        condicion = "En Cursada (" + intensCount + " RIE)";
+        condicionTipo = "intensifica";
+      } else {
+        condicion = "En Cursada (" + gradedCount + "/" + totalMats + ")";
+        condicionTipo = "cursando";
+      }
+    }
+
+    return {
+      totalMats,
+      gradedCount,
+      approvedCount,
+      intensCount,
+      pendingCount: totalMats - gradedCount,
+      avg,
+      condicion,
+      condicionTipo
+    };
+  };
+
+  const getStudentAverage = (estId) => {
+    const st = getStudentAcademicStatus(estId, filteredPlanillaMaterias);
+    return st.avg;
+  };
+
+  const filteredPlanillaStudents = React.useMemo(() => {
+    return estudiantes.filter((est) => {
+      if (searchPlanilla.trim()) {
+        const q = searchPlanilla.toLowerCase();
+        const match =
+          est.apellido?.toLowerCase().includes(q) ||
+          est.nombre?.toLowerCase().includes(q) ||
+          (est.dni && est.dni.includes(q));
+        if (!match) return false;
+      }
+      const st = getStudentAcademicStatus(est.id, filteredPlanillaMaterias);
+      if (planillaEstadoFilter === "aprobados") {
+        return st.condicionTipo === "promociona" || (st.gradedCount > 0 && st.intensCount === 0 && st.avg >= 7);
+      }
+      if (planillaEstadoFilter === "intensificacion") {
+        return st.intensCount > 0 || st.condicionTipo === "intensifica";
+      }
+      if (planillaEstadoFilter === "pendientes") {
+        return st.pendingCount > 0;
+      }
+      return true;
+    });
+  }, [estudiantes, searchPlanilla, planillaEstadoFilter, filteredPlanillaMaterias, planillaCalificacionesMap]);
+
+  const planillaStats = React.useMemo(() => {
+    if (!selectedPlanillaCurso || estudiantes.length === 0 || filteredPlanillaMaterias.length === 0) {
+      return { avg: "-", passRate: "-", filledRate: "0%", totalRisk: 0, totalAprobados: 0, totalEnCursada: 0, totalGradedCells: 0 };
+    }
+    let totalSum = 0;
+    let totalNumericCount = 0;
+    const totalCells = estudiantes.length * filteredPlanillaMaterias.length;
+    let filledCells = 0;
+    let fullyApproved = 0;
+    let inRisk = 0;
+    let inCursadaWithPass = 0;
+
+    estudiantes.forEach((est) => {
+      const st = getStudentAcademicStatus(est.id, filteredPlanillaMaterias);
+      if (st.avg > 0) {
+        totalSum += st.avg;
+        totalNumericCount++;
+      }
+      filledCells += st.gradedCount;
+
+      if (st.condicionTipo === "promociona") {
+        fullyApproved++;
+      } else if (st.intensCount > 0) {
+        inRisk++;
+      } else if (st.gradedCount > 0 && st.approvedCount > 0) {
+        inCursadaWithPass++;
+      }
+    });
+
+    const avg = totalNumericCount > 0 ? (totalSum / totalNumericCount).toFixed(1) : "-";
+    const passRate = estudiantes.length > 0 ? Math.round(((fullyApproved + inCursadaWithPass) / estudiantes.length) * 100) + "%" : "-";
+    const filledRate = totalCells > 0 ? Math.round((filledCells / totalCells) * 100) + "%" : "0%";
+
+    return {
+      avg,
+      passRate,
+      filledRate,
+      totalRisk: inRisk,
+      totalAprobados: fullyApproved,
+      totalEnCursada: inCursadaWithPass,
+      totalGradedCells: filledCells
+    };
+  }, [selectedPlanillaCurso, estudiantes, filteredPlanillaMaterias, planillaCalificacionesMap]);
+
+  const getMateriaStats = (materiaId) => {
+    let sum = 0;
+    let count = 0;
+    let passes = 0;
+    estudiantes.forEach((est) => {
+      const g = getStudentGradeInfo(est.id, { id: materiaId });
+      const val = g.nota_final ?? g.nota;
+      if (val != null && !isNaN(Number(val))) {
+        sum += Number(val);
+        count++;
+        if (Number(val) >= 7) passes++;
+      }
+    });
+    const avg = count > 0 ? (sum / count).toFixed(1) : "-";
+    const rate = count > 0 ? Math.round((passes / count) * 100) + "%" : "-";
+    return { avg, rate, count };
+  };
+
+  const getGradeBadgeClass = (grade, val) => {
+    if (val === "TEA" || (typeof grade === "number" && grade >= 7)) {
+      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+    }
+    if (val === "TEP" || (typeof grade === "number" && grade >= 4 && grade < 7)) {
+      return "bg-amber-50 text-amber-800 border-amber-200";
+    }
+    if (val === "TED" || (typeof grade === "number" && grade > 0 && grade < 4)) {
+      return "bg-rose-50 text-rose-800 border-rose-200";
+    }
+    return "text-slate-400 bg-slate-50 border-slate-200";
+  };
+
+  const handleExportPlanillaCsv = () => {
+    if (!selectedPlanillaCurso || estudiantes.length === 0) {
+      Swal.fire("Atención", "No hay datos para exportar en este curso.", "info");
+      return;
+    }
+
+    const headers = [
+      "N°",
+      "Estudiante",
+      "DNI",
+      ...filteredPlanillaMaterias.map((m) => `"${m.nombre.replace(/"/g, '""')}"`),
+      "Promedio General",
+      "Condición"
+    ];
+
+    const rows = filteredPlanillaStudents.map((est, idx) => {
+      const studentGrades = filteredPlanillaMaterias.map((m) => {
+        const g = getStudentGradeInfo(est.id, m);
+        const val = g.nota_final ?? g.nota;
+        return val != null ? val : (g.valoracion || "-");
+      });
+      const avg = getStudentAverage(est.id);
+      const cond = avg >= 7 ? "Promociona" : avg > 0 ? "Intensifica" : "Regular";
+      return [
+        idx + 1,
+        `"${est.apellido}, ${est.nombre}"`,
+        est.dni || "",
+        ...studentGrades,
+        avg > 0 ? avg.toFixed(1) : "-",
+        cond
+      ].join(";");
+    });
+
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `Planilla_Calificaciones_${selectedPlanillaCurso.anio}_${selectedPlanillaCurso.division}_2026.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header Panel Preceptores */}
@@ -713,6 +1211,17 @@ export default function PreceptorPage() {
                               className="bg-blue-50 hover:bg-blue-100 text-[#006384] font-bold text-xs py-1.5 px-3 rounded-xl border border-blue-200 inline-flex items-center gap-1"
                             >
                               <Edit className="w-3.5 h-3.5" /> Legajo
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedSabanaStudent(est);
+                                loadSabanaData(est);
+                                setShowSabanaModal(true);
+                              }}
+                              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs py-1.5 px-3 rounded-xl border border-emerald-200 inline-flex items-center gap-1"
+                              title="Ver Sábana Académica Oficial"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5" /> Sábana
                             </button>
                             <button
                               onClick={() => {
@@ -961,52 +1470,144 @@ export default function PreceptorPage() {
 
       {activePreceptorTab === "planillas" && (
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1 max-w-md">
-              <label className="block text-xs font-bold text-gray-700 mb-1">Curso / División</label>
-              <select
-                value={selectedPlanillaCursoId}
-                onChange={(e) => setSelectedPlanillaCursoId(e.target.value)}
-                className="field-soft text-xs font-bold border-2 border-blue-500 py-2.5 px-3 bg-white w-full"
-              >
-                <option value="">Seleccione un curso...</option>
-                {cursos.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.anio}° "{c.division}" - {c.orientacion} (Ciclo 2026)
-                  </option>
-                ))}
-              </select>
+          {/* Top Control Bar: Curso, Cuatrimestre, Formato y Acciones */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Selector de Curso */}
+              <div className="flex-1 max-w-xl space-y-1.5">
+                <label className="block text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                  <BookOpen className="w-4 h-4 text-[#006384]" /> Curso y División
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedPlanillaCursoId}
+                    onChange={(e) => setSelectedPlanillaCursoId(e.target.value)}
+                    className="field-soft text-xs font-bold border-2 border-blue-500 py-2.5 px-3 bg-white min-w-[240px]"
+                  >
+                    <option value="">-- Seleccione un curso --</option>
+                    {cursos.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.anio}° "{c.division}" - {c.orientacion} ({c.turno})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex flex-wrap gap-1">
+                    {cursos.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedPlanillaCursoId(c.id)}
+                        className={"py-2 px-3 rounded-xl text-xs font-bold transition-all " + (selectedPlanillaCursoId === c.id ? "bg-[#006384] text-white shadow-xs" : "bg-gray-100 text-gray-700 hover:bg-gray-200")}
+                      >
+                        {c.anio}° "{c.division}"
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de Acción */}
+              {selectedPlanillaCurso && (
+                <div className="flex flex-wrap items-center gap-2 self-start lg:self-end">
+                  <button
+                    onClick={handleExportPlanillaCsv}
+                    title="Exportar planilla actual a formato CSV / Excel"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs flex items-center gap-1.5 transition-transform hover:scale-[1.02]"
+                  >
+                    <Download className="w-4 h-4" /> Exportar Excel / CSV
+                  </button>
+
+                  <button
+                    onClick={() => window.print()}
+                    title="Imprimir Planilla Oficial"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-xs flex items-center gap-1.5 transition-transform hover:scale-[1.02]"
+                  >
+                    <Printer className="w-4 h-4" /> Imprimir Planilla
+                  </button>
+                </div>
+              )}
             </div>
 
             {selectedPlanillaCurso && (
-              <div className="flex items-center gap-3">
-                <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1 text-xs font-bold">
-                  <button
-                    onClick={() => setPlanillaFilterMode("nota_final")}
-                    className={"py-1.5 px-3 rounded-lg transition-all " + (planillaFilterMode === "nota_final" ? "bg-white text-blue-600 shadow-xs" : "text-gray-600 hover:text-gray-900")}
-                  >
-                    Nota Final
-                  </button>
-                  <button
-                    onClick={() => setPlanillaFilterMode("conceptual")}
-                    className={"py-1.5 px-3 rounded-lg transition-all " + (planillaFilterMode === "conceptual" ? "bg-white text-blue-600 shadow-xs" : "text-gray-600 hover:text-gray-900")}
-                  >
-                    Conceptual
-                  </button>
-                  <button
-                    onClick={() => setPlanillaFilterMode("completa")}
-                    className={"py-1.5 px-3 rounded-lg transition-all " + (planillaFilterMode === "completa" ? "bg-white text-blue-600 shadow-xs" : "text-gray-600 hover:text-gray-900")}
-                  >
-                    Vista Completa
-                  </button>
+              <div className="pt-3 border-t border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Selector de Materias (Módulos Individuales) */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+                    <BookOpen className="w-3.5 h-3.5 text-[#006384]" /> Módulos / Materias:
+                  </span>
+                  <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1 text-xs font-bold">
+                    <button
+                      onClick={() => setPlanillaMateriaFilter("todas")}
+                      className={"py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 " + (planillaMateriaFilter === "todas" ? "bg-white text-[#006384] shadow-xs font-extrabold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      <span>📚</span>
+                      <span>Todas las Materias ({planillaMaterias.length})</span>
+                    </button>
+                    <button
+                      onClick={() => setPlanillaMateriaFilter("Q1")}
+                      className={"py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 " + (planillaMateriaFilter === "Q1" ? "bg-blue-600 text-white shadow-xs font-extrabold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      <span>📘</span>
+                      <span>Materias 1° Cuatr.</span>
+                    </button>
+                    <button
+                      onClick={() => setPlanillaMateriaFilter("Q2")}
+                      className={"py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 " + (planillaMateriaFilter === "Q2" ? "bg-amber-500 text-white shadow-xs font-extrabold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      <span>📙</span>
+                      <span>Materias 2° Cuatr.</span>
+                    </button>
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-md flex items-center gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Imprimir Planilla
-                </button>
+                {/* Selector de Modo de Vista: Matriz Resumen vs Sábana Completa */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5 text-gray-400" /> Vista:
+                  </span>
+                  <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1 text-xs font-semibold">
+                    <button
+                      onClick={() => setPlanillaViewMode("matriz")}
+                      className={"py-1 px-2.5 rounded-lg transition-all flex items-center gap-1 " + (planillaViewMode === "matriz" ? "bg-white text-[#006384] shadow-xs font-bold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      <Layers className="w-3 h-3 text-[#006384]" /> Matriz
+                    </button>
+                    <button
+                      onClick={() => setPlanillaViewMode("sabana")}
+                      className={"py-1 px-2.5 rounded-lg transition-all flex items-center gap-1 " + (planillaViewMode === "sabana" ? "bg-white text-emerald-800 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      <FileSpreadsheet className="w-3 h-3 text-emerald-600" /> Sábana Completa
+                    </button>
+                  </div>
+                </div>
+
+                {/* Formato de Visualización */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5 text-gray-400" /> Formato:
+                  </span>
+                  <div className="bg-gray-100 p-1 rounded-xl flex items-center gap-1 text-xs font-semibold">
+                    <button
+                      onClick={() => setPlanillaDisplayMode("mixto")}
+                      className={"py-1 px-2.5 rounded-lg transition-all " + (planillaDisplayMode === "mixto" ? "bg-white text-gray-900 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      Mixto
+                    </button>
+                    <button
+                      onClick={() => setPlanillaDisplayMode("num")}
+                      className={"py-1 px-2.5 rounded-lg transition-all " + (planillaDisplayMode === "num" ? "bg-white text-gray-900 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      Numérico
+                    </button>
+                    <button
+                      onClick={() => setPlanillaDisplayMode("conceptual")}
+                      className={"py-1 px-2.5 rounded-lg transition-all " + (planillaDisplayMode === "conceptual" ? "bg-white text-gray-900 shadow-xs font-bold" : "text-gray-600 hover:text-gray-900")}
+                    >
+                      Conceptual (TEA/TEP/TED)
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1019,103 +1620,468 @@ export default function PreceptorPage() {
               <div className="space-y-1">
                 <h3 className="text-lg font-bold font-heading text-[#0D2A3E]">Planilla de Calificaciones</h3>
                 <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
-                  Seleccione un curso y división en la sección superior para visualizar la matriz anual de notas e imprimir el reporte.
+                  Seleccione un curso y división en la sección superior para visualizar la matriz consolidada de notas, filtrar por cuatrimestre e imprimir o exportar los registros.
                 </p>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
+              {/* Tarjetas de Métricas en Tiempo Real */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="card p-5 bg-white border border-gray-200 border-l-4 border-l-[#006384] flex items-center justify-between shadow-xs">
                   <div>
-                    <p className="text-xs font-bold text-gray-500">Promedio General</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">
-                      {estudiantes.length > 0 ? "7.5" : "-"}
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Promedio General</p>
+                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-0.5">
+                      {planillaStats.avg}
                     </h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Calificaciones del período</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-[#006384] flex items-center justify-center">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                 </div>
 
-                <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
+                <div className="card p-5 bg-white border border-gray-200 border-l-4 border-l-emerald-500 flex items-center justify-between shadow-xs">
                   <div>
-                    <p className="text-xs font-bold text-gray-500">Carga de Notas</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">
-                      {planillaMaterias.length > 0 ? "100%" : "0%"}
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Tasa de Aprobación</p>
+                    <h3 className="text-2xl font-black text-emerald-700 mt-0.5">
+                      {planillaStats.passRate}
                     </h3>
+                    <p className="text-[10px] text-emerald-600 font-medium mt-0.5">{planillaStats.totalAprobados} alumnos con promedio ≥ 7</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <BookOpen className="w-5 h-5" />
+                  <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <Award className="w-5 h-5" />
                   </div>
                 </div>
 
-                <div className="card p-6 bg-white flex items-center justify-between border border-gray-200">
+                <div className="card p-5 bg-white border border-gray-200 border-l-4 border-l-blue-500 flex items-center justify-between shadow-xs">
                   <div>
-                    <p className="text-xs font-bold text-gray-500">Alumnos Registrados</p>
-                    <h3 className="text-2xl font-black text-[#0D2A3E] mt-1">{estudiantes.length}</h3>
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">Carga Docente</p>
+                    <h3 className="text-2xl font-black text-[#006384] mt-0.5">
+                      {planillaStats.filledRate}
+                    </h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{filteredPlanillaMaterias.length} materias auditadas</p>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="card p-5 bg-white border border-gray-200 border-l-4 border-l-amber-500 flex items-center justify-between shadow-xs">
+                  <div>
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">En Intensificación</p>
+                    <h3 className="text-2xl font-black text-amber-700 mt-0.5">
+                      {planillaStats.totalRisk}
+                    </h3>
+                    <p className="text-[10px] text-amber-600 font-medium mt-0.5">Alumnos con materias pendientes</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                     <AlertCircle className="w-5 h-5" />
                   </div>
                 </div>
               </div>
 
-              {/* Dynamic Matrix Table */}
-              <div className="card p-0 overflow-hidden bg-white shadow-xs rounded-2xl border border-gray-200">
-                <div className="bg-[#0D2A3E] text-white p-4 px-6 flex items-center justify-between">
-                  <h4 className="text-xs font-bold tracking-wide">
-                    Planilla Consolidada: <span className="text-[#F5C442] font-extrabold">{selectedPlanillaCurso.anio}° "{selectedPlanillaCurso.division}"</span> ({selectedPlanillaCurso.orientacion})
-                  </h4>
-                  <span className="text-[11px] font-bold bg-blue-900/60 text-blue-200 px-3 py-1 rounded-full border border-blue-700">
-                    Ciclo Lectivo 2026
-                  </span>
+              {/* Sub-Barra de Búsqueda y Filtro de Estado de Alumnos */}
+              <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchPlanilla}
+                    onChange={(e) => setSearchPlanilla(e.target.value)}
+                    placeholder="Buscar estudiante por apellido, nombre o DNI..."
+                    className="field-soft pl-10 pr-8 py-2 text-xs w-full bg-gray-50 border-gray-200"
+                  />
+                  {searchPlanilla && (
+                    <button
+                      onClick={() => setSearchPlanilla("")}
+                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b">
-                      <tr>
-                        <th className="py-3.5 px-4 min-w-[200px]">Estudiante</th>
-                        {planillaMaterias.length === 0 ? (
-                          <th className="py-3.5 px-4 text-center">Sin materias asignadas</th>
-                        ) : (
-                          planillaMaterias.map((m) => (
-                            <th key={m.id} className="py-3.5 px-3 text-center border-l border-gray-200 min-w-[140px]">
-                              <div>{m.nombre}</div>
-                              <div className="text-[10px] text-gray-500 font-normal">{planillaDocentesMap[m.id] || "Docente A Cargo"}</div>
-                            </th>
-                          ))
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white font-medium">
-                      {estudiantes.length === 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold">
+                  <span className="text-gray-400 text-[11px] mr-1 flex items-center gap-1">
+                    <Filter className="w-3.5 h-3.5" /> Estado:
+                  </span>
+                  <button
+                    onClick={() => setPlanillaEstadoFilter("todos")}
+                    className={"py-1.5 px-3 rounded-xl transition-all " + (planillaEstadoFilter === "todos" ? "bg-[#0D2A3E] text-white font-bold" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+                  >
+                    Todos ({estudiantes.length})
+                  </button>
+                  <button
+                    onClick={() => setPlanillaEstadoFilter("aprobados")}
+                    className={"py-1.5 px-3 rounded-xl transition-all " + (planillaEstadoFilter === "aprobados" ? "bg-emerald-700 text-white font-bold" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+                  >
+                    Aprobados ({planillaStats.totalAprobados})
+                  </button>
+                  <button
+                    onClick={() => setPlanillaEstadoFilter("intensificacion")}
+                    className={"py-1.5 px-3 rounded-xl transition-all " + (planillaEstadoFilter === "intensificacion" ? "bg-amber-600 text-white font-bold" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+                  >
+                    Intensificación ({planillaStats.totalRisk})
+                  </button>
+                  <button
+                    onClick={() => setPlanillaEstadoFilter("pendientes")}
+                    className={"py-1.5 px-3 rounded-xl transition-all " + (planillaEstadoFilter === "pendientes" ? "bg-blue-600 text-white font-bold" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+                  >
+                    Con Pendientes
+                  </button>
+                </div>
+              </div>
+
+              {/* Matriz Dinámica Consolidada */}
+              <div className="card p-0 overflow-hidden bg-white shadow-xs rounded-2xl border border-gray-200">
+                {/* Cabecera institucional de la planilla */}
+                <div className="bg-[#0D2A3E] text-white p-4 px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <FileSpreadsheet className="w-5 h-5 text-[#F5C442]" />
+                    <div>
+                      <h4 className="text-xs font-bold tracking-wide">
+                        Planilla Oficial: <span className="text-[#F5C442] font-extrabold">{selectedPlanillaCurso.anio}° "{selectedPlanillaCurso.division}"</span> ({selectedPlanillaCurso.orientacion})
+                      </h4>
+                      <p className="text-[11px] text-slate-300">
+                        {planillaMateriaFilter === "Q1" ? "Mostrando: Materias de 1° Cuatrimestre" : planillaMateriaFilter === "Q2" ? "Mostrando: Materias de 2° Cuatrimestre" : "Mostrando: Todos los módulos curriculares"} • Calificaciones Individuales por Materia • Turno {selectedPlanillaCurso.turno}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold bg-blue-900/60 text-blue-200 px-3 py-1 rounded-full border border-blue-700">
+                      Ciclo Lectivo 2026
+                    </span>
+                    <span className="text-[11px] font-bold bg-slate-800 text-[#F5C442] px-3 py-1 rounded-full border border-slate-700">
+                      {filteredPlanillaStudents.length} alumno(s)
+                    </span>
+                  </div>
+                </div>
+
+                {filteredPlanillaMaterias.length > 0 && planillaStats.totalGradedCells === 0 && !loadingPlanilla && (
+                  <div className="bg-amber-50 border-b border-amber-200 p-3.5 px-6 flex items-center justify-between gap-3 text-xs text-amber-900">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        <strong>Período sin calificaciones cargadas:</strong> Los módulos seleccionados ({planillaMateriaFilter === "Q2" ? "2° Cuatrimestre" : planillaMateriaFilter === "Q1" ? "1° Cuatrimestre" : "este período"}) aún no tienen actas de calificaciones volcadas por los docentes titulares en la base de datos.
+                      </span>
+                    </div>
+                    {planillaMateriaFilter !== "todas" && (
+                      <button
+                        onClick={() => setPlanillaMateriaFilter("todas")}
+                        className="text-[11px] font-bold text-amber-800 underline hover:text-amber-950 shrink-0"
+                      >
+                        Ver todos los módulos
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {loadingPlanilla ? (
+                  <div className="py-16 text-center space-y-3">
+                    <div className="w-10 h-10 border-4 border-[#006384] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <p className="text-xs font-bold text-gray-600">Cargando matriz de materias y calificaciones...</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto max-h-[650px] overflow-y-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-[#EEF5FA] text-[#0D2A3E] font-bold border-b border-gray-200 sticky top-0 z-30 shadow-xs">
                         <tr>
-                          <td colSpan={planillaMaterias.length + 1} className="py-6 text-center text-gray-400">
-                            No hay estudiantes registrados en este curso.
-                          </td>
-                        </tr>
-                      ) : (
-                        estudiantes.map((est, idx) => (
-                          <tr key={est.id} className="hover:bg-gray-50/80">
-                            <td className="py-3.5 px-4 font-bold text-[#0D2A3E]">
-                              {idx + 1}. {est.apellido}, {est.nombre}
-                            </td>
-                            {planillaMaterias.map((m) => {
-                              const val = planillaCalificacionesMap[est.id]?.[m.id] || "-";
+                          {/* Columna Estudiante Fija (Sticky Left) */}
+                          <th className="sticky left-0 z-30 bg-[#EEF5FA] py-3.5 px-4 min-w-[260px] text-left border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]">
+                            <div className="flex items-center justify-between">
+                              <span>ESTUDIANTE ({filteredPlanillaStudents.length})</span>
+                              <span className="text-[10px] text-gray-500 font-mono">DNI</span>
+                            </div>
+                          </th>
+
+                          {/* Columnas de Materias */}
+                          {filteredPlanillaMaterias.length === 0 ? (
+                            <th className="py-3.5 px-4 text-center text-gray-400">Sin materias vinculadas</th>
+                          ) : (
+                            filteredPlanillaMaterias.map((m) => {
+                              const qType = getMateriaCuatrimestre(m);
                               return (
-                                <td key={m.id} className="py-3.5 px-3 text-center border-l border-gray-100 font-bold text-gray-800">
-                                  {val}
+                                <th
+                                  key={m.id}
+                                  className={"py-3 px-3 text-center border-l border-gray-200 " + (planillaViewMode === "sabana" ? "min-w-[195px]" : "min-w-[145px] max-w-[200px]") + " align-top bg-[#EEF5FA]"}
+                                >
+                                  <div className="space-y-1">
+                                    <div className="font-extrabold text-[#0D2A3E] text-xs leading-tight line-clamp-2" title={m.nombre}>
+                                      {m.nombre}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 font-normal truncate" title={planillaDocentesMap[m.id] || "Sin Docente"}>
+                                      {planillaDocentesMap[m.id] || "Docente sin asignar"}
+                                    </div>
+                                    <div className="pt-0.5 flex items-center justify-center gap-1">
+                                      {qType === "Q1" ? (
+                                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200">
+                                          1° Cuatr.
+                                        </span>
+                                      ) : qType === "Q2" ? (
+                                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                                          2° Cuatr.
+                                        </span>
+                                      ) : (
+                                        <span className="inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 border border-purple-200">
+                                          Anual
+                                        </span>
+                                      )}
+                                      {(() => {
+                                        const mStats = getMateriaStats(m.id);
+                                        return mStats.count > 0 ? (
+                                          <span className="inline-flex items-center gap-0.5 text-[8.5px] font-extrabold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300" title={"Cargadas " + mStats.count + " notas de " + estudiantes.length + " alumnos"}>
+                                            ● {mStats.count} notas
+                                          </span>
+                                        ) : (
+                                          <span className="inline-block text-[8.5px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500" title="Aún sin calificaciones cargadas por el docente">
+                                            ○ Pendiente
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                    {planillaViewMode === "sabana" && (
+                                      <div className="grid grid-cols-4 gap-0.5 pt-1.5 border-t border-gray-200 text-[9px] font-black text-gray-500">
+                                        <span title="Valoración Pedagógica">VAL</span>
+                                        <span title="Nota Cursada">CURS</span>
+                                        <span title="Intensificación RIE">RIE</span>
+                                        <span title="Calificación Final" className="text-[#006384]">FIN</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </th>
+                              );
+                            })
+                          )}
+
+                          {/* Columna Promedio General */}
+                          <th className="py-3.5 px-3 text-center border-l-2 border-gray-300 min-w-[90px] bg-[#EEF5FA]">
+                            <div>PROMEDIO</div>
+                            <div className="text-[10px] text-gray-500 font-normal">General</div>
+                          </th>
+
+                          {/* Columna Condición */}
+                          <th className="py-3.5 px-3 text-center border-l border-gray-200 min-w-[110px] bg-[#EEF5FA]">
+                            <div>CONDICIÓN</div>
+                            <div className="text-[10px] text-gray-500 font-normal">Pedagógica</div>
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-gray-100 bg-white font-medium">
+                        {filteredPlanillaStudents.length === 0 ? (
+                          <tr>
+                            <td colSpan={filteredPlanillaMaterias.length + 3} className="py-12 text-center text-gray-400">
+                              <SearchX className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                              <p className="font-bold text-sm text-gray-600">No se encontraron estudiantes</p>
+                              <p className="text-xs text-gray-400 mt-1">Pruebe modificando los términos de búsqueda o el filtro de estado.</p>
+                              {(searchPlanilla || planillaEstadoFilter !== "todos") && (
+                                <button
+                                  onClick={() => { setSearchPlanilla(""); setPlanillaEstadoFilter("todos"); }}
+                                  className="mt-3 text-xs font-bold text-[#006384] hover:underline"
+                                >
+                                  Restablecer filtros
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPlanillaStudents.map((est, idx) => {
+                            const avgNum = getStudentAverage(est.id);
+                            const isPassing = avgNum >= 7;
+
+                            return (
+                              <tr key={est.id} className="group hover:bg-blue-50/40 transition-colors">
+                                {/* Columna Estudiante Fija (Sticky Left) */}
+                                <td className="sticky left-0 z-10 bg-white group-hover:bg-[#F2F8FD] py-3 px-4 border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)] transition-colors">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-[#0D2A3E] text-xs truncate">
+                                        {idx + 1}. {est.apellido}, {est.nombre}
+                                      </p>
+                                      <p className="text-[10px] font-mono text-gray-500">
+                                        DNI: {est.dni || "S/D"}
+                                      </p>
+                                    </div>
+
+                                    {/* Acciones Rápidas en Fila */}
+                                    <div className="flex items-center gap-1 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedSabanaStudent(est);
+                                          loadSabanaData(est);
+                                          setShowSabanaModal(true);
+                                        }}
+                                        title="Ver Sábana Académica Individual"
+                                        className="p-1.5 hover:bg-emerald-100 text-emerald-700 rounded-lg transition"
+                                      >
+                                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedBoletinStudent(est);
+                                          loadBoletinData(est);
+                                          setShowBoletinModal(true);
+                                        }}
+                                        title="Ver Boletín Oficial"
+                                        className="p-1.5 hover:bg-amber-100 text-amber-700 rounded-lg transition"
+                                      >
+                                        <FileText className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedLegajoStudent(est);
+                                          setShowLegajoModal(true);
+                                        }}
+                                        title="Ver / Editar Legajo"
+                                        className="p-1.5 hover:bg-blue-100 text-[#006384] rounded-lg transition"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Columnas de Materias (Módulos Individuales) */}
+                                {filteredPlanillaMaterias.map((m) => {
+                                  const info = getStudentGradeInfo(est.id, m);
+                                  const displayedGrade = info.nota_final ?? info.nota;
+                                  const badgeClass = getGradeBadgeClass(displayedGrade, info.valoracion);
+
+                                  return (
+                                    <td key={m.id} className="py-3 px-2 text-center border-l border-gray-100">
+                                      {planillaViewMode === "sabana" ? (
+                                        <div className="grid grid-cols-4 gap-0.5 text-center text-[10px] items-center">
+                                          <div className={"py-1 px-0.5 font-bold truncate rounded text-[9px] " + (
+                                            info.valoracion === "TEA" ? "bg-emerald-100 text-emerald-800 font-extrabold" :
+                                            info.valoracion === "TEP" ? "bg-amber-100 text-amber-800 font-extrabold" :
+                                            info.valoracion === "TED" ? "bg-rose-100 text-rose-800 font-extrabold" : "bg-gray-50 text-gray-400"
+                                          )} title={"Valoración Pedagógica: " + (info.valoracion || 'Sin valoración')}>
+                                            {info.valoracion || "-"}
+                                          </div>
+                                          <div className={"py-1 px-0.5 font-mono font-semibold rounded " + (info.nota != null ? "bg-blue-50 text-blue-950 font-bold" : "text-gray-300")} title={"Cursada: " + (info.nota != null ? info.nota : '-')}>
+                                            {info.nota != null ? info.nota : "-"}
+                                          </div>
+                                          <div className={"py-1 px-0.5 font-mono font-semibold rounded " + (info.nota_rie != null ? "bg-amber-100 text-amber-900 font-bold" : "text-gray-300")} title={"Intensificación RIE: " + (info.nota_rie != null ? info.nota_rie : '-')}>
+                                            {info.nota_rie != null ? info.nota_rie : "-"}
+                                          </div>
+                                          <div className={"py-1 px-0.5 font-mono font-black rounded " + (
+                                            displayedGrade >= 7 ? "bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs" :
+                                            (displayedGrade != null ? "bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs" :
+                                            (info.valoracion === "TED" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                                            (info.valoracion === "TEA" ? "bg-emerald-50 text-emerald-700" : "text-gray-300")))
+                                          )} title={"Calificación Final: " + (displayedGrade != null ? displayedGrade : (info.valoracion || '-'))}>
+                                            {displayedGrade != null ? displayedGrade : (info.valoracion || "-")}
+                                          </div>
+                                        </div>
+                                      ) : displayedGrade != null ? (
+                                        <div className="inline-flex flex-col items-center">
+                                          <span className={"inline-block text-xs font-black px-2.5 py-1 rounded-xl border font-mono shadow-2xs " + badgeClass}>
+                                            {displayedGrade}
+                                          </span>
+                                          {planillaDisplayMode !== "num" && info.valoracion && (
+                                            <span className="text-[9px] font-bold text-gray-500 mt-0.5">
+                                              {info.valoracion}
+                                            </span>
+                                          )}
+                                          {info.nota_rie != null && (
+                                            <span className="text-[8px] font-bold text-amber-700 bg-amber-50 px-1 rounded mt-0.5 border border-amber-200" title="Nota de Intensificación">
+                                              RIE: {info.nota_rie}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : info.valoracion ? (
+                                        <span className={"inline-block text-[11px] font-extrabold px-2.5 py-0.5 rounded-lg border " + badgeClass}>
+                                          {info.valoracion}
+                                        </span>
+                                      ) : (
+                                        <span className="text-gray-300 font-mono text-xs">-</span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+
+                                {/* Columna Promedio General */}
+                                {(() => {
+                                  const acadStatus = getStudentAcademicStatus(est.id, filteredPlanillaMaterias);
+                                  return (
+                                    <>
+                                      <td className="py-3 px-3 text-center border-l-2 border-gray-200 font-mono text-xs">
+                                        {acadStatus.avg > 0 ? (
+                                          <div className="inline-flex flex-col items-center">
+                                            <span className={"inline-block px-2.5 py-1 rounded-xl font-black " + (acadStatus.avg >= 7 ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800")}>
+                                              {acadStatus.avg.toFixed(1)}
+                                            </span>
+                                            <span className="text-[9px] text-gray-400 mt-0.5 font-normal">
+                                              {acadStatus.gradedCount} de {acadStatus.totalMats} mod.
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-gray-400 font-normal">-</span>
+                                        )}
+                                      </td>
+
+                                      {/* Columna Condición Académica */}
+                                      <td className="py-3 px-3 text-center border-l border-gray-200 whitespace-nowrap">
+                                        {acadStatus.condicionTipo === "promociona" ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Promociona
+                                          </span>
+                                        ) : acadStatus.condicionTipo === "intensifica" ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                            <AlertCircle className="w-3 h-3 text-amber-600" /> {acadStatus.condicion}
+                                          </span>
+                                        ) : acadStatus.condicionTipo === "cursando" ? (
+                                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200">
+                                            <Sparkles className="w-3 h-3 text-blue-600" /> {acadStatus.condicion}
+                                          </span>
+                                        ) : (
+                                          <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                                            Sin notas
+                                          </span>
+                                        )}
+                                      </td>
+                                    </>
+                                  );
+                                })()}
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+
+                      {/* Pie de Tabla con Estadísticas por Asignatura */}
+                      {filteredPlanillaStudents.length > 0 && filteredPlanillaMaterias.length > 0 && (
+                        <tfoot className="bg-[#F8FAFC] text-gray-700 font-bold border-t-2 border-gray-300">
+                          <tr>
+                            <td className="sticky left-0 z-20 bg-[#F8FAFC] py-3 px-4 border-r border-gray-200 text-left font-extrabold text-[#0D2A3E] text-xs shadow-[2px_0_5px_-2px_rgba(0,0,0,0.06)]">
+                              PROMEDIO POR ASIGNATURA
+                            </td>
+                            {filteredPlanillaMaterias.map((m) => {
+                              const st = getMateriaStats(m.id);
+                              return (
+                                <td key={m.id} className="py-3 px-2 text-center border-l border-gray-200">
+                                  <div className="font-mono text-xs font-black text-[#006384]">
+                                    {st.avg}
+                                  </div>
+                                  <div className="text-[9px] text-gray-400 font-medium">
+                                    {st.rate !== "-" ? `${st.rate} aprob.` : "S/D"}
+                                  </div>
                                 </td>
                               );
                             })}
+                            <td className="py-3 px-3 text-center border-l-2 border-gray-300 font-mono text-xs font-black text-[#0D2A3E]">
+                              {planillaStats.avg}
+                            </td>
+                            <td className="py-3 px-3 text-center border-l border-gray-200 text-[10px] text-gray-500 font-bold">
+                              {planillaStats.passRate} Aprob.
+                            </td>
                           </tr>
-                        ))
+                        </tfoot>
                       )}
-                    </tbody>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1601,6 +2567,300 @@ export default function PreceptorPage() {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SÁBANA ACADÉMICA DEL ESTUDIANTE */}
+      {showSabanaModal && selectedSabanaStudent && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col border border-gray-200 overflow-hidden">
+            {/* Header del Modal */}
+            <div className="p-5 border-b flex justify-between items-center bg-[#0D2A3E] text-white shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-[#F5C442] text-[#0D2A3E] flex items-center justify-center font-black text-xl shadow-xs">
+                  {selectedSabanaStudent.nombre ? selectedSabanaStudent.nombre.charAt(0).toUpperCase() : 'E'}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider uppercase bg-emerald-500 text-white">
+                      Sábana Académica
+                    </span>
+                    <span className="text-xs text-slate-300 font-mono">
+                      Legajo #{selectedSabanaStudent.id ? selectedSabanaStudent.id.substring(0, 8).toUpperCase() : "REG"}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold font-heading text-white mt-0.5">
+                    {selectedSabanaStudent.apellido}, {selectedSabanaStudent.nombre}
+                  </h3>
+                  <p className="text-xs text-[#F5C442] font-medium flex items-center gap-2">
+                    <span>DNI: {selectedSabanaStudent.dni || "S/D"}</span>
+                    <span>•</span>
+                    <span>CENS Nº 454 Esteban Echeverría</span>
+                    <span>•</span>
+                    <span>Ciclo Lectivo {cicloLectivo || 2026}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 shadow-xs transition"
+                  title="Imprimir Sábana Oficial"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span className="hidden sm:inline">Imprimir Sábana</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={exportarSabanaIndividualCSV}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl flex items-center gap-1.5 shadow-xs transition"
+                  title="Descargar Sábana en CSV / Excel"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Exportar CSV</span>
+                </button>
+                <button
+                  onClick={() => setShowSabanaModal(false)}
+                  className="text-gray-300 hover:text-white font-bold text-xl p-1.5 rounded-lg hover:bg-white/10 transition"
+                  title="Cerrar"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido Scrollable */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-slate-50/50">
+              {/* Encabezado Académico / Membrete Institucional */}
+              <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#006384]">
+                    <GraduationCap className="w-4 h-4" />
+                    <span>PLAN DE ESTUDIOS DE EDUCACIÓN SECUNDARIA DE ADULTOS</span>
+                  </div>
+                  <h4 className="text-sm font-black text-[#0D2A3E]">
+                    Resolución Ministerial N° 2993/22 • Modalidad Adultos y Formación Profesional
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    Establecimiento: CENS Nº 454 • Distrito Esteban Echeverría • Región Educativa 5
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-[#EEF5FA] p-3.5 rounded-xl border border-blue-100 text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-500 block uppercase">Curso y División</span>
+                    <span className="font-extrabold text-[#0D2A3E]">
+                      {selectedPlanillaCurso ? (selectedPlanillaCurso.anio + "° " + selectedPlanillaCurso.division + "°") : (selectedCurso ? (selectedCurso.anio + "° " + selectedCurso.division + "°") : "1° Año")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-500 block uppercase">Turno</span>
+                    <span className="font-extrabold text-[#0D2A3E]">
+                      {selectedPlanillaCurso?.turno || selectedCurso?.turno || "Noche"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-500 block uppercase">Condición</span>
+                    <span className="font-extrabold text-emerald-700">Regular Activo</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Indicadores Resumen (KPIs del Estudiante) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-[#006384] shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Total Módulos</p>
+                  <h4 className="text-2xl font-black text-[#0D2A3E] mt-1">{sabanaStats.total}</h4>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Asignaturas de la currícula</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Módulos Acreditados</p>
+                  <h4 className="text-2xl font-black text-emerald-700 mt-1">{sabanaStats.aprobadas}</h4>
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                    {sabanaStats.total > 0 ? Math.round((sabanaStats.aprobadas / sabanaStats.total) * 100) : 0}% de acreditación
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-amber-500 shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">En Intensificación</p>
+                  <h4 className="text-2xl font-black text-amber-700 mt-1">{sabanaStats.intensificacion}</h4>
+                  <p className="text-[10px] text-amber-600 font-semibold mt-0.5">Pendientes de cierre / RIE</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-gray-200 border-l-4 border-l-[#F5C442] shadow-xs">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase">Promedio Definitivo</p>
+                  <h4 className="text-2xl font-black text-[#006384] mt-1">{sabanaStats.promedio}</h4>
+                  <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                    Asistencia: {sabanaAsistencia.porcentaje}% ({sabanaAsistencia.presentes} P / {sabanaAsistencia.ausentes} A)
+                  </p>
+                </div>
+              </div>
+
+              {/* Sábana Detallada de Calificaciones */}
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
+                <div className="bg-[#EEF5FA] p-3.5 px-5 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-[#006384]" />
+                    <span className="text-xs font-bold text-[#0D2A3E]">
+                      Matriz Individual de Calificaciones por Módulo Curricular
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold bg-white text-[#006384] px-2.5 py-1 rounded-lg border border-blue-200">
+                    {sabanaCalificaciones.length} materias registradas
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-gray-50 text-[#0D2A3E] font-bold border-b border-gray-200">
+                      <tr>
+                        <th className="py-3 px-3.5 text-center w-10">#</th>
+                        <th className="py-3 px-4 min-w-[200px]">Materia / Módulo Curricular</th>
+                        <th className="py-3 px-3.5 min-w-[150px]">Docente a Cargo</th>
+                        <th className="py-3 px-3 text-center min-w-[90px]">Tramo</th>
+                        <th className="py-3 px-3 text-center min-w-[90px]">Valoración</th>
+                        <th className="py-3 px-3 text-center min-w-[80px]">Cursada</th>
+                        <th className="py-3 px-3 text-center min-w-[80px]">RIE / Intens.</th>
+                        <th className="py-3 px-3 text-center min-w-[90px]">Nota Final</th>
+                        <th className="py-3 px-4 text-center min-w-[130px]">Condición</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {loadingSabana ? (
+                        <tr>
+                          <td colSpan="9" className="text-center py-10 text-gray-400 font-bold">
+                            <div className="w-7 h-7 border-3 border-[#006384] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            Cargando datos completos de la sábana...
+                          </td>
+                        </tr>
+                      ) : sabanaCalificaciones.length === 0 ? (
+                        <tr>
+                          <td colSpan="9" className="text-center py-8 text-gray-400">
+                            No se encontraron materias registradas para este curso.
+                          </td>
+                        </tr>
+                      ) : (
+                        sabanaCalificaciones.map((c, idx) => {
+                          const isAprobado = c.estado === "Acreditado";
+                          const isIntens = c.estado === "En Intensificación";
+
+                          return (
+                            <tr key={c.id || idx} className="hover:bg-blue-50/30 transition-colors">
+                              <td className="py-3 px-3.5 text-center font-mono text-gray-400 font-bold">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-[#0D2A3E]">
+                                {c.materia_nombre}
+                              </td>
+                              <td className="py-3 px-3.5 text-gray-600 font-medium truncate max-w-[160px]" title={c.docente}>
+                                {c.docente}
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <span className={"px-2 py-0.5 rounded text-[10px] font-bold " + (
+                                  c.cuatrimestre.includes("1°") ? "bg-blue-50 text-blue-800 border border-blue-200" :
+                                  c.cuatrimestre.includes("2°") ? "bg-amber-50 text-amber-800 border border-amber-200" :
+                                  "bg-purple-50 text-purple-800 border border-purple-200"
+                                )}>
+                                  {c.cuatrimestre}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                {c.valoracion ? (
+                                  <span className={"px-2 py-0.5 rounded font-bold text-[10px] " + (
+                                    c.valoracion === "TEA" ? "bg-emerald-100 text-emerald-800" :
+                                    c.valoracion === "TEP" ? "bg-amber-100 text-amber-800" :
+                                    "bg-red-100 text-red-800"
+                                  )}>
+                                    {c.valoracion}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 font-mono">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono font-bold text-gray-700">
+                                {c.nota != null ? c.nota : "-"}
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono font-bold text-amber-800">
+                                {c.nota_rie != null ? c.nota_rie : "-"}
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono font-black text-sm">
+                                {c.nota_final != null ? (
+                                  <span className={"px-2 py-0.5 rounded-lg " + (
+                                    c.nota_final >= 7 ? "text-emerald-700 bg-emerald-50 border border-emerald-200" : "text-red-700 bg-red-50 border border-red-200"
+                                  )}>
+                                    {c.nota_final}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 font-normal">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {isAprobado ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Acreditado
+                                  </span>
+                                ) : isIntens ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">
+                                    <Clock className="w-3 h-3 text-amber-600" /> Intensificación
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                    En Cursada
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Recuadro de Firmas Oficiales Reglamentarias */}
+              <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-[#0D2A3E]">
+                  <Award className="w-4 h-4 text-[#006384]" />
+                  <span>Constancia y Aval Institucional (CENS Nº 454 Esteban Echeverría)</span>
+                </div>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Se deja constancia fehaciente de que las calificaciones y valoraciones consignadas en la presente Sábana Académica corresponden fielmente a los registros volcados por el cuerpo docente en las actas de cursada, intensificación y exámenes correspondientes al Ciclo Lectivo {cicloLectivo || 2026}.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
+                  <div className="border-t border-dashed border-gray-400 pt-2 text-center">
+                    <p className="text-xs font-bold text-[#0D2A3E]">Firma y Aclaración Preceptor/a</p>
+                    <p className="text-[10px] text-gray-400">División correspondiente</p>
+                  </div>
+                  <div className="border-t border-dashed border-gray-400 pt-2 text-center">
+                    <p className="text-xs font-bold text-[#0D2A3E]">Docente Tutor / Coordinador</p>
+                    <p className="text-[10px] text-gray-400">Trayectoria Pedagógica</p>
+                  </div>
+                  <div className="border-t border-dashed border-gray-400 pt-2 text-center">
+                    <p className="text-xs font-bold text-[#0D2A3E]">Sello y Firma Dirección / Secretaría</p>
+                    <p className="text-[10px] text-gray-400">CENS Nº 454</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Modal */}
+            <div className="p-4 border-t flex items-center justify-between bg-white shrink-0">
+              <span className="text-[11px] text-gray-400 font-mono">
+                Documento emitido conforme al SGA CENS Nº 454 • Esteban Echeverría
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSabanaModal(false)}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 px-6 rounded-xl transition"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
